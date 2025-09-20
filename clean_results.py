@@ -1,0 +1,138 @@
+import pandas as pd
+import glob
+import os
+from datetime import datetime
+import re
+
+# -----------------------------
+# Step 1: Define directories
+# -----------------------------
+# Source folder with raw CSV/Excel files
+input_dir = "/mnt/c/Users/MTECH COMPUTERS/Documents/RAW_RESULTS"
+
+# Base output folders
+base_wsl_output = "/home/ernest/cleaned_results"  # WSL cleaned folder
+base_win_output = "/mnt/c/Users/MTECH COMPUTERS/Documents/CLEANED_RESULTS"  # Windows cleaned folder
+
+# -----------------------------
+# Step 2: Create timestamped folders with obj_result prefix
+# -----------------------------
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+folder_name = f"obj_result_{timestamp}"
+output_dir = os.path.join(base_wsl_output, folder_name)
+windows_doc_folder = os.path.join(base_win_output, folder_name)
+
+os.makedirs(output_dir, exist_ok=True)
+os.makedirs(windows_doc_folder, exist_ok=True)
+
+# -----------------------------
+# Step 3: Helper to sanitize filenames for Windows
+# -----------------------------
+def sanitize_filename(name):
+    return re.sub(r'[<>:"/\\|?*]', '_', name)
+
+# -----------------------------
+# Step 4: Find all CSV and Excel files in RAW_RESULTS
+# -----------------------------
+csv_files = glob.glob(os.path.join(input_dir, "*.csv"))
+xls_files = glob.glob(os.path.join(input_dir, "*.xls")) + glob.glob(os.path.join(input_dir, "*.xlsx"))
+
+# Exclude temporary Excel files starting with '~$'
+xls_files = [f for f in xls_files if not os.path.basename(f).startswith('~$')]
+csv_files = [f for f in csv_files if not os.path.basename(f).startswith('~$')]
+
+all_files = csv_files + xls_files
+
+if not all_files:
+    print("❌ No CSV or Excel files found in RAW_RESULTS folder.")
+    exit()
+
+all_cleaned_dfs = []
+
+# -----------------------------
+# Step 5: Process each file
+# -----------------------------
+for file in all_files:
+    file_name = os.path.basename(file)
+    print(f"Processing: {file_name}")
+
+    # Load file
+    try:
+        if file.lower().endswith(".csv"):
+            df = pd.read_csv(file)
+        else:  # Excel
+            df = pd.read_excel(file, engine='openpyxl')
+    except Exception as e:
+        print(f"⚠️ Error reading {file_name}: {e}")
+        continue
+
+    # Check required columns
+    required_cols = ['Surname', 'First name', 'Grade/20.00']
+    if not all(col in df.columns for col in required_cols):
+        print(f"⚠️ Skipping {file_name}: required columns not found")
+        continue
+
+    # Keep only required columns
+    cleaned_df = df[required_cols].copy()
+
+    # Rename columns
+    cleaned_df.rename(columns={
+        'Surname': 'MAT NO.',
+        'First name': 'FULL NAME',
+        'Grade/20.00': 'Grade/20.00'
+    }, inplace=True)
+
+    # Sort by MAT NO. A-Z (case-insensitive)
+    cleaned_df.sort_values(by='MAT NO.', key=lambda x: x.str.upper(), inplace=True)
+
+    # Reset index and add Serial Number (SN)
+    cleaned_df.reset_index(drop=True, inplace=True)
+    cleaned_df.insert(0, 'SN', range(1, len(cleaned_df) + 1))
+
+    # -----------------------------
+    # Remove SN for Overall Average row only
+    # -----------------------------
+    mask = cleaned_df['MAT NO.'].str.contains('Overall average', case=False, na=False)
+    cleaned_df.loc[mask, 'SN'] = ''
+
+    # -----------------------------
+    # Prepare output filenames
+    # -----------------------------
+    base_name = os.path.splitext(file_name)[0]
+    safe_base_name = sanitize_filename(base_name)
+
+    wsl_output_file = os.path.join(output_dir, f"cleaned_{safe_base_name}.csv")
+    windows_output_file = os.path.join(windows_doc_folder, f"cleaned_{safe_base_name}.csv")
+
+    # -----------------------------
+    # Save cleaned CSVs
+    # -----------------------------
+    cleaned_df.to_csv(wsl_output_file, index=False)
+    cleaned_df.to_csv(windows_output_file, index=False)
+
+    print(f"✅ Cleaned CSV saved in WSL: {wsl_output_file}")
+    print(f"✅ Cleaned CSV saved in Windows Documents: {windows_output_file}\n")
+
+    all_cleaned_dfs.append(cleaned_df)  # For master CSV
+
+# -----------------------------
+# Step 6: Merge all cleaned files into a master CSV
+# -----------------------------
+if all_cleaned_dfs:
+    master_df = pd.concat(all_cleaned_dfs, ignore_index=True)
+
+    # Remove SN for Overall Average row in master
+    mask_master = master_df['MAT NO.'].str.contains('Overall average', case=False, na=False)
+    master_df.loc[mask_master, 'SN'] = ''
+
+    master_wsl = os.path.join(output_dir, "master_cleaned_results.csv")
+    master_windows = os.path.join(windows_doc_folder, "master_cleaned_results.csv")
+
+    master_df.to_csv(master_wsl, index=False)
+    master_df.to_csv(master_windows, index=False)
+
+    print(f"🎉 Master CSV saved in WSL: {master_wsl}")
+    print(f"🎉 Master CSV saved in Windows Documents: {master_windows}")
+
+print("✅ All processing completed successfully!")
+
