@@ -5,10 +5,10 @@ caosce_result.py
 CAOSCE cleaning script (updated with robust FULL NAME extraction and proper S/N sorting).
 
 Place raw files (CSV/XLS/XLSX) into:
-  /mnt/c/Users/MTECH COMPUTERS/Documents/CAOSCE_RAW
+  /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT
 
 Cleaned output (CSV + formatted XLSX) will be saved to:
-  /mnt/c/Users/MTECH COMPUTERS/Documents/CAOSCE_CLEAN
+  /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT
 
 Final cleaned layout:
 S/N  EXAM NO.  FULL NAME  PS1_Score/  PS3_Score/  PS5_Score/  QS2_Score/  QS4_Score/  QS6_Score/  VIVA/10
@@ -26,8 +26,8 @@ from openpyxl.utils import get_column_letter
 # ---------------------------
 # Configuration
 # ---------------------------
-RAW_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/CAOSCE_RAW"
-CLEAN_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/CAOSCE_CLEAN"
+RAW_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
+CLEAN_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT"
 os.makedirs(RAW_DIR, exist_ok=True)
 os.makedirs(CLEAN_DIR, exist_ok=True)
 
@@ -124,7 +124,7 @@ def process_files():
         path = os.path.join(RAW_DIR, fname)
         lower = fname.lower()
 
-        # Determine station type from filename
+        # Determine station type
         station_key = None
         if "procedure" in lower:
             if "one" in lower or "station 1" in lower: station_key = "procedure_station_one"
@@ -172,17 +172,13 @@ def process_files():
                     "VIVA/10": None
                 }
 
-            # ---------------------------
             # Robust FULL NAME extraction
-            # ---------------------------
             full_name_candidate = None
-            # Prefer fullname column
             if fullname_col and pd.notna(row.get(fullname_col)):
                 val = str(row.get(fullname_col)).strip()
                 if val and re.search(r"[A-Za-z]{2,}", val):
                     full_name_candidate = val
 
-            # Fallback: search other columns containing letters, skip username/exam_no
             if not full_name_candidate:
                 for c in df.columns:
                     if c == username_col:
@@ -192,13 +188,10 @@ def process_files():
                         full_name_candidate = v
                         break
 
-            if full_name_candidate:
-                if not results[exam_no]["FULL NAME"]:
-                    results[exam_no]["FULL NAME"] = full_name_candidate
+            if full_name_candidate and not results[exam_no]["FULL NAME"]:
+                results[exam_no]["FULL NAME"] = full_name_candidate
 
-            # ---------------------------
             # Score assignment
-            # ---------------------------
             score_val = None
             if station_key == "viva":
                 if viva_col:
@@ -218,34 +211,26 @@ def process_files():
 
         print(f"📂 Processed {fname} ({rows_added} rows read)")
 
-    # ---------------------------
-    # Build final DataFrame
-    # ---------------------------
+    # Final DataFrame
     final_cols = ["EXAM NO.", "FULL NAME",
                   "PS1_Score/", "PS3_Score/", "PS5_Score/",
                   "QS2_Score/", "QS4_Score/", "QS6_Score/",
                   "VIVA/10"]
     df_out = pd.DataFrame(list(results.values()))
 
-    # Fill missing FULL NAME from other stations
     df_out["FULL NAME"] = df_out.groupby("EXAM NO.")["FULL NAME"].transform(lambda x: x.ffill().bfill())
 
-    # Sort by EXAM NO. numerically
     df_out["__exam_num_sort"] = pd.to_numeric(df_out["EXAM NO."], errors="coerce")
     df_out.sort_values(by=["__exam_num_sort", "EXAM NO."], ascending=[True, True], inplace=True, na_position="last")
     df_out.drop(columns="__exam_num_sort", inplace=True)
     df_out.reset_index(drop=True, inplace=True)
 
-    # Add S/N
     df_out.insert(0, "S/N", range(1, len(df_out) + 1))
 
-    # Replace missing scores
     for col in final_cols[2:]:
         df_out[col] = df_out[col].apply(lambda v: "NO SCORE" if v is None or (isinstance(v, float) and math.isnan(v)) else v)
 
-    # ---------------------------
-    # Save CSV and XLSX
-    # ---------------------------
+    # Save
     ts = datetime.now().strftime(TIMESTAMP_FMT)
     out_csv = os.path.join(CLEAN_DIR, f"{OUTPUT_BASENAME}_{ts}.csv")
     out_xlsx = os.path.join(CLEAN_DIR, f"{OUTPUT_BASENAME}_{ts}.xlsx")
@@ -254,9 +239,7 @@ def process_files():
     print(f"\nSaved cleaned CSV: {out_csv}")
     print(f"Saved cleaned XLSX (pre-format): {out_xlsx}")
 
-    # ---------------------------
-    # Excel formatting
-    # ---------------------------
+    # Format Excel
     try:
         wb = load_workbook(out_xlsx)
         ws = wb.active
@@ -298,9 +281,6 @@ def process_files():
 
     print("\n✅ CAOSCE cleaning completed. Files saved in:", CLEAN_DIR)
 
-# ---------------------------
-# Entrypoint
-# ---------------------------
+
 if __name__ == "__main__":
     process_files()
-

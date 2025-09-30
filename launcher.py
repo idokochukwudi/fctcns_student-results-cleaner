@@ -6,7 +6,7 @@ Centralized launcher for student result cleaning scripts.
 
 Features:
 - Password protection using .env file (hidden input)
-- Auto-create required folders in Windows Documents
+- Auto-create required folders in Windows Documents/PROCESS_RESULT
 - Prompt to select which script to run
 - Works with WSL and Python 3
 - User-friendly prompts and messages
@@ -15,7 +15,6 @@ Features:
 import os
 import subprocess
 import sys
-from dotenv import load_dotenv
 from getpass import getpass  # Hide password input
 
 # ---------------------------
@@ -27,15 +26,35 @@ YELLOW = "\033[93m"
 RESET = "\033[0m"
 
 # ---------------------------
-# Load environment variables
+# Base directory inside Windows Documents
 # ---------------------------
-BASE_DIR = os.path.expanduser("~/student_result_cleaner")
+BASE_DIR = os.path.expanduser("~/Documents/PROCESS_RESULT")
+
+# ---------------------------
+# Load environment variables from .env
+# ---------------------------
+try:
+    from dotenv import load_dotenv, find_dotenv
+except ModuleNotFoundError:
+    print(f"{RED}❌ python-dotenv is not installed. Please install it in your venv:{RESET}")
+    print(f"{YELLOW}pip install python-dotenv{RESET}")
+    sys.exit(1)
+
 dotenv_path = os.path.join(BASE_DIR, ".env")
+if not os.path.exists(dotenv_path):
+    # fallback to launcher folder if BASE_DIR .env not found
+    dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
+
+if not os.path.exists(dotenv_path):
+    print(f"{RED}❌ .env file not found in {BASE_DIR} or launcher directory.{RESET}")
+    input("Press any key to exit . . .")
+    sys.exit(1)
+
 load_dotenv(dotenv_path)
 PASSWORD = os.environ.get("STUDENT_CLEANER_PASSWORD")
 
 if not PASSWORD:
-    print(f"{RED}❌ .env file missing or STUDENT_CLEANER_PASSWORD not set.{RESET}")
+    print(f"{RED}❌ STUDENT_CLEANER_PASSWORD not set in .env.{RESET}")
     input("Press any key to exit . . .")
     sys.exit(1)
 
@@ -54,20 +73,18 @@ else:
     sys.exit(1)
 
 # ---------------------------
-# Windows username detection
-# ---------------------------
-WINDOWS_USER = "MTECH COMPUTERS"  # Replace if your Windows username changes
-
-# ---------------------------
-# Define folders
+# Define folders inside PROCESS_RESULT
 # ---------------------------
 FOLDERS = {
-    "CAOSCE_RAW": f"/mnt/c/Users/{WINDOWS_USER}/Documents/CAOSCE_RAW",
-    "CAOSCE_CLEAN": f"/mnt/c/Users/{WINDOWS_USER}/Documents/CAOSCE_CLEAN",
-    "RAW_RESULTS": f"/mnt/c/Users/{WINDOWS_USER}/Documents/RAW_RESULTS",
-    "CLEANED_RESULTS": f"/mnt/c/Users/{WINDOWS_USER}/Documents/CLEANED_RESULTS",
-    "RAW_JAMB_DB": f"/mnt/c/Users/{WINDOWS_USER}/Documents/RAW_JAMB_DB",
-    "CLEAN_JAMB_DB": f"/mnt/c/Users/{WINDOWS_USER}/Documents/CLEAN_JAMB_DB"
+    "INTERNAL_RAW": os.path.join(BASE_DIR, "INTERNAL_RESULT/RAW_INTERNAL_RESULT"),
+    "INTERNAL_CLEAN": os.path.join(BASE_DIR, "INTERNAL_RESULT/CLEAN_INTERNAL_RESULT"),
+    "CAOSCE_RAW": os.path.join(BASE_DIR, "CAOSCE_RESULT/RAW_CAOSCE_RESULT"),
+    "CAOSCE_CLEAN": os.path.join(BASE_DIR, "CAOSCE_RESULT/CLEAN_CAOSCE_RESULT"),
+    "PUTME_RAW": os.path.join(BASE_DIR, "PUTME_RESULT/RAW_PUTME_RESULT"),
+    "PUTME_RAW_BATCH": os.path.join(BASE_DIR, "PUTME_RESULT/RAW_CANDIDATE_BATCHES"),
+    "PUTME_CLEAN": os.path.join(BASE_DIR, "PUTME_RESULT/CLEAN_PUTME_RESULT"),
+    "JAMB_RAW": os.path.join(BASE_DIR, "JAMB_DB/RAW_JAMB_DB"),
+    "JAMB_CLEAN": os.path.join(BASE_DIR, "JAMB_DB/CLEAN_JAMB_DB")
 }
 
 # ---------------------------
@@ -81,12 +98,12 @@ for name, path in FOLDERS.items():
 # ---------------------------
 # Scripts paths
 # ---------------------------
-SCRIPTS_DIR = os.path.join(BASE_DIR, "scripts")
+SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "scripts")
 SCRIPTS = {
     "1": ("CAOSCE Result Cleaning", os.path.join(SCRIPTS_DIR, "caosce_result.py")),
-    "2": ("Internal Exam Cleaning (UTME/clean_results)", os.path.join(SCRIPTS_DIR, "clean_results.py")),
-    "3": ("UTME Result Cleaning (utme_result)", os.path.join(SCRIPTS_DIR, "utme_result.py")),
-    "4": ("JAMB Name Split (split_names)", os.path.join(SCRIPTS_DIR, "split_names.py"))
+    "2": ("Internal Exam Cleaning", os.path.join(SCRIPTS_DIR, "clean_results.py")),
+    "3": ("PUTME Result Cleaning", os.path.join(SCRIPTS_DIR, "utme_result.py")),
+    "4": ("JAMB Candidate Name Split", os.path.join(SCRIPTS_DIR, "split_names.py"))
 }
 
 # ---------------------------
@@ -108,11 +125,11 @@ while True:
         print(f"{RED}❌ Invalid selection. Please enter 1, 2, 3, or 4.{RESET}")
 
 # ---------------------------
-# Run selected script
+# Run selected script using current venv Python
 # ---------------------------
 print(f"\n{YELLOW}🚀 Running {script_name} ...{RESET}\n")
 try:
-    subprocess.run(["python3", script_to_run], check=True)
+    subprocess.run([sys.executable, script_to_run], check=True)
     print(f"\n{GREEN}✅ {script_name} completed successfully!{RESET}")
 except subprocess.CalledProcessError as e:
     print(f"\n{RED}❌ An error occurred while running {script_name}.{RESET}")

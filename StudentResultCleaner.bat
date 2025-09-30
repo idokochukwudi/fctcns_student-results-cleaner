@@ -1,3 +1,4 @@
 @echo off
-wsl python3 /home/ernest/student_result_cleaner/launcher.py
+:: Activate the WSL virtual environment and run the launcher
+wsl bash -c "source /home/ernest/student_result_cleaner/venv/bin/activate && python3 /home/ernest/student_result_cleaner/launcher.py"
 pause

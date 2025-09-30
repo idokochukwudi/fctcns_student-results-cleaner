@@ -7,10 +7,10 @@ import re
 # -----------------------------
 # Step 1: Define directories
 # -----------------------------
-input_dir = "/mnt/c/Users/MTECH COMPUTERS/Documents/RAW_RESULTS"
+input_dir = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT"
 
-base_wsl_output = "/home/ernest/cleaned_results"
-base_win_output = "/mnt/c/Users/MTECH COMPUTERS/Documents/CLEANED_RESULTS"
+base_wsl_output = "/home/ernest/PROCESS_RESULT/INTERNAL_RESULT/CLEAN_INTERNAL_RESULT"
+base_win_output = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/CLEAN_INTERNAL_RESULT"
 
 # -----------------------------
 # Step 2: Create timestamped folders with obj_result prefix
@@ -30,18 +30,19 @@ def sanitize_filename(name):
     return re.sub(r'[<>:"/\\|?*]', '_', name)
 
 # -----------------------------
-# Step 4: Find all CSV and Excel files in RAW_RESULTS
+# Step 4: Find all CSV and Excel files in RAW_INTERNAL_RESULT
 # -----------------------------
 csv_files = glob.glob(os.path.join(input_dir, "*.csv"))
 xls_files = glob.glob(os.path.join(input_dir, "*.xls")) + glob.glob(os.path.join(input_dir, "*.xlsx"))
 
+# Exclude temporary files (~$)
 xls_files = [f for f in xls_files if not os.path.basename(f).startswith('~$')]
 csv_files = [f for f in csv_files if not os.path.basename(f).startswith('~$')]
 
 all_files = csv_files + xls_files
 
 if not all_files:
-    print("❌ No CSV or Excel files found in RAW_RESULTS folder.")
+    print("❌ No CSV or Excel files found in RAW_INTERNAL_RESULT folder.")
     exit()
 
 all_cleaned_dfs = []
@@ -78,11 +79,10 @@ for file in all_files:
     # Keep only required columns
     cleaned_df = df[required_cols].copy()
 
-    # Rename columns BUT keep Grade column name as-is (e.g. Grade/20.00)
+    # Rename columns BUT keep Grade column name as-is
     cleaned_df.rename(columns={
         'Surname': 'MAT NO.',
         'First name': 'FULL NAME',
-        # grade_col left unchanged
     }, inplace=True)
 
     # Sort by MAT NO.
@@ -131,4 +131,3 @@ if all_cleaned_dfs:
     print(f"🎉 Master CSV saved in Windows Documents: {master_windows}")
 
 print("✅ All processing completed successfully!")
-

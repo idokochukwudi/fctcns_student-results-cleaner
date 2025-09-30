@@ -3,8 +3,8 @@ import os
 from datetime import datetime
 
 # --- Paths ---
-raw_folder = "/mnt/c/Users/MTECH COMPUTERS/Documents/RAW_JAMB_DB"
-clean_base_folder = "/mnt/c/Users/MTECH COMPUTERS/Documents/CLEAN_JAMB_DB"
+raw_folder = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
+clean_base_folder = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/CLEAN_JAMB_DB"
 
 # Create time-stamped folder for this run
 timestamp_folder = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -82,4 +82,3 @@ for file in files:
 
     except Exception as e:
         print(f"⚠️ Skipping {file}: {e}")
-
