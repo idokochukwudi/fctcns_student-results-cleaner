@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Result Cleaner Dashboard</title>
+</head>
+<body>
+    <h1>Result Cleaner Dashboard</h1>
+    <ul>
+        <li><a href="{{ url_for('run_script', script_name='utme') }}">Run UTME Script</a></li>
+        <li><a href="{{ url_for('run_script', script_name='caosce') }}">Run CAOSCE Script</a></li>
+        <li><a href="{{ url_for('run_script', script_name='clean') }}">Run Clean Results Script</a></li>
+    </ul>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for msg in messages %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</body>
+</html>

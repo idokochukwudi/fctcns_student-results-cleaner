@@ -5,13 +5,13 @@ utme_result.py
 Robust UTME/PUTME cleaning and reporting script (no matplotlib required).
 
 Place raw files (CSV/XLS/XLSX) into:
-  PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT
+  PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT (or specify via --input-dir)
 
 Put raw candidate batches (optional) into:
-  PROCESS_RESULT/PUTME_RESULT/RAW_CANDIDATE_BATCHES
+  PROCESS_RESULT/PUTME_RESULT/RAW_CANDIDATE_BATCHES (or specify via --candidate-dir)
 
 Outputs cleaned CSV + formatted XLSX are saved to:
-  PROCESS_RESULT/PUTME_RESULT/CLEAN_PUTME_RESULT/UTME_RESULT-<timestamp>
+  PROCESS_RESULT/PUTME_RESULT/CLEAN_PUTME_RESULT/UTME_RESULT-<timestamp> (or specify via --output-dir)
 
 Combined output for all batches is saved as:
   PROCESS_RESULT/PUTME_RESULT/CLEAN_PUTME_RESULT/UTME_RESULT-<timestamp>/PUTME_COMBINE_RESULT_<timestamp>.xlsx
@@ -32,6 +32,7 @@ Features:
  - Combines all batches into a single PUTME_COMBINE_RESULT file
  - Enhanced logging for invalid APPLICATION IDs and batch-specific absent candidates
  - Supports batch IDs with or without spaces (e.g., Batch1 or Batch 1)
+ - Supports command-line arguments for non-interactive runs
 """
 
 import os
@@ -46,22 +47,29 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, PieChart, Reference
 from openpyxl.chart.label import DataLabelList
+import argparse
 
 # ---------------------------
-# Directory configuration
+# Directory configuration (defaults)
 # ---------------------------
-BASE_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT"
-RAW_DIR = os.path.join(BASE_DIR, "RAW_PUTME_RESULT")
-CANDIDATE_DIR = os.path.join(BASE_DIR, "RAW_CANDIDATE_BATCHES")
-CLEAN_DIR = os.path.join(BASE_DIR, "CLEAN_PUTME_RESULT")
+DEFAULT_BASE_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT"
+DEFAULT_RAW_DIR = os.path.join(DEFAULT_BASE_DIR, "RAW_PUTME_RESULT")
+DEFAULT_CANDIDATE_DIR = os.path.join(DEFAULT_BASE_DIR, "RAW_CANDIDATE_BATCHES")
+DEFAULT_CLEAN_DIR = os.path.join(DEFAULT_BASE_DIR, "CLEAN_PUTME_RESULT")
+DEFAULT_PASS_THRESHOLD = 50.0
+TIMESTAMP_FMT = "%Y-%m-%d_%H:%M:%S"
 
-PASS_THRESHOLD = 50.0                # highlight passes >= this
-TIMESTAMP_FMT = "%Y-%m-%d_%H:%M:%S"  # well-structured timestamp format
-
-# Ensure directories exist
-os.makedirs(RAW_DIR, exist_ok=True)
-os.makedirs(CLEAN_DIR, exist_ok=True)
-os.makedirs(CANDIDATE_DIR, exist_ok=True)
+def parse_args():
+    """Parse command-line arguments with defaults."""
+    parser = argparse.ArgumentParser(description="UTME/PUTME Results Cleaning Script")
+    parser.add_argument("--input-dir", default=DEFAULT_RAW_DIR, help=f"Input directory for raw files (default: {DEFAULT_RAW_DIR})")
+    parser.add_argument("--candidate-dir", default=DEFAULT_CANDIDATE_DIR, help=f"Directory for candidate batch files (default: {DEFAULT_CANDIDATE_DIR})")
+    parser.add_argument("--output-dir", default=DEFAULT_CLEAN_DIR, help=f"Output directory for cleaned files (default: {DEFAULT_CLEAN_DIR})")
+    parser.add_argument("--pass-threshold", type=float, default=DEFAULT_PASS_THRESHOLD, help=f"Pass threshold for highlighting (default: {DEFAULT_PASS_THRESHOLD})")
+    parser.add_argument("--batch-id", help="Specific batch ID to process (e.g., 'Batch1' or 'Batch 1')")
+    parser.add_argument("--non-interactive", action="store_true", help="Skip interactive prompts (e.g., for converted score)")
+    parser.add_argument("--converted-score-max", type=int, help="Target maximum for converted score (e.g., 60 for Score/60%%) when non-interactive")
+    return parser.parse_args()
 
 # ---------------------------
 # Soft pastel color palette for states and charts
@@ -165,35 +173,33 @@ def auto_column_width(ws, min_width=8, max_width=60):
 def load_candidate_batches(folder, batch_id=None):
     """Load candidate-batch files. If batch_id is provided, load only the matching batch file; otherwise, load all."""
     if not os.path.isdir(folder):
-        print(f"⚠️ Candidate batch directory {folder} does not exist.")
+        print(f"Warning: Candidate batch directory {folder} does not exist.")
         return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
     
     files = [f for f in os.listdir(folder) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
     if not files:
-        print(f"⚠️ No candidate batch files found in {folder}.")
+        print(f"Warning: No candidate batch files found in {folder}.")
         return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
     
     if batch_id:
-        # Normalize batch_id for matching (e.g., "Batch 1" -> "batch1")
         batch_id_normalized = re.sub(r'\s+', '', batch_id.lower())
-        # Try to find a file matching the batch_id (case-insensitive, with or without space)
         matching_files = [f for f in files if batch_id_normalized in re.sub(r'\s+', '', f.lower())]
         if not matching_files:
-            print(f"⚠️ No candidate batch file found for batch ID '{batch_id}' in {folder}.")
+            print(f"Warning: No candidate batch file found for batch ID '{batch_id}' in {folder}.")
             return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
         files = matching_files
     
     rows = []
     for fname in sorted(files):
         path = os.path.join(folder, fname)
-        print(f"📄 Loading candidate batch file: {fname}")
+        print(f"Loading candidate batch file: {fname}")
         try:
             if fname.lower().endswith(".csv"):
                 cdf = pd.read_csv(path, dtype=str)
             else:
                 cdf = pd.read_excel(path, dtype=str)
         except Exception as e:
-            print(f"❌ Error reading candidate batch {fname}: {e}")
+            print(f"Error reading candidate batch {fname}: {e}")
             continue
         exam_col = find_column_by_names(cdf, ["username", "exam no", "reg no", "mat no", "regnum", "reg number"])
         name_col = find_column_by_names(cdf, ["firstname", "full name", "name", "candidate name", "user full name", "RG_CANDNAME"])
@@ -236,17 +242,16 @@ def load_candidate_batches(folder, batch_id=None):
                 rows.append({"EXAM_NO": ex, "FULL_NAME": name or "", "PHONE NUMBER": phone or "", "STATE": state or ""})
     
     if not rows:
-        print(f"⚠️ No valid candidate records found in batch files{' for ' + batch_id if batch_id else ''}.")
+        print(f"No valid candidate records found in batch files{' for ' + batch_id if batch_id else ''}.")
         return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
     
     cdf_all = pd.DataFrame(rows)
-    # Check for duplicates
     duplicates = cdf_all[cdf_all.duplicated(subset=["EXAM_NO"], keep=False)]
     if not duplicates.empty:
-        print(f"⚠️ Found {len(duplicates)} duplicate EXAM_NO entries in candidate batches{' for ' + batch_id if batch_id else ''}:")
+        print(f"Found {len(duplicates)} duplicate EXAM_NO entries in candidate batches{' for ' + batch_id if batch_id else ''}:")
         print(duplicates[["EXAM_NO", "FULL_NAME"]].head().to_string())
     cdf_all = cdf_all.drop_duplicates(subset=["EXAM_NO"], keep="first")
-    print(f"📊 Loaded {len(cdf_all)} unique registered candidates from batch files{' for ' + batch_id if batch_id else ''}.")
+    print(f"Loaded {len(cdf_all)} unique registered candidates from batch files{' for ' + batch_id if batch_id else ''}.")
     if "PHONE NUMBER" in cdf_all.columns:
         cdf_all["PHONE NUMBER"] = cdf_all["PHONE NUMBER"].apply(clean_phone_value)
     return cdf_all
@@ -258,14 +263,14 @@ def extract_numeric_token(s):
     """Return first sequence of 3+ digits found in string, else None."""
     if s is None:
         return None
-    s = re.sub(r'\W+', '', str(s).strip().lower())  # Remove all non-alphanumeric
+    s = re.sub(r'\W+', '', str(s).strip().lower())
     m = re.search(r"(\d{3,})", s)
     return m.group(1) if m else None
 
 # ---------------------------
 # Format Excel sheet helper
 # ---------------------------
-def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header):
+def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_threshold):
     ws = wb[ws_name]
     header_font = Font(bold=True, size=12)
     for cell in ws[1]:
@@ -290,7 +295,6 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header):
         for cell in r:
             cell.border = border
 
-    # state row coloring
     try:
         state_col_index = list(cleaned.columns).index("STATE") + 1
         for row_idx in range(2, ws.max_row + 1):
@@ -301,7 +305,6 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header):
     except Exception:
         pass
 
-    # highlight passes
     score_cols_indices = [i + 1 for i, c in enumerate(cleaned.columns) if str(c).startswith("Score/")]
     pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
     pass_font = Font(color="006100")
@@ -312,7 +315,7 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header):
                 if cell.value is None or str(cell.value).strip() == "":
                     continue
                 val = float(cell.value)
-                if val >= PASS_THRESHOLD:
+                if val >= pass_threshold:
                     cell.fill = pass_fill
                     cell.font = pass_font
             except Exception:
@@ -321,7 +324,7 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header):
 # ---------------------------
 # Create Analysis and Charts sheets
 # ---------------------------
-def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, output_dir, ts, fname="Combined"):
+def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, output_dir, ts, fname="Combined", pass_threshold=DEFAULT_PASS_THRESHOLD):
     total_candidates = len(cleaned)
     score_series = df["_ScoreNum"].dropna().astype(float) if "_ScoreNum" in df.columns else pd.Series([], dtype=float)
     highest_score = score_series.max() if not score_series.empty else None
@@ -330,9 +333,8 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
 
     state_counts = df.groupby("STATE")["_ScoreNum"].count().sort_index() if "_ScoreNum" in df.columns else pd.Series(dtype=int)
     state_avg = df.groupby("STATE")["_ScoreNum"].mean().round(2).sort_index() if "_ScoreNum" in df.columns else pd.Series(dtype=float)
-    state_pass_count = df[df["_ScoreNum"].astype(float) >= PASS_THRESHOLD].groupby("STATE")["_ScoreNum"].count() if "_ScoreNum" in df.columns else pd.Series(dtype=int)
+    state_pass_count = df[df["_ScoreNum"].astype(float) >= pass_threshold].groupby("STATE")["_ScoreNum"].count() if "_ScoreNum" in df.columns else pd.Series(dtype=int)
 
-    # Analysis sheet
     if "Analysis" in wb.sheetnames:
         wb.remove(wb["Analysis"])
     anal = wb.create_sheet("Analysis")
@@ -343,7 +345,7 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
     anal.append(["Average Score (raw)", avg_score])
     anal.append([])
 
-    anal.append(["State", "Candidates", "Average Score", f"Pass Count (≥{int(PASS_THRESHOLD)})", "Pass Rate (%)"])
+    anal.append(["State", "Candidates", "Average Score", f"Pass Count (≥{int(pass_threshold)})", "Pass Rate (%)"])
     per_state_rows = []
     for st in sorted(set(df["STATE"].tolist())):
         cnt = int(state_counts.get(st, 0))
@@ -362,7 +364,6 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
                 cell.font = Font(bold=True, size=12)
             break
 
-    # Narrative summary
     if per_state_rows:
         sorted_by_count = sorted(per_state_rows, key=lambda r: r[1], reverse=True)
         most_state, most_cnt = sorted_by_count[0][0], sorted_by_count[0][1]
@@ -386,7 +387,6 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             anal.append([f"Highest pass rate: {best_pass_state}"])
         anal.append([f"Overall pass rate: {overall_pass_rate}%"])
 
-        # Add to console summary
         print(f"\nSummary for {fname}:")
         print(f"  Total candidates processed: {total_candidates}")
         print(f"  Highest raw score: {highest_score}")
@@ -395,18 +395,16 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
         print(f"  State with most candidates: {most_state} ({most_cnt})")
         print(f"  State with fewest candidates: {least_state} ({least_cnt})")
 
-    # Charts sheet
     if "Charts" in wb.sheetnames:
         wb.remove(wb["Charts"])
     chs = wb.create_sheet("Charts")
 
-    # Chart overview and legend table
     chs["A1"] = "UTME Results Charts Overview"
     chs["A1"].font = Font(bold=True, size=16)
     chs["A2"] = (
         "1. Candidates per State: Number of candidates from each state.\n"
         "2. Average Score per State: Average score (raw) per state.\n"
-        "3. Pass Rate per State: Percentage of candidates scoring ≥50 per state.\n"
+        f"3. Pass Rate per State: Percentage of candidates scoring ≥{int(pass_threshold)} per state.\n"
         "4. Score Distribution: Number of candidates in 10-point score ranges.\n"
         "5. Pass/Fail Distribution: Proportion of all candidates who passed vs. failed."
     )
@@ -423,13 +421,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
     state_colors = {}
     for st in sorted(set(df["STATE"].tolist())):
         fill = state_color_for(st)
-        state_colors[st] = fill.start_color.rgb[2:]  # Store color without 'FF' prefix
+        state_colors[st] = fill.start_color.rgb[2:]
         chs[f"C{row}"] = st
         chs[f"D{row}"].fill = fill
         row += 1
     auto_column_width(chs, min_width=10, max_width=30)
 
-    # Write data for state-based charts
     start_row = row + 2
     chs.cell(row=start_row, column=1, value="State")
     chs.cell(row=start_row, column=2, value="Candidates")
@@ -444,7 +441,6 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
 
     n = len(counts_sorted)
     if n > 0:
-        # Chart 1: Candidates per State
         try:
             c1 = BarChart()
             c1.title = "Candidates per State"
@@ -469,9 +465,8 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             c1.y_axis.titleFont = Font(size=14)
             chs.add_chart(c1, f"F{start_row}")
         except Exception as e:
-            print(f"⚠️ Error creating Candidates chart: {e}")
+            print(f"Error creating Candidates chart: {e}")
 
-        # Chart 2: Average Score per State
         try:
             c2 = BarChart()
             c2.title = "Average Score per State"
@@ -496,12 +491,11 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             c2.y_axis.titleFont = Font(size=14)
             chs.add_chart(c2, f"F{start_row + 20}")
         except Exception as e:
-            print(f"⚠️ Error creating Average Score chart: {e}")
+            print(f"Error creating Average Score chart: {e}")
 
-        # Chart 3: Pass Rate per State
         try:
             c3 = BarChart()
-            c3.title = f"Pass Rate per State (≥ {int(PASS_THRESHOLD)})"
+            c3.title = f"Pass Rate per State (≥ {int(pass_threshold)})"
             c3.x_axis.title = "State"
             c3.y_axis.title = "Pass Rate (%)"
             c3.width = 32
@@ -523,9 +517,8 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             c3.y_axis.titleFont = Font(size=14)
             chs.add_chart(c3, f"F{start_row + 40}")
         except Exception as e:
-            print(f"⚠️ Error creating Pass Rate chart: {e}")
+            print(f"Error creating Pass Rate chart: {e}")
 
-    # Chart 4: Score Distribution
     try:
         score_vals = score_series.dropna().astype(float)
         if len(score_vals) > 0:
@@ -564,11 +557,10 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
                 c4.y_axis.titleFont = Font(size=14)
                 chs.add_chart(c4, f"F{insert_row}")
             except Exception as e:
-                print(f"⚠️ Error creating Score Distribution chart: {e}")
+                print(f"Error creating Score Distribution chart: {e}")
     except Exception as e:
-        print(f"⚠️ Error processing score distribution: {e}")
+        print(f"Error processing score distribution: {e}")
 
-    # Chart 5: Overall Pass/Fail Pie Chart
     try:
         if total_candidates > 0:
             insert_row_pie = chs.max_row + 3
@@ -579,7 +571,7 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             chs.cell(row=insert_row_pie + 2, column=1, value="Fail")
             chs.cell(row=insert_row_pie + 2, column=2, value=overall_fail)
             pie = PieChart()
-            pie.title = f"Overall Pass/Fail Distribution (≥ {int(PASS_THRESHOLD)})"
+            pie.title = f"Overall Pass/Fail Distribution (≥ {int(pass_threshold)})"
             pie.width = 15
             pie.height = 10
             data_ref_pie = Reference(chs, min_col=2, min_row=insert_row_pie + 1, max_row=insert_row_pie + 2)
@@ -592,26 +584,24 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             pie.dLbls.showCatName = True
             pie.style = 10
             for i, series in enumerate(pie.series):
-                series.graphicalProperties.solidFill = "A8E6CF" if i == 0 else "FFCCCB"  # Soft Green for Pass, Soft Red for Fail
+                series.graphicalProperties.solidFill = "A8E6CF" if i == 0 else "FFCCCB"
             pie.title.font = Font(size=16, bold=True)
             chs.add_chart(pie, f"F{insert_row_pie}")
     except Exception as e:
-        print(f"⚠️ Error creating Pass/Fail Pie chart: {e}")
+        print(f"Error creating Pass/Fail Pie chart: {e}")
 
     auto_column_width(chs)
     auto_column_width(anal)
 
-    # Absent sheet
     absent_count = 0
     absent_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE"])
     invalid_ids = []
     if not candidates_df.empty:
         present_ids = set()
         if "APPLICATION ID" in cleaned.columns:
-            # Check for duplicates and invalid IDs
             duplicates = cleaned[cleaned["APPLICATION ID"].duplicated(keep=False)]
             if not duplicates.empty:
-                print(f"⚠️ Found {len(duplicates)} duplicate APPLICATION ID entries in {fname}:")
+                print(f"Found {len(duplicates)} duplicate APPLICATION ID entries in {fname}:")
                 print(duplicates[["APPLICATION ID", "FULL NAME"]].head().to_string())
             for index, v in cleaned["APPLICATION ID"].astype(str).items():
                 tok = extract_numeric_token(v)
@@ -620,15 +610,14 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
                 else:
                     invalid_ids.append((v, cleaned.at[index, "FULL NAME"]))
             if invalid_ids:
-                print(f"⚠️ Found {len(invalid_ids)} invalid APPLICATION ID entries in {fname} (non-numeric):")
-                for invalid_id, full_name in invalid_ids[:5]:  # Show first 5
+                print(f"Found {len(invalid_ids)} invalid APPLICATION ID entries in {fname} (non-numeric):")
+                for invalid_id, full_name in invalid_ids[:5]:
                     print(f"  APPLICATION ID: {invalid_id}, FULL NAME: {full_name}")
         for index, v in cleaned["FULL NAME"].astype(str).items():
             tok = extract_numeric_token(v)
             if tok and tok not in present_ids:
-                # Cross-check if this ID exists in candidates_df
                 if tok in candidates_df["EXAM_NO_NORMAL"].values:
-                    print(f"⚠️ Numeric ID {tok} found in FULL NAME but not in APPLICATION ID for {fname}, FULL NAME: {v}")
+                    print(f"Numeric ID {tok} found in FULL NAME but not in APPLICATION ID for {fname}, FULL NAME: {v}")
                     present_ids.add(tok)
         candidates_df["EXAM_NO_NORMAL"] = candidates_df["EXAM_NO"].astype(str).apply(lambda x: extract_numeric_token(x) or x)
         candidate_ids = set(candidates_df["EXAM_NO_NORMAL"].astype(str).tolist())
@@ -638,18 +627,17 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
         absent_df = absent_df.rename(columns={"EXAM_NO": "APPLICATION ID", "FULL_NAME": "FULL NAME", "PHONE NUMBER": "PHONE NO.", "STATE": "STATE"})
         absent_count = len(absent_df)
 
-        print(f"🕵️‍♂️ Absent candidates check for {fname}:")
+        print(f"Absent candidates check for {fname}:")
         print(f"  Total registered candidates: {len(candidates_df)}")
         print(f"  Total present candidates: {len(present_ids)}")
         print(f"  Total absent candidates: {absent_count}")
         print(f"  Expected absent candidates: {len(candidates_df) - len(present_ids)}")
         if absent_count != (len(candidates_df) - len(present_ids)):
-            print(f"⚠️ Discrepancy detected: Expected {len(candidates_df) - len(present_ids)} absent, got {absent_count}")
+            print(f"Warning: Discrepancy detected: Expected {len(candidates_df) - len(present_ids)} absent, got {absent_count}")
         print(f"  Sample absent IDs (first 5): {absent_ids[:5]}")
         if invalid_ids:
             print(f"  Note: {len(invalid_ids)} invalid APPLICATION IDs may affect absent count.")
 
-    # Always create Absent sheet
     if "Absent" in wb.sheetnames:
         wb.remove(wb["Absent"])
     abs_ws = wb.create_sheet("Absent")
@@ -674,21 +662,19 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
 # ---------------------------
 # Core processing for a single file
 # ---------------------------
-def process_file(path, output_dir, ts, all_candidates_df):
+def process_file(path, output_dir, ts, all_candidates_df, pass_threshold):
     fname = os.path.basename(path)
-    print(f"\n📂 Processing: {fname}")
+    print(f"\nProcessing: {fname}")
 
-    # Extract batch ID from filename (e.g., "Batch 1" or "Batch1" from "2025-PBN-EEXAM-PBN-Batch 1 Quiz-grades.xlsx")
     batch_id_match = re.search(r"(Batch\s*\d+)", fname, re.IGNORECASE)
     batch_id = batch_id_match.group(1) if batch_id_match else None
     if batch_id:
-        print(f"🔍 Detected batch ID: {batch_id}")
-        candidates_df = load_candidate_batches(CANDIDATE_DIR, batch_id=batch_id)
+        print(f"Detected batch ID: {batch_id}")
+        candidates_df = load_candidate_batches(os.path.dirname(path), batch_id=batch_id)
     else:
-        print(f"⚠️ Could not detect batch ID in filename {fname}. Using empty candidates list for batch-specific absent calculation.")
+        print(f"Warning: Could not detect batch ID in filename {fname}. Using empty candidates list for batch-specific absent calculation.")
         candidates_df = pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
 
-    # Load
     try:
         if fname.lower().endswith(".csv"):
             df = pd.read_csv(path, dtype=str)
@@ -701,12 +687,11 @@ def process_file(path, output_dir, ts, all_candidates_df):
                 except Exception:
                     df = pd.read_excel(path, dtype=str, engine="xlrd")
     except Exception as e:
-        print(f"❌ ERROR reading {fname}: {e}")
+        print(f"Error reading {fname}: {e}")
         return None, None, None
 
     df.rename(columns=lambda c: str(c).strip(), inplace=True)
 
-    # Map canonical names
     fullname_col = find_column_by_names(df, ["First name", "Firstname", "Full name", "Name", "Surname"])
     if fullname_col:
         df.rename(columns={fullname_col: "FULL NAME"}, inplace=True)
@@ -723,12 +708,10 @@ def process_file(path, output_dir, ts, all_candidates_df):
     if city_col:
         df.rename(columns={city_col: "STATE"}, inplace=True)
 
-    # drop requested columns
     for drop_col in ["Username", "Department", "State", "Started on", "Completed", "Time taken", "USERNAME", "DEPARTMENT"]:
         if drop_col in df.columns:
             df.drop(columns=[drop_col], inplace=True)
 
-    # ensure canonical columns
     if "FULL NAME" not in df.columns:
         df["FULL NAME"] = pd.NA
     if "PHONE NUMBER" not in df.columns:
@@ -741,10 +724,9 @@ def process_file(path, output_dir, ts, all_candidates_df):
     df["STATE"] = df["STATE"].replace(["", "nan", "None"], "NO STATE OF ORIGIN")
     df["STATE"] = df["STATE"].fillna("NO STATE OF ORIGIN")
 
-    # find grade column
     grade_col = find_grade_column(df)
     if not grade_col:
-        print(f"❌ Missing required column: a 'Grade/...' or 'Grade' column was not found in {fname}. Skipping.")
+        print(f"Skipping {fname}: Missing required column: a 'Grade/...' or 'Grade' column was not found.")
         return None, None, None
 
     if str(grade_col).strip().lower().startswith("grade/"):
@@ -764,12 +746,11 @@ def process_file(path, output_dir, ts, all_candidates_df):
     df = df[df["_ScoreNum"].notna()].copy()
 
     if df.empty:
-        print("⚠️ No valid rows remain after cleaning; skipping file.")
+        print(f"No valid rows remain after cleaning {fname}; skipping file.")
         return None, None, None
 
     df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
-    # sort and serials
     df.sort_values(by=["STATE", "_ScoreNum"], ascending=[True, False], inplace=True, na_position="last")
     df.reset_index(drop=True, inplace=True)
     df.insert(0, "S/N", range(1, len(df) + 1))
@@ -786,7 +767,6 @@ def process_file(path, output_dir, ts, all_candidates_df):
 
     cleaned = df[out_cols].copy()
 
-    # Add normalized Score/100
     found_max = re.search(r"(\d+(?:\.\d+)?)", str(score_header))
     original_max = float(found_max.group(1)) if found_max else 100.0
     cleaned["Score/100"] = ((df["_ScoreNum"].astype(float) / original_max) * 100).round(0).astype("Int64")
@@ -794,7 +774,6 @@ def process_file(path, output_dir, ts, all_candidates_df):
     cleaned = cleaned[~((cleaned["FULL NAME"].astype(str).str.strip() == "") &
                         (cleaned["PHONE NUMBER"].astype(str).str.strip() == ""))].copy()
 
-    # prepare output filenames
     base_name = f"UTME_RESULT_{os.path.splitext(fname)[0]}_{ts}"
     out_csv = os.path.join(output_dir, base_name + ".csv")
     out_xlsx = os.path.join(output_dir, base_name + ".xlsx")
@@ -804,39 +783,33 @@ def process_file(path, output_dir, ts, all_candidates_df):
         cleaned.to_excel(out_xlsx, index=False, engine="openpyxl")
     except Exception:
         cleaned.to_excel(out_xlsx, index=False)
-    print(f"Saved cleaned CSV: {out_csv}")
-    print(f"Saved cleaned XLSX (pre-format): {out_xlsx}")
+    print(f"Saved processed file: {os.path.basename(out_csv)}")
+    print(f"Saved processed file: {os.path.basename(out_xlsx)}")
 
-    # Excel formatting
     wb = load_workbook(out_xlsx)
     ws = wb.active
     ws.title = "Results"
-    format_excel_sheet(wb, "Results", cleaned, {}, score_header)
+    format_excel_sheet(wb, "Results", cleaned, {}, score_header, pass_threshold)
 
-    # Analysis and Charts
-    absent_df = create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, output_dir, ts, fname=fname)
+    absent_df = create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, output_dir, ts, fname=fname, pass_threshold=pass_threshold)
 
-    # Save workbook
     wb.save(out_xlsx)
-    print(f"✅ Final Excel saved with Analysis & Charts: {out_xlsx}")
-    print(f"  (CSV also available at: {out_csv})")
+    print(f"Saved processed file with Analysis & Charts: {os.path.basename(out_xlsx)}")
 
     return cleaned, df, absent_df
 
 # ---------------------------
 # Combine all batches
 # ---------------------------
-def combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts):
+def combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts, pass_threshold, non_interactive=False, converted_score_max=None):
     if not cleaned_dfs:
-        print("⚠️ No valid batches to combine.")
+        print("No valid batches to combine.")
         return
 
-    # Combine cleaned results
     combined_cleaned = pd.concat(cleaned_dfs, ignore_index=True)
-    # Check for duplicates
     duplicates = combined_cleaned[combined_cleaned["APPLICATION ID"].duplicated(keep=False)]
     if not duplicates.empty:
-        print(f"⚠️ Found {len(duplicates)} duplicate APPLICATION ID entries in combined results:")
+        print(f"Found {len(duplicates)} duplicate APPLICATION ID entries in combined results:")
         print(duplicates[["APPLICATION ID", "FULL NAME"]].head().to_string())
     combined_cleaned = combined_cleaned.drop_duplicates(subset=["APPLICATION ID"], keep="first")
     combined_cleaned.sort_values(by=["STATE", "Score/100"], ascending=[True, False], inplace=True)
@@ -844,60 +817,87 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts):
     combined_cleaned["S/N"] = range(1, len(combined_cleaned) + 1)
     combined_cleaned["STATE_SN"] = combined_cleaned.groupby("STATE").cumcount() + 1
 
-    # Add converted score column for combined result
     score_header = [col for col in combined_cleaned.columns if col.startswith("Score/") and col != "Score/100"][0]
     found_max = re.search(r"(\d+(?:\.\d+)?)", str(score_header))
     original_max = float(found_max.group(1)) if found_max else 100.0
-    add_conv = input("Add converted score column for combined result (e.g., convert Score/100 to Score/60)? (y/n): ").strip().lower()
-    if add_conv in ("y", "yes"):
-        tgt_raw = input("Enter target maximum (integer), e.g., 60: ").strip()
+
+    if non_interactive and converted_score_max is not None:
         try:
-            tgt = float(tgt_raw)
+            tgt = float(converted_score_max)
             new_col = f"Score/{int(tgt)}%"
             combined_cleaned[new_col] = ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt).round(0).astype("Int64")
-            print(f"✅ Added converted column '{new_col}' to combined result.")
+            print(f"Added converted column '{new_col}' to combined result.")
         except Exception as e:
-            print(f"⚠️ Invalid conversion value; skipped converted column: {e}")
+            print(f"Invalid conversion value; skipped converted column: {e}")
+    elif not non_interactive:
+        add_conv = input("Add converted score column for combined result (e.g., convert Score/100 to Score/60)? (y/n): ").strip().lower()
+        if add_conv in ("y", "yes"):
+            tgt_raw = input("Enter target maximum (integer), e.g., 60: ").strip()
+            try:
+                tgt = float(tgt_raw)
+                new_col = f"Score/{int(tgt)}%"
+                combined_cleaned[new_col] = ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt).round(0).astype("Int64")
+                print(f"Added converted column '{new_col}' to combined result.")
+            except Exception as e:
+                print(f"Invalid conversion value; skipped converted column: {e}")
 
-    # Combine raw data for analysis
     combined_df = pd.concat(dfs, ignore_index=True)
     combined_df = combined_df.drop_duplicates(subset=["APPLICATION ID"], keep="first")
 
-    # Save combined file
     out_xlsx = os.path.join(output_dir, f"PUTME_COMBINE_RESULT_{ts}.xlsx")
     combined_cleaned.to_excel(out_xlsx, index=False, engine="openpyxl")
-    print(f"Saved combined XLSX (pre-format): {out_xlsx}")
+    print(f"Saved processed file: {os.path.basename(out_xlsx)}")
 
-    # Format combined file
     wb = load_workbook(out_xlsx)
     ws = wb.active
     ws.title = "Results"
-    format_excel_sheet(wb, "Results", combined_cleaned, {}, score_header)
+    format_excel_sheet(wb, "Results", combined_cleaned, {}, score_header, pass_threshold)
 
-    # Analysis and Charts for combined data (use all candidates)
-    candidates_df = load_candidate_batches(CANDIDATE_DIR)  # Load all candidate batches
-    create_analysis_and_charts(wb, combined_cleaned, combined_df, candidates_df, score_header, output_dir, ts, fname="Combined")
+    candidates_df = load_candidate_batches(DEFAULT_CANDIDATE_DIR)
+    create_analysis_and_charts(wb, combined_cleaned, combined_df, candidates_df, score_header, output_dir, ts, fname="Combined", pass_threshold=pass_threshold)
 
     wb.save(out_xlsx)
-    print(f"✅ Combined Excel saved with Analysis & Charts: {out_xlsx}")
+    print(f"Saved processed file with Analysis & Charts: {os.path.basename(out_xlsx)}")
 
 # ---------------------------
 # Entrypoint
 # ---------------------------
 def main():
+    args = parse_args()
     print("Starting UTME Results Cleaning...")
+
+    # Use command-line arguments or defaults
+    RAW_DIR = args.input_dir
+    CANDIDATE_DIR = args.candidate_dir
+    CLEAN_DIR = args.output_dir
+    PASS_THRESHOLD = args.pass_threshold
+    BATCH_ID = args.batch_id
+    NON_INTERACTIVE = args.non_interactive
+    CONVERTED_SCORE_MAX = args.converted_score_max
+
+    # Ensure directories exist
+    os.makedirs(RAW_DIR, exist_ok=True)
+    os.makedirs(CLEAN_DIR, exist_ok=True)
+    os.makedirs(CANDIDATE_DIR, exist_ok=True)
+
+    # Filter files based on batch_id if provided
     files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith((".csv", ".xlsx", ".xls"))]
+    if BATCH_ID:
+        batch_id_normalized = re.sub(r'\s+', '', BATCH_ID.lower())
+        files = [f for f in files if batch_id_normalized in re.sub(r'\s+', '', f.lower())]
+        if not files:
+            print(f"No raw files found matching batch ID '{BATCH_ID}' in {RAW_DIR}")
+            return
+
     if not files:
-        print(f"❌ No raw files found in {RAW_DIR}\nPut your raw file(s) there and re-run.")
+        print(f"No raw files found in {RAW_DIR}\nPut your raw file(s) there and re-run.")
         return
 
-    # Generate timestamp once per run
     ts = datetime.now().strftime(TIMESTAMP_FMT)
     output_dir = os.path.join(CLEAN_DIR, f"UTME_RESULT-{ts}")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Load all candidates for combined file
-    all_candidates_df = load_candidate_batches(CANDIDATE_DIR)
+    all_candidates_df = load_candidate_batches(CANDIDATE_DIR, batch_id=BATCH_ID)
     outputs = []
     cleaned_dfs = []
     dfs = []
@@ -905,7 +905,7 @@ def main():
 
     for f in files:
         try:
-            cleaned, df, absent_df = process_file(os.path.join(RAW_DIR, f), output_dir, ts, all_candidates_df)
+            cleaned, df, absent_df = process_file(os.path.join(RAW_DIR, f), output_dir, ts, all_candidates_df, PASS_THRESHOLD)
             if cleaned is not None:
                 outputs.append((os.path.join(output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.csv"),
                                 os.path.join(output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.xlsx")))
@@ -913,17 +913,16 @@ def main():
                 dfs.append(df)
                 absent_dfs.append(absent_df)
         except Exception as e:
-            print(f"❌ ERROR processing {f}: {e}", file=sys.stderr)
+            print(f"Error processing {f}: {e}", file=sys.stderr)
 
-    # Combine all batches
-    combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts)
+    combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts, PASS_THRESHOLD, NON_INTERACTIVE, CONVERTED_SCORE_MAX)
 
-    print("\n✅ All done. Cleaned files (CSV + XLSX) are in:", output_dir)
+    print("\nProcessing completed successfully.")
     if outputs:
         for csvp, xl in outputs:
-            print(" -", csvp)
-            print(" -", xl)
-    print(f" - {os.path.join(output_dir, f'PUTME_COMBINE_RESULT_{ts}.xlsx')}")
+            print(f" - Saved processed file: {os.path.basename(csvp)}")
+            print(f" - Saved processed file: {os.path.basename(xl)}")
+    print(f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_{ts}.xlsx'))}")
 
 if __name__ == "__main__":
     main()

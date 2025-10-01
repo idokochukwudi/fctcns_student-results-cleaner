@@ -118,7 +118,7 @@ def process_files():
 
     files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith((".xlsx", ".xls", ".csv"))]
     if not files:
-        print("❌ No raw files found in", RAW_DIR)
+        print(f"No raw files found in {RAW_DIR}")
         return
 
     results = {}
@@ -146,7 +146,7 @@ def process_files():
             else:
                 df = pd.read_excel(path, dtype=str)
         except Exception as e:
-            print(f"❌ ERROR reading {fname}: {e}")
+            print(f"Error reading {fname}: {e}")
             continue
 
         df.rename(columns=lambda c: str(c).strip(), inplace=True)
@@ -212,7 +212,7 @@ def process_files():
 
             rows_added += 1
 
-        print(f"📂 Processed {fname} ({rows_added} rows read)")
+        print(f"Processed {fname} ({rows_added} rows read)")
 
     # Final DataFrame
     final_cols = ["EXAM NO.", "FULL NAME",
@@ -238,8 +238,8 @@ def process_files():
     out_xlsx = os.path.join(output_dir, f"{OUTPUT_BASENAME}_{ts}.xlsx")
     df_out.to_csv(out_csv, index=False)
     df_out.to_excel(out_xlsx, index=False, engine="openpyxl")
-    print(f"\nSaved cleaned CSV: {out_csv}")
-    print(f"Saved cleaned XLSX (pre-format): {out_xlsx}")
+    print(f"Saved processed file: {os.path.basename(out_csv)}")
+    print(f"Saved processed file: {os.path.basename(out_xlsx)}")
 
     # Format Excel
     try:
@@ -277,11 +277,12 @@ def process_files():
 
         auto_column_width(ws)
         wb.save(out_xlsx)
-        print(f"Saved formatted XLSX: {out_xlsx}")
+        print(f"Saved processed file with formatting: {os.path.basename(out_xlsx)}")
     except Exception as e:
-        print("⚠️ Error formatting XLSX:", e)
+        print(f"Error formatting XLSX: {e}")
 
-    print("\n✅ CAOSCE cleaning completed. Files saved in:", output_dir)
+    print("\nProcessing completed successfully.")
+    print(f"Files saved in: {output_dir}")
 
 
 if __name__ == "__main__":
