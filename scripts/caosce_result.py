@@ -2,13 +2,13 @@
 """
 caosce_result.py
 
-CAOSCE cleaning script (updated with robust FULL NAME extraction and proper S/N sorting).
+CAOSCE cleaning script (updated with robust FULL NAME extraction, proper S/N sorting, and timestamped output folders).
 
 Place raw files (CSV/XLS/XLSX) into:
   /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT
 
-Cleaned output (CSV + formatted XLSX) will be saved to:
-  /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT
+Cleaned output (CSV + formatted XLSX) will be saved to a timestamped folder:
+  /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT/CAOSCE_RESULT_YYYY-MM-DD_HH:MM:SS
 
 Final cleaned layout:
 S/N  EXAM NO.  FULL NAME  PS1_Score/  PS3_Score/  PS5_Score/  QS2_Score/  QS4_Score/  QS6_Score/  VIVA/10
@@ -27,11 +27,8 @@ from openpyxl.utils import get_column_letter
 # Configuration
 # ---------------------------
 RAW_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
-CLEAN_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT"
-os.makedirs(RAW_DIR, exist_ok=True)
-os.makedirs(CLEAN_DIR, exist_ok=True)
-
-TIMESTAMP_FMT = "%Y%m%d_%H%M%S"
+BASE_CLEAN_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT"
+TIMESTAMP_FMT = "%Y-%m-%d_%H:%M:%S"
 OUTPUT_BASENAME = "CAOSCE_CLEANED"
 
 STATION_COLUMN_MAP = {
@@ -112,6 +109,12 @@ def auto_column_width(ws, min_width=8, max_width=60):
 # ---------------------------
 def process_files():
     print("Starting CAOSCE Results Cleaning...\n")
+
+    # Create timestamped output directory
+    ts = datetime.now().strftime(TIMESTAMP_FMT)
+    output_dir = os.path.join(BASE_CLEAN_DIR, f"CAOSCE_RESULT_{ts}")
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(RAW_DIR, exist_ok=True)
 
     files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith((".xlsx", ".xls", ".csv"))]
     if not files:
@@ -230,10 +233,9 @@ def process_files():
     for col in final_cols[2:]:
         df_out[col] = df_out[col].apply(lambda v: "NO SCORE" if v is None or (isinstance(v, float) and math.isnan(v)) else v)
 
-    # Save
-    ts = datetime.now().strftime(TIMESTAMP_FMT)
-    out_csv = os.path.join(CLEAN_DIR, f"{OUTPUT_BASENAME}_{ts}.csv")
-    out_xlsx = os.path.join(CLEAN_DIR, f"{OUTPUT_BASENAME}_{ts}.xlsx")
+    # Save to timestamped directory
+    out_csv = os.path.join(output_dir, f"{OUTPUT_BASENAME}_{ts}.csv")
+    out_xlsx = os.path.join(output_dir, f"{OUTPUT_BASENAME}_{ts}.xlsx")
     df_out.to_csv(out_csv, index=False)
     df_out.to_excel(out_xlsx, index=False, engine="openpyxl")
     print(f"\nSaved cleaned CSV: {out_csv}")
@@ -279,7 +281,7 @@ def process_files():
     except Exception as e:
         print("⚠️ Error formatting XLSX:", e)
 
-    print("\n✅ CAOSCE cleaning completed. Files saved in:", CLEAN_DIR)
+    print("\n✅ CAOSCE cleaning completed. Files saved in:", output_dir)
 
 
 if __name__ == "__main__":
