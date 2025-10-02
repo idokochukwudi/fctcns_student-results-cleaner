@@ -1,119 +1,159 @@
 import os
 import subprocess
-import traceback
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+import re
+from flask import Flask, request, redirect, url_for, render_template, flash, session
+from functools import wraps
 from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-COLLEGE = os.getenv("COLLEGE_NAME", "Default College")
-DEPARTMENT = os.getenv("DEPARTMENT", "Default Department")
-APP_PASSWORD = os.getenv("STUDENT_CLEANER_PASSWORD", "admin")
-FLASK_SECRET = os.getenv("FLASK_SECRET", "supersecretkey")
+from jinja2 import TemplateNotFound, UndefinedError
 
 app = Flask(__name__)
-app.secret_key = FLASK_SECRET
+app.secret_key = os.getenv("FLASK_SECRET", "default_secret_key_1234567890")
+load_dotenv()
+app.logger.info(f"Loaded environment variables - STUDENT_CLEANER_PASSWORD: {os.getenv('STUDENT_CLEANER_PASSWORD', 'Not found')}, COLLEGE_NAME: {os.getenv('COLLEGE_NAME', 'Not found')}, DEPARTMENT: {os.getenv('DEPARTMENT', 'Not found')}, FLASK_SECRET: {os.getenv('FLASK_SECRET', 'Not found')}")
 
-# Script paths (absolute)
-SCRIPTS_DIR = "/home/ernest/student_result_cleaner/scripts"
+PASSWORD = os.getenv("STUDENT_CLEANER_PASSWORD", "admin")
+COLLEGE = os.getenv("COLLEGE_NAME", "FCT College of Nursing Sciences, Gwagwalada")
+DEPARTMENT = os.getenv("DEPARTMENT", "Examinations Office")
 
 SCRIPT_MAP = {
-    "utme": os.path.join(SCRIPTS_DIR, "utme_result.py"),
-    "caosce": os.path.join(SCRIPTS_DIR, "caosce_result.py"),
-    "clean": os.path.join(SCRIPTS_DIR, "clean_results.py"),
-    "split": os.path.join(SCRIPTS_DIR, "split_names.py"),
+    "utme": "scripts/utme_result.py",
+    "caosce": "scripts/caosce_result.py",
+    "clean": "scripts/clean_results.py",
+    "split": "scripts/split_names.py"
 }
-
-# Success indicators for counting processed input files
 SUCCESS_INDICATORS = {
-    "utme": ["Processing: "],  # Count input files processed
-    "caosce": ["Processed "],  # Count input files processed
-    "clean": ["Cleaned CSV saved in WSL", "Master CSV saved in WSL"],
-    "split": ["Saved processed file"]
+    "utme": [r"Processing: (2025-PBN-EEXAM-PBN-Batch\d+ Quiz-grades\.xlsx)"],
+    "caosce": [r"Processed (CAOSCE SET2023A.*?|VIVA \([0-9]+\)\.xlsx) \(\d+ rows read\)"],
+    "clean": [r"Cleaned CSV saved in Windows Documents: .*?cleaned_(Set2023A Class-[^\.]+)\.csv"],
+    "split": [r"Saved processed file: (clean_jamb_DB_.*?\.csv)"]
 }
 
-# Login + Auth
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    error = None
-    if request.method == "POST":
-        password = request.form.get("password")
-        if password == APP_PASSWORD:
-            session["logged_in"] = True
-            return redirect(url_for("dashboard"))
-        else:
-            error = "Invalid password. Please try again."
-    return render_template(
-        "login.html",
-        college=COLLEGE,
-        department=DEPARTMENT,
-        error=error
-    )
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        app.logger.debug(f"Session data: {session}")
+        if "logged_in" not in session:
+            app.logger.warning("Session 'logged_in' not found, redirecting to login")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
 
-@app.route("/logout")
-def logout():
-    session.clear()
+@app.route("/", methods=["GET"])
+def index():
     return redirect(url_for("login"))
 
-@app.before_request
-def require_login():
-    allowed_routes = {"login", "static"}
-    if "logged_in" not in session and request.endpoint not in allowed_routes:
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        password = request.form.get("password")
+        app.logger.info(f"Attempted login with password: {password}, Expected: {PASSWORD}")
+        if password == PASSWORD:
+            session["logged_in"] = True
+            app.logger.info(f"Session set: {session}")
+            flash("Successfully logged in!")
+            return redirect(url_for("dashboard"))
+        else:
+            app.logger.error(f"Login failed. Provided: {password}, Expected: {PASSWORD}")
+            flash("Invalid password. Please try again.")
+            return redirect(url_for("login"))
+    return render_template("login.html", college=COLLEGE)
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    try:
+        return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT)
+    except TemplateNotFound as e:
+        app.logger.error(f"Template not found: {str(e)}")
+        flash(f"Template error: {str(e)}")
+        return redirect(url_for("login"))
+    except UndefinedError as e:
+        app.logger.error(f"Template rendering error: {str(e)}")
+        flash(f"Template rendering error: {str(e)}")
+        return redirect(url_for("login"))
+    except Exception as e:
+        app.logger.error(f"Unexpected error in dashboard: {str(e)}")
+        flash(f"Server error: {str(e)}")
         return redirect(url_for("login"))
 
-# Dashboard
-@app.route("/")
-def dashboard():
-    scripts = {
-        "utme": {"desc": "Process PUTME Examination Results"},
-        "caosce": {"desc": "Process CAOSCE Examination Results"},
-        "clean": {"desc": "Process Objective Examination Results"},
-        "split": {"desc": "Process JAMB Candidate Database"},
-    }
-    return render_template(
-        "dashboard.html",
-        college=COLLEGE,
-        department=DEPARTMENT,
-        scripts=scripts
-    )
-
-# Run Scripts
 @app.route("/run/<script_name>", methods=["GET", "POST"])
+@login_required
 def run_script(script_name):
-    if script_name not in SCRIPT_MAP:
-        flash("Invalid script requested.")
-        return redirect(url_for("dashboard"))
-
-    script_path = SCRIPT_MAP[script_name]
-    script_desc = {
-        "utme": "PUTME Examination Results",
-        "caosce": "CAOSCE Examination Results",
-        "clean": "Objective Examination Results",
-        "split": "JAMB Candidate Database"
-    }.get(script_name, "Script")
-
-    # Verify script exists
-    if not os.path.isfile(script_path):
-        flash(f"Script file not found: {script_path}")
-        return redirect(url_for("dashboard"))
-
-    # Define input directory for error messaging
-    input_dir = {
-        "utme": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT",
-        "caosce": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT",
-        "clean": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT",
-        "split": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
-    }.get(script_name, "the input directory")
-
     try:
+        if script_name not in SCRIPT_MAP:
+            app.logger.error(f"Invalid script requested: {script_name}")
+            flash("Invalid script requested.")
+            return redirect(url_for("dashboard"))
+
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        script_path = os.path.join(project_root, SCRIPT_MAP[script_name])
+        script_desc = {
+            "utme": "PUTME Examination Results",
+            "caosce": "CAOSCE Examination Results",
+            "clean": "Objective Examination Results",
+            "split": "JAMB Candidate Database"
+        }.get(script_name, "Script")
+
+        app.logger.debug(f"Checking script path: {script_path}")
+        if not os.path.isfile(script_path):
+            app.logger.error(f"Script file not found: {script_path}")
+            flash(f"Script file not found: {script_path}")
+            return redirect(url_for("dashboard"))
+
+        if not os.access(script_path, os.X_OK):
+            app.logger.warning(f"Script {script_path} is not executable. Attempting to fix permissions.")
+            os.chmod(script_path, 0o755)
+
+        input_dir = {
+            "utme": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT",
+            "caosce": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT",
+            "clean": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT",
+            "split": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
+        }.get(script_name, "the input directory")
+
+        app.logger.debug(f"Checking input directory: {input_dir}")
+        if not os.path.isdir(input_dir):
+            app.logger.error(f"Input directory not found: {input_dir}")
+            flash(f"Input directory not found: {input_dir}")
+            return redirect(url_for("dashboard"))
+
+        try:
+            dir_contents = os.listdir(input_dir)
+            valid_extensions = ('.csv', '.xlsx', '.xls')
+            input_files = [f for f in dir_contents if f.lower().endswith(valid_extensions)]
+            app.logger.debug(f"Input directory contents: {dir_contents}")
+            app.logger.debug(f"Valid input files: {input_files}")
+            for item in input_files:
+                item_path = os.path.join(input_dir, item)
+                permissions = oct(os.stat(item_path).st_mode & 0o777)
+                readable = os.access(item_path, os.R_OK)
+                writable = os.access(item_path, os.W_OK)
+                app.logger.debug(f"File: {item_path}, Permissions: {permissions}, Readable: {readable}, Writable: {writable}")
+            if not input_files:
+                app.logger.warning(f"No valid CSV/Excel files found in {input_dir}")
+                flash(f"No CSV or Excel files found in {input_dir}")
+                return redirect(url_for("dashboard"))
+        except Exception as e:
+            app.logger.error(f"Failed to list input directory {input_dir}: {str(e)}")
+            flash(f"Cannot access input directory: {input_dir}")
+            return redirect(url_for("dashboard"))
+
         if script_name == "utme":
             if request.method == "GET":
-                return render_template(
-                    "utme_form.html",
-                    college=COLLEGE,
-                    department=DEPARTMENT
-                )
+                try:
+                    return render_template(
+                        "utme_form.html",
+                        college=COLLEGE,
+                        DEPARTMENT=DEPARTMENT
+                    )
+                except TemplateNotFound as e:
+                    app.logger.error(f"Template not found: {str(e)}")
+                    flash(f"Template error: {str(e)}")
+                    return redirect(url_for("dashboard"))
+                except UndefinedError as e:
+                    app.logger.error(f"Template rendering error: {str(e)}")
+                    flash(f"Template rendering error: {str(e)}")
+                    return redirect(url_for("dashboard"))
 
             if request.method == "POST":
                 convert_value = request.form.get("convert_value", "").strip()
@@ -123,67 +163,85 @@ def run_script(script_name):
                 if convert_value:
                     cmd.extend(["--non-interactive", "--converted-score-max", convert_value])
 
-                result = subprocess.run(
-                    cmd,
-                    input=f"{convert_column}\n",
-                    text=True,
-                    capture_output=True,
-                    check=True
-                )
-
-                # Parse output for summary
-                output_lines = result.stdout.splitlines()
-                success_indicators = SUCCESS_INDICATORS.get(script_name, ["Processing: "])
-                processed_files = sum(1 for line in output_lines if any(indicator in line for indicator in success_indicators))
-                skipped_files = sum(1 for line in output_lines if "Skipping" in line)
-                # Log raw output for debugging
-                print(f"Script {script_name} stdout: {result.stdout}")
-                print(f"Script {script_name} stderr: {result.stderr}")
-                if processed_files == 0 and skipped_files > 0:
-                    flash(f"No files were processed for {script_desc}. {skipped_files} file(s) skipped due to missing required columns or invalid format.")
-                else:
-                    flash(f"Successfully processed {processed_files} input file(s) for {script_desc}. {skipped_files} file(s) skipped due to missing required columns or invalid format.")
+                app.logger.debug(f"Executing command: {cmd}")
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        input=f"{convert_column}\n",
+                        text=True,
+                        capture_output=True,
+                        check=True
+                    )
+                    output_lines = result.stdout.splitlines()
+                    success_indicators = SUCCESS_INDICATORS.get(script_name, [r"Processing: (2025-PBN-EEXAM-PBN-Batch\d+ Quiz-grades\.xlsx)"])
+                    processed_files_set = set()
+                    for line in output_lines:
+                        for indicator in success_indicators:
+                            match = re.search(indicator, line)
+                            if match:
+                                file_name = match.group(1)
+                                processed_files_set.add(file_name)
+                                app.logger.debug(f"Matched file for {script_name}: {file_name} in line: {line}")
+                    processed_files = len(processed_files_set)
+                    skipped_files = sum(1 for line in output_lines if "Skipping" in line)
+                    app.logger.info(f"Script {script_name} stdout: {result.stdout}")
+                    app.logger.info(f"Script {script_name} stderr: {result.stderr}")
+                    if processed_files == 0 and skipped_files > 0:
+                        flash(f"No files processed for {script_desc}. {skipped_files} file(s) skipped.")
+                    elif processed_files == 0:
+                        flash(f"No files processed for {script_desc}. Check input files in {input_dir}.")
+                    else:
+                        flash(f"Successfully processed {processed_files} file(s) for {script_desc}. {skipped_files} file(s) skipped.")
+                except subprocess.CalledProcessError as e:
+                    app.logger.error(f"Subprocess error in {script_name}: {e.stderr}")
+                    flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
                 return redirect(url_for("dashboard"))
 
-        # Other scripts
-        result = subprocess.run(
-            ["python3", script_path],
-            text=True,
-            capture_output=True,
-            check=True
-        )
-
-        # Parse output for summary
-        output_lines = result.stdout.splitlines()
-        success_indicators = SUCCESS_INDICATORS.get(script_name, ["Saved processed file"])
-        processed_files = sum(1 for line in output_lines if any(indicator in line for indicator in success_indicators))
-        skipped_files = sum(1 for line in output_lines if "Skipping" in line)
-        # Log raw output for debugging
-        print(f"Script {script_name} stdout: {result.stdout}")
-        print(f"Script {script_name} stderr: {result.stderr}")
-        if "No CSV or Excel files found" in result.stdout or "No CSV or Excel files found" in result.stderr:
-            flash(f"No files found to process for {script_desc}. Please add CSV or Excel files to the input directory: {input_dir}")
-        elif "No valid files were processed" in result.stdout or "No valid files were processed" in result.stderr:
-            flash(f"No files were processed for {script_desc}. Please check input files for required columns (e.g., Surname, First name, Grade/...).")
-        elif processed_files == 0:
-            flash(f"No files were processed for {script_desc}. {skipped_files} file(s) skipped due to missing required columns or invalid format.")
-        else:
-            flash(f"Successfully processed {processed_files} input file(s) for {script_desc}. {skipped_files} file(s) skipped due to missing required columns or invalid format.")
-    except subprocess.CalledProcessError as e:
-        print(f"Script {script_name} stdout: {e.stdout}")
-        print(f"Script {script_name} stderr: {e.stderr}")
-        if "No CSV or Excel files found" in e.stdout or "No CSV or Excel files found" in e.stderr:
-            flash(f"No files found to process for {script_desc}. Please add CSV or Excel files to the input directory: {input_dir}")
-        elif "No valid files were processed" in e.stdout or "No valid files were processed" in e.stderr:
-            flash(f"No files were processed for {script_desc}. Please check input files for required columns (e.g., Surname, First name, Grade/...).")
-        else:
+        app.logger.debug(f"Executing command: python3 {script_path}")
+        try:
+            result = subprocess.run(
+                ["python3", script_path],
+                text=True,
+                capture_output=True,
+                check=True
+            )
+            output_lines = result.stdout.splitlines()
+            success_indicators = SUCCESS_INDICATORS.get(script_name, [r"Saved processed file: .*?\.csv"])
+            processed_files_set = set()
+            for line in output_lines:
+                for indicator in success_indicators:
+                    match = re.search(indicator, line)
+                    if match:
+                        file_name = match.group(1)
+                        processed_files_set.add(file_name)
+                        app.logger.debug(f"Matched file for {script_name}: {file_name} in line: {line}")
+            processed_files = len(processed_files_set)
+            skipped_files = sum(1 for line in output_lines if "Skipping" in line)
+            app.logger.info(f"Script {script_name} stdout: {result.stdout}")
+            app.logger.info(f"Script {script_name} stderr: {result.stderr}")
+            if "No CSV or Excel files found" in result.stdout or "No CSV or Excel files found" in result.stderr:
+                flash(f"No CSV or Excel files found in {input_dir} for {script_desc}.")
+            elif "No valid files were processed" in result.stdout or "No valid files were processed" in result.stderr:
+                flash(f"No files processed for {script_desc}. Check input files for required columns in {input_dir}.")
+            elif processed_files == 0:
+                flash(f"No files processed for {script_desc}. {skipped_files} file(s) skipped. Check logs for details.")
+            else:
+                flash(f"Successfully processed {processed_files} file(s) for {script_desc}. {skipped_files} file(s) skipped.")
+        except subprocess.CalledProcessError as e:
+            app.logger.error(f"Subprocess error in {script_name}: {e.stderr}")
             flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
     except Exception as e:
-        traceback.print_exc()
-        flash(f"Unexpected error while processing {script_desc}: {str(e)}")
-
+        app.logger.error(f"Unexpected error in {script_name}: {str(e)}")
+        flash(f"Server error processing {script_desc}: {str(e)}")
     return redirect(url_for("dashboard"))
 
-# Start App
+@app.route("/logout")
+@login_required
+def logout():
+    session.pop("logged_in", None)
+    app.logger.info(f"Session cleared: {session}")
+    flash("You have been logged out.")
+    return redirect(url_for("login"))
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
