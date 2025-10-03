@@ -1,41 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - {{ college }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f8f9fa; }
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; background: white; border-radius: 5px; }
-        h1 { color: #343a40; }
-        .list-group-item { margin: 5px 0; padding: 10px; border: 1px solid #dee2e6; text-decoration: none; display: block; }
-        .list-group-item:hover { background-color: #e9ecef; }
-        .text-danger { color: #dc3545; }
-        .flash-messages { color: #28a745; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Dashboard - {{ college }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1 class="mt-4">Welcome to {{ college }} Dashboard</h1>
-        <p class="lead">Department: {{ DEPARTMENT }}</p>
-        <div class="list-group">
-            <a href="{{ url_for('run_script', script_name='utme') }}" class="list-group-item list-group-item-action">Process PUTME Results</a>
-            <a href="{{ url_for('run_script', script_name='caosce') }}" class="list-group-item list-group-item-action">Process CAOSCE Results</a>
-            <a href="{{ url_for('run_script', script_name='clean') }}" class="list-group-item list-group-item-action">Process Internal Exam Results</a>
-            <a href="{{ url_for('run_script', script_name='split') }}" class="list-group-item list-group-item-action">Process JAMB Database</a>
-            <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action text-danger">Logout</a>
-        </div>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <ul class="flash-messages mt-3">
-                {% for message in messages %}
-                    <li>{{ message }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <h2>FCTCNS</h2>
+    <a href="{{ url_for('dashboard') }}">🏠 <span>Dashboard</span></a>
+    <a href="{{ url_for('run_script', script_name='utme') }}">📑 <span>PUTME</span></a>
+    <a href="{{ url_for('run_script', script_name='caosce') }}">📘 <span>CAOSCE</span></a>
+    <a href="{{ url_for('run_script', script_name='clean') }}">🗂 <span>Internal Exams</span></a>
+    <a href="{{ url_for('run_script', script_name='split') }}">📄 <span>JAMB Database</span></a>
+    <a href="{{ url_for('logout') }}">🚪 <span>Logout</span></a>
+  </div>
+
+  <!-- Main content -->
+  <div class="main-content" id="main">
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+    <!-- Sticky Header bar -->
+    <div class="header-bar">
+      <div class="header-left">
+        <h1>FCT College of Nursing Sciences, Gwagwalada</h1>
+        <h2>Department of Nursing</h2>
+      </div>
+      <div class="header-right">
+        <p><strong>Unit:</strong> Examination</p>
+      </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Action buttons -->
+    <div class="button-group">
+      <form method="POST" action="{{ url_for('run_script', script_name='utme') }}">
+        <button type="submit">Process PUTME Results</button>
+      </form>
+      <form method="POST" action="{{ url_for('run_script', script_name='caosce') }}">
+        <button type="submit">Process CAOSCE Results</button>
+      </form>
+      <form method="POST" action="{{ url_for('run_script', script_name='clean') }}">
+        <button type="submit">Process Internal Exams</button>
+      </form>
+      <form method="POST" action="{{ url_for('run_script', script_name='split') }}">
+        <button type="submit">Process JAMB Database</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </body>
 </html>

@@ -1,0 +1,151 @@
+/* General Layout */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f9;
+}
+
+/* Sidebar */
+.sidebar {
+    height: 100%;
+    width: 240px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #023047;
+    padding-top: 20px;
+    transition: 0.3s;
+    overflow-x: hidden;
+    color: white;
+}
+
+.sidebar img {
+    display: block;
+    width: 120px;
+    height: auto;
+    margin: 0 auto 15px auto;
+    border-radius: 10px;
+}
+
+.sidebar h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.sidebar a {
+    display: block;
+    color: #ddd;
+    padding: 12px 20px;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.sidebar a:hover {
+    background-color: #035e7b;
+    color: #fff;
+}
+
+/* Sidebar collapsed */
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed h2,
+.sidebar.collapsed a span {
+    display: none;
+}
+
+.sidebar.collapsed img {
+    width: 40px;
+    margin: 0 auto 10px auto;
+}
+
+/* Main content */
+.main-content {
+    margin-left: 240px;
+    padding: 20px;
+    transition: margin-left 0.3s;
+}
+
+/* Collapsed main */
+.main-content.collapsed {
+    margin-left: 60px;
+}
+
+/* Toggle button */
+.toggle-btn {
+    font-size: 20px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    margin-bottom: 15px;
+}
+
+/* Sticky header bar */
+.header-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header-left h1 {
+    margin: 0;
+    font-size: 20px;
+    color: #023047;
+}
+
+.header-left h2 {
+    margin: 0;
+    font-size: 16px;
+    color: #555;
+}
+
+.header-right p {
+    margin: 0;
+    font-size: 14px;
+    color: #219ebc;
+    font-weight: bold;
+}
+
+/* Buttons */
+.button-group {
+    margin-top: 20px;
+}
+
+.button-group form {
+    display: inline-block;
+}
+
+.button-group button {
+    background: #219ebc;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.button-group button:hover {
+    background: #126782;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin: 15px 0;
+    padding: 10px;
+    background: #e3f2fd;
+    border: 1px solid #90caf9;
+    border-radius: 5px;
+    color: #0d47a1;
+    font-weight: bold;
+}
