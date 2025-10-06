@@ -29,10 +29,11 @@ Features:
  - Applies a soft, pastel row color per STATE
  - Produces Analysis sheet and clear, management-friendly Charts with a legend table
  - Lists registered-but-absent candidates in Absent sheet, batch-specific for individual files
+ - Detects and reports candidates appearing in results of a different batch than their registered batch
  - Combines all batches into a single PUTME_COMBINE_RESULT file
- - Enhanced logging for invalid APPLICATION IDs and batch-specific absent candidates
- - Supports batch IDs with or without spaces (e.g., Batch1 or Batch 1)
- - Supports command-line arguments for non-interactive runs
+ - Enhanced logging for invalid APPLICATION IDs, batch-specific absent candidates, and batch mismatches
+ - Supports batch IDs with or without spaces (e.g., Batch1A or Batch 1A)
+ - Ensures absent counts reflect the exact difference between registered candidates and those who sat
 """
 
 import os
@@ -66,9 +67,9 @@ def parse_args():
     parser.add_argument("--candidate-dir", default=DEFAULT_CANDIDATE_DIR, help=f"Directory for candidate batch files (default: {DEFAULT_CANDIDATE_DIR})")
     parser.add_argument("--output-dir", default=DEFAULT_CLEAN_DIR, help=f"Output directory for cleaned files (default: {DEFAULT_CLEAN_DIR})")
     parser.add_argument("--pass-threshold", type=float, default=DEFAULT_PASS_THRESHOLD, help=f"Pass threshold for highlighting (default: {DEFAULT_PASS_THRESHOLD})")
-    parser.add_argument("--batch-id", help="Specific batch ID to process (e.g., 'Batch1' or 'Batch 1')")
+    parser.add_argument("--batch-id", help="Specific batch ID to process (e.g., 'Batch1A' or 'Batch 1A')")
     parser.add_argument("--non-interactive", action="store_true", help="Skip interactive prompts (e.g., for converted score)")
-    parser.add_argument("--converted-score-max", type=int, help="Target maximum for converted score (e.g., 60 for Score/60%%) when non-interactive")
+    parser.add_argument("--converted-score-max", type=int, help="Target maximum for converted score (e.g., 60 for Score/60%) when non-interactive")
     return parser.parse_args()
 
 # ---------------------------
@@ -167,32 +168,37 @@ def auto_column_width(ws, min_width=8, max_width=60):
                     max_len = l
         ws.column_dimensions[get_column_letter(i)].width = min(max_width, max(min_width, max_len + 2))
 
+def normalize_id(s):
+    if s is None:
+        return None
+    return str(s).strip().lower()
+
 # ---------------------------
 # Candidate batches helpers
 # ---------------------------
 def load_candidate_batches(folder, batch_id=None):
-    """Load candidate-batch files. If batch_id is provided, load only the matching batch file; otherwise, load all."""
+    """Load candidate-batch files. If batch_id is provided, load only the matching batch file; otherwise, load all with batch IDs."""
     if not os.path.isdir(folder):
         print(f"Warning: Candidate batch directory {folder} does not exist.")
-        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
-    
+        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]), {}, {}
+
     files = [f for f in os.listdir(folder) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
     if not files:
         print(f"Warning: No candidate batch files found in {folder}.")
-        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
-    
-    if batch_id:
-        batch_id_normalized = re.sub(r'\s+', '', batch_id.lower())
-        matching_files = [f for f in files if batch_id_normalized in re.sub(r'\s+', '', f.lower())]
-        if not matching_files:
-            print(f"Warning: No candidate batch file found for batch ID '{batch_id}' in {folder}.")
-            return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
-        files = matching_files
-    
+        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]), {}, {}
+
+    batch_id_map = {}  # Maps normalized ID to registered BATCH_ID
+    numeric_to_full = {}  # Maps numeric token to original EXAM_NO
     rows = []
     for fname in sorted(files):
         path = os.path.join(folder, fname)
-        print(f"Loading candidate batch file: {fname}")
+        batch_id_match = re.search(r"(Batch\s*\d+[A-Za-z]?)", fname, re.IGNORECASE)
+        current_batch_id = batch_id_match.group(1) if batch_id_match else fname
+        if batch_id:
+            batch_id_normalized = re.sub(r'\s+', '', batch_id.lower())
+            if batch_id_normalized not in re.sub(r'\s+', '', fname.lower()):
+                continue
+        print(f"Loading candidate batch file: {fname} (Batch ID: {current_batch_id})")
         try:
             if fname.lower().endswith(".csv"):
                 cdf = pd.read_csv(path, dtype=str)
@@ -239,22 +245,27 @@ def load_candidate_batches(folder, batch_id=None):
                     if not state and re.search(r"[A-Za-z]{2,}", s) and c.lower() in ["city", "state"]:
                         state = s
             if ex:
-                rows.append({"EXAM_NO": ex, "FULL_NAME": name or "", "PHONE NUMBER": phone or "", "STATE": state or ""})
+                rows.append({"EXAM_NO": ex, "FULL_NAME": name or "", "PHONE NUMBER": phone or "", "STATE": state or "", "BATCH_ID": current_batch_id})
+                norm_id = normalize_id(ex)
+                batch_id_map[norm_id] = current_batch_id
+                tok = extract_numeric_token(ex)
+                if tok:
+                    numeric_to_full[tok] = ex
     
     if not rows:
         print(f"No valid candidate records found in batch files{' for ' + batch_id if batch_id else ''}.")
-        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
+        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]), {}, {}
     
     cdf_all = pd.DataFrame(rows)
     duplicates = cdf_all[cdf_all.duplicated(subset=["EXAM_NO"], keep=False)]
     if not duplicates.empty:
         print(f"Found {len(duplicates)} duplicate EXAM_NO entries in candidate batches{' for ' + batch_id if batch_id else ''}:")
-        print(duplicates[["EXAM_NO", "FULL_NAME"]].head().to_string())
+        print(duplicates[["EXAM_NO", "FULL_NAME", "BATCH_ID"]].head().to_string())
     cdf_all = cdf_all.drop_duplicates(subset=["EXAM_NO"], keep="first")
     print(f"Loaded {len(cdf_all)} unique registered candidates from batch files{' for ' + batch_id if batch_id else ''}.")
     if "PHONE NUMBER" in cdf_all.columns:
         cdf_all["PHONE NUMBER"] = cdf_all["PHONE NUMBER"].apply(clean_phone_value)
-    return cdf_all
+    return cdf_all, batch_id_map, numeric_to_full
 
 # ---------------------------
 # Extract numeric tokens helper
@@ -324,7 +335,7 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
 # ---------------------------
 # Create Analysis and Charts sheets
 # ---------------------------
-def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, output_dir, ts, fname="Combined", pass_threshold=DEFAULT_PASS_THRESHOLD):
+def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_df, batch_id_map, numeric_to_full, score_header, output_dir, ts, fname="Combined", pass_threshold=DEFAULT_PASS_THRESHOLD, current_batch_id=None):
     total_candidates = len(cleaned)
     score_series = df["_ScoreNum"].dropna().astype(float) if "_ScoreNum" in df.columns else pd.Series([], dtype=float)
     highest_score = score_series.max() if not score_series.empty else None
@@ -590,14 +601,16 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
     except Exception as e:
         print(f"Error creating Pass/Fail Pie chart: {e}")
 
-    auto_column_width(chs)
-    auto_column_width(anal)
-
+    # Calculate absent candidates and batch mismatches
     absent_count = 0
     absent_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE"])
+    mismatch_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"])
     invalid_ids = []
+    total_registered = len(candidates_df)
+
     if not candidates_df.empty:
         present_ids = set()
+        mismatch_rows = []
         if "APPLICATION ID" in cleaned.columns:
             duplicates = cleaned[cleaned["APPLICATION ID"].duplicated(keep=False)]
             if not duplicates.empty:
@@ -605,6 +618,26 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
                 print(duplicates[["APPLICATION ID", "FULL NAME"]].head().to_string())
             for index, v in cleaned["APPLICATION ID"].astype(str).items():
                 tok = extract_numeric_token(v)
+                norm_id = normalize_id(v)
+                registered_batch = None
+                full_ex = None
+                if norm_id in batch_id_map:
+                    registered_batch = batch_id_map[norm_id]
+                    full_ex = v
+                elif tok and tok in numeric_to_full:
+                    full_ex = numeric_to_full[tok]
+                    norm_id = normalize_id(full_ex)
+                    registered_batch = batch_id_map.get(norm_id, "")
+                if registered_batch and current_batch_id and re.sub(r'\s+', '', registered_batch.lower()) != re.sub(r'\s+', '', current_batch_id.lower()):
+                    mismatch_row = full_candidates_df[full_candidates_df["EXAM_NO"].apply(normalize_id) == norm_id]
+                    if not mismatch_row.empty:
+                        mismatch_rows.append({
+                            "APPLICATION ID": v,
+                            "FULL NAME": cleaned.at[index, "FULL NAME"],
+                            "PHONE NO.": cleaned.at[index, "PHONE NUMBER"],
+                            "STATE": cleaned.at[index, "STATE"],
+                            "REGISTERED BATCH": registered_batch
+                        })
                 if tok:
                     present_ids.add(tok)
                 else:
@@ -616,25 +649,46 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
         for index, v in cleaned["FULL NAME"].astype(str).items():
             tok = extract_numeric_token(v)
             if tok and tok not in present_ids:
-                if tok in candidates_df["EXAM_NO_NORMAL"].values:
-                    print(f"Numeric ID {tok} found in FULL NAME but not in APPLICATION ID for {fname}, FULL NAME: {v}")
+                registered_batch = ""
+                full_ex = None
+                if tok in numeric_to_full:
+                    full_ex = numeric_to_full[tok]
+                    norm_id = normalize_id(full_ex)
+                    registered_batch = batch_id_map.get(norm_id, "")
+                    if current_batch_id and re.sub(r'\s+', '', registered_batch.lower()) != re.sub(r'\s+', '', current_batch_id.lower()):
+                        mismatch_row = full_candidates_df[full_candidates_df["EXAM_NO"] == full_ex]
+                        if not mismatch_row.empty:
+                            mismatch_rows.append({
+                                "APPLICATION ID": full_ex,
+                                "FULL NAME": v,
+                                "PHONE NO.": cleaned.at[index, "PHONE NUMBER"],
+                                "STATE": cleaned.at[index, "STATE"],
+                                "REGISTERED BATCH": registered_batch
+                            })
                     present_ids.add(tok)
-        candidates_df["EXAM_NO_NORMAL"] = candidates_df["EXAM_NO"].astype(str).apply(lambda x: extract_numeric_token(x) or x)
-        candidate_ids = set(candidates_df["EXAM_NO_NORMAL"].astype(str).tolist())
 
+        # Calculate absent candidates
+        candidates_df["EXAM_NO_NORMAL"] = candidates_df["EXAM_NO"].apply(lambda x: extract_numeric_token(x) or normalize_id(x))
+        candidate_ids = set(candidates_df["EXAM_NO_NORMAL"])
         absent_ids = sorted([cid for cid in candidate_ids if cid not in present_ids])
         absent_df = candidates_df[candidates_df["EXAM_NO_NORMAL"].isin(absent_ids)][["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"]].drop_duplicates()
         absent_df = absent_df.rename(columns={"EXAM_NO": "APPLICATION ID", "FULL_NAME": "FULL NAME", "PHONE NUMBER": "PHONE NO.", "STATE": "STATE"})
         absent_count = len(absent_df)
 
+        # Handle batch mismatches
+        if mismatch_rows:
+            mismatch_df = pd.DataFrame(mismatch_rows)
+            print(f"Found {len(mismatch_df)} candidates in {fname} results who were registered in a different batch:")
+            print(mismatch_df[["APPLICATION ID", "FULL NAME", "REGISTERED BATCH"]].to_string(index=False))
+
         print(f"Absent candidates check for {fname}:")
-        print(f"  Total registered candidates: {len(candidates_df)}")
-        print(f"  Total present candidates: {len(present_ids)}")
-        print(f"  Total absent candidates: {absent_count}")
-        print(f"  Expected absent candidates: {len(candidates_df) - len(present_ids)}")
-        if absent_count != (len(candidates_df) - len(present_ids)):
-            print(f"Warning: Discrepancy detected: Expected {len(candidates_df) - len(present_ids)} absent, got {absent_count}")
-        print(f"  Sample absent IDs (first 5): {absent_ids[:5]}")
+        print(f"  Total registered candidates (from RAW_CANDIDATE_BATCHES): {total_registered}")
+        print(f"  Total present candidates (sat for exam): {len(present_ids)}")
+        print(f"  Total absent candidates (registered but did not sit): {absent_count}")
+        if absent_count != len(absent_df):
+            print(f"Warning: Discrepancy detected: Expected {absent_count} absent candidates, but found {len(absent_df)} in absent_df")
+        if absent_ids:
+            print(f"  Sample absent IDs (first 5): {absent_ids[:5]}")
         if invalid_ids:
             print(f"  Note: {len(invalid_ids)} invalid APPLICATION IDs may affect absent count.")
 
@@ -649,31 +703,47 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, out
             abs_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE")])
     auto_column_width(abs_ws)
 
+    if "BatchMismatches" in wb.sheetnames:
+        wb.remove(wb["BatchMismatches"])
+    mismatch_ws = wb.create_sheet("BatchMismatches")
+    mismatch_ws.append(["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"])
+    if mismatch_df.empty:
+        mismatch_ws.append(["No candidates found in wrong batch.", "", "", "", ""])
+    else:
+        for _, r in mismatch_df.iterrows():
+            mismatch_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE"), r.get("REGISTERED BATCH")])
+    auto_column_width(mismatch_ws)
+
     anal.append([])
-    anal.append(["Registered (candidate batches) total", int(len(candidates_df))])
+    anal.append(["Registered (candidate batches) total", int(total_registered)])
     anal.append(["Registered but absent (did not sit)", int(absent_count)])
+    anal.append(["Candidates in wrong batch", len(mismatch_df)])
     anal.append([])
 
-    print(f"  Registered (candidate batches): {len(candidates_df)}")
+    print(f"  Registered (candidate batches): {total_registered}")
     print(f"  Registered but absent: {absent_count}")
+    print(f"  Candidates in wrong batch: {len(mismatch_df)}")
 
-    return absent_df
+    auto_column_width(chs)
+    auto_column_width(anal)
+
+    return absent_df, mismatch_df
 
 # ---------------------------
 # Core processing for a single file
 # ---------------------------
-def process_file(path, output_dir, ts, all_candidates_df, pass_threshold):
+def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_batch_id_map, full_numeric_to_full, pass_threshold):
     fname = os.path.basename(path)
     print(f"\nProcessing: {fname}")
 
-    batch_id_match = re.search(r"(Batch\s*\d+)", fname, re.IGNORECASE)
+    batch_id_match = re.search(r"(Batch\s*\d+[A-Za-z]?)", fname, re.IGNORECASE)
     batch_id = batch_id_match.group(1) if batch_id_match else None
     if batch_id:
         print(f"Detected batch ID: {batch_id}")
-        candidates_df = load_candidate_batches(os.path.dirname(path), batch_id=batch_id)
+        candidates_df, _, _ = load_candidate_batches(candidate_dir, batch_id=batch_id)
     else:
         print(f"Warning: Could not detect batch ID in filename {fname}. Using empty candidates list for batch-specific absent calculation.")
-        candidates_df = pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"])
+        candidates_df = pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"])
 
     try:
         if fname.lower().endswith(".csv"):
@@ -688,7 +758,7 @@ def process_file(path, output_dir, ts, all_candidates_df, pass_threshold):
                     df = pd.read_excel(path, dtype=str, engine="xlrd")
     except Exception as e:
         print(f"Error reading {fname}: {e}")
-        return None, None, None
+        return None, None, None, None
 
     df.rename(columns=lambda c: str(c).strip(), inplace=True)
 
@@ -727,7 +797,7 @@ def process_file(path, output_dir, ts, all_candidates_df, pass_threshold):
     grade_col = find_grade_column(df)
     if not grade_col:
         print(f"Skipping {fname}: Missing required column: a 'Grade/...' or 'Grade' column was not found.")
-        return None, None, None
+        return None, None, None, None
 
     if str(grade_col).strip().lower().startswith("grade/"):
         score_header = re.sub(r'(?i)^grade', 'Score', grade_col, flags=re.I)
@@ -747,7 +817,7 @@ def process_file(path, output_dir, ts, all_candidates_df, pass_threshold):
 
     if df.empty:
         print(f"No valid rows remain after cleaning {fname}; skipping file.")
-        return None, None, None
+        return None, None, None, None
 
     df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
@@ -791,17 +861,17 @@ def process_file(path, output_dir, ts, all_candidates_df, pass_threshold):
     ws.title = "Results"
     format_excel_sheet(wb, "Results", cleaned, {}, score_header, pass_threshold)
 
-    absent_df = create_analysis_and_charts(wb, cleaned, df, candidates_df, score_header, output_dir, ts, fname=fname, pass_threshold=pass_threshold)
+    absent_df, mismatch_df = create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_df, full_batch_id_map, full_numeric_to_full, score_header, output_dir, ts, fname=fname, pass_threshold=pass_threshold, current_batch_id=batch_id)
 
     wb.save(out_xlsx)
-    print(f"Saved processed file with Analysis & Charts: {os.path.basename(out_xlsx)}")
+    print(f"Saved processed file with Analysis, Charts, Absent, and BatchMismatches: {os.path.basename(out_xlsx)}")
 
-    return cleaned, df, absent_df
+    return cleaned, df, absent_df, mismatch_df
 
 # ---------------------------
 # Combine all batches
 # ---------------------------
-def combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts, pass_threshold, non_interactive=False, converted_score_max=None):
+def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, pass_threshold, candidate_dir, non_interactive=False, converted_score_max=None):
     if not cleaned_dfs:
         print("No valid batches to combine.")
         return
@@ -853,11 +923,25 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts, pass_threshold
     ws.title = "Results"
     format_excel_sheet(wb, "Results", combined_cleaned, {}, score_header, pass_threshold)
 
-    candidates_df = load_candidate_batches(DEFAULT_CANDIDATE_DIR)
-    create_analysis_and_charts(wb, combined_cleaned, combined_df, candidates_df, score_header, output_dir, ts, fname="Combined", pass_threshold=pass_threshold)
+    full_candidates_df, full_batch_id_map, full_numeric_to_full = load_candidate_batches(candidate_dir)
+    absent_df, mismatch_df = create_analysis_and_charts(wb, combined_cleaned, combined_df, full_candidates_df, full_candidates_df, full_batch_id_map, full_numeric_to_full, score_header, output_dir, ts, fname="Combined", pass_threshold=pass_threshold)
+
+    # Combine all mismatch DataFrames
+    if mismatch_dfs:
+        combined_mismatch_df = pd.concat(mismatch_dfs, ignore_index=True).drop_duplicates(subset=["APPLICATION ID"])
+        if not combined_mismatch_df.empty:
+            print(f"Found {len(combined_mismatch_df)} candidates in combined results who were registered in a different batch:")
+            print(combined_mismatch_df[["APPLICATION ID", "FULL NAME", "REGISTERED BATCH"]].to_string(index=False))
+            if "BatchMismatches" in wb.sheetnames:
+                wb.remove(wb["BatchMismatches"])
+            mismatch_ws = wb.create_sheet("BatchMismatches")
+            mismatch_ws.append(["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"])
+            for _, r in combined_mismatch_df.iterrows():
+                mismatch_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE"), r.get("REGISTERED BATCH")])
+            auto_column_width(mismatch_ws)
 
     wb.save(out_xlsx)
-    print(f"Saved processed file with Analysis & Charts: {os.path.basename(out_xlsx)}")
+    print(f"Saved processed file with Analysis, Charts, Absent, and BatchMismatches: {os.path.basename(out_xlsx)}")
 
 # ---------------------------
 # Entrypoint
@@ -897,25 +981,29 @@ def main():
     output_dir = os.path.join(CLEAN_DIR, f"UTME_RESULT-{ts}")
     os.makedirs(output_dir, exist_ok=True)
 
-    all_candidates_df = load_candidate_batches(CANDIDATE_DIR, batch_id=BATCH_ID)
+    # Load full candidates_df, batch_id_map, numeric_to_full from all candidates
+    full_candidates_df, full_batch_id_map, full_numeric_to_full = load_candidate_batches(CANDIDATE_DIR)
+
     outputs = []
     cleaned_dfs = []
     dfs = []
     absent_dfs = []
+    mismatch_dfs = []
 
     for f in files:
         try:
-            cleaned, df, absent_df = process_file(os.path.join(RAW_DIR, f), output_dir, ts, all_candidates_df, PASS_THRESHOLD)
+            cleaned, df, absent_df, mismatch_df = process_file(os.path.join(RAW_DIR, f), output_dir, ts, CANDIDATE_DIR, full_candidates_df, full_batch_id_map, full_numeric_to_full, PASS_THRESHOLD)
             if cleaned is not None:
                 outputs.append((os.path.join(output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.csv"),
                                 os.path.join(output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.xlsx")))
                 cleaned_dfs.append(cleaned)
                 dfs.append(df)
                 absent_dfs.append(absent_df)
+                mismatch_dfs.append(mismatch_df)
         except Exception as e:
             print(f"Error processing {f}: {e}", file=sys.stderr)
 
-    combine_batches(cleaned_dfs, dfs, absent_dfs, output_dir, ts, PASS_THRESHOLD, NON_INTERACTIVE, CONVERTED_SCORE_MAX)
+    combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, PASS_THRESHOLD, CANDIDATE_DIR, NON_INTERACTIVE, CONVERTED_SCORE_MAX)
 
     print("\nProcessing completed successfully.")
     if outputs:

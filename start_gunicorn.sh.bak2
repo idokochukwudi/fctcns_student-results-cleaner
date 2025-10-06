@@ -1,0 +1,84 @@
+#!/bin/bash
+echo "Starting start_gunicorn.sh at $(date)" > /home/ernest/student_result_cleaner/start_gunicorn.log
+echo "Current user: $(whoami)" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+echo "Current directory: $(pwd)" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+
+cd /home/ernest/student_result_cleaner >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to cd to /home/ernest/student_result_cleaner" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    exit 1
+fi
+
+echo "Clearing stale .pyc files and __pycache__" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+find /home/ernest/student_result_cleaner -name "*.pyc" -delete >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+find /home/ernest/student_result_cleaner/venv -name "__pycache__" -type d -exec rm -rf {} + >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+
+echo "Sourcing virtual environment" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+if [ -f /home/ernest/student_result_cleaner/venv/bin/activate ]; then
+    source /home/ernest/student_result_cleaner/venv/bin/activate >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to source virtual environment" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+        exit 1
+    fi
+else
+    echo "Error: Virtual environment not found at /home/ernest/student_result_cleaner/venv/bin/activate" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    exit 1
+fi
+
+echo "Checking dependencies" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+pip install -r /home/ernest/student_result_cleaner/requirements.txt >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to install dependencies" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    exit 1
+fi
+
+echo "Checking Python version" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+python --version >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+
+echo "Checking for port 5000" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+if command -v ss >/dev/null 2>&1; then
+    ss -tuln | grep 5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+else
+    netstat -tuln | grep 5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+fi
+if [ $? -eq 0 ]; then
+    echo "Warning: Port 5000 is in use, attempting to kill processes" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    pkill -f gunicorn >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+    sleep 2
+    if command -v ss >/dev/null 2>&1; then
+        ss -tuln | grep 5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+    else
+        netstat -tuln | grep 5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+    fi
+    if [ $? -eq 0 ]; then
+        echo "Error: Port 5000 still in use after pkill" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+        exit 1
+    fi
+fi
+
+echo "Starting Gunicorn" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+export PYTHONPATH=/home/ernest/student_result_cleaner:$PYTHONPATH
+/home/ernest/student_result_cleaner/venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5000 --timeout 60 --log-level debug launcher.app:app --log-file /home/ernest/student_result_cleaner/launcher/app.log >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1 &
+GUNICORN_PID=$!
+echo "Gunicorn PID: $GUNICORN_PID" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+sleep 15
+ps aux | grep gunicorn | grep -v grep >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: No Gunicorn processes running" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    exit 1
+fi
+if command -v ss >/dev/null 2>&1; then
+    ss -tuln | grep 5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+else
+    netstat -tuln | grep 5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+fi
+if [ $? -ne 0 ]; then
+    echo "Error: Gunicorn not listening on port 5000" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    exit 1
+fi
+curl http://127.0.0.1:5000 >> /home/ernest/student_result_cleaner/start_gunicorn.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: Gunicorn not responding on 127.0.0.1:5000" >> /home/ernest/student_result_cleaner/start_gunicorn.log
+    exit 1
+fi
+echo "Gunicorn started successfully" >> /home/ernest/student_result_cleaner/start_gunicorn.log
