@@ -16,21 +16,28 @@ Outputs cleaned CSV + formatted XLSX are saved to:
 Combined output for all batches is saved as:
   PROCESS_RESULT/PUTME_RESULT/CLEAN_PUTME_RESULT/UTME_RESULT-<timestamp>/PUTME_COMBINE_RESULT_<timestamp>.xlsx
 
+Unsorted combined output is saved as:
+  PROCESS_RESULT/PUTME_RESULT/CLEAN_PUTME_RESULT/UTME_RESULT-<timestamp>/PUTME_COMBINE_RESULT_UNSORTED_<timestamp>.xlsx
+
 Features:
  - Maps common header variations to canonical names
  - Drops unwanted columns (Username, Department, State, Started on, Completed, Time taken)
  - Detects Grade/... column and renames to Score/...
- - Adds Score/100 (0 decimals) and optional Score/{N}% (0 decimals) only in combined result
+ - Adds Score/100 (0 decimals) in individual and sorted combined results, and Score/100.00 (2 decimals) in unsorted result
  - Removes 'overall average' rows and invalid rows
- - Sorts by STATE (A->Z) then Score (Z->A highest first)
- - Adds S/N (global) and STATE_SN (restarts per state)
+ - Sorts combined result by STATE (A->Z) then Score (Z->A highest first)
+ - Unsorted result preserves raw input order from RAW_PUTME_RESULT with columns: S/N, FULL NAME, APPLICATION ID, PHONE NUMBER, STATE, Score/100.00 (2 decimals), without state-based coloring or green highlighting for scores >= pass threshold
+ - Adds batch-specific worksheets (e.g., Batch1A, Batch1B) in unsorted result, each with unsorted data, same columns as Unsorted Results, and an overall average row for Score/100.00
+ - Adds an overall average row for Score/100.00 in the Unsorted Results sheet
+ - Adds S/N (global) and STATE_SN (restarts per state, excluded in unsorted result)
  - Cleans phone numbers (remove .0, non-digits, ensure leading 0)
- - Highlights passes (>= PASS_THRESHOLD) in green
- - Applies a soft, pastel row color per STATE
+ - Highlights passes (>= PASS_THRESHOLD) in green for individual and sorted combined results
+ - Applies a soft, pastel row color per STATE (except in unsorted result)
  - Produces Analysis sheet and clear, management-friendly Charts with a legend table
- - Lists registered-but-absent candidates in Absent sheet, batch-specific for individual files
+ - Lists registered-but-absent candidates in Absent sheet with Batch column, batch-specific for individual files
  - Detects and reports candidates appearing in results of a different batch than their registered batch
- - Combines all batches into a single PUTME_COMBINE_RESULT file with Rebatched sheet (listing candidates who sat in a different batch)
+ - Combines all batches into a single PUTME_COMBINE_RESULT file with Rebatched sheet
+ - Generates unsorted combined result with specified columns, batch-specific worksheets, and overall averages
  - Enhanced logging for invalid APPLICATION IDs, batch-specific absent candidates, and batch mismatches
  - Supports batch IDs with or without spaces (e.g., Batch1A or Batch 1A)
  - Ensures absent counts reflect the exact difference between registered candidates and those who sat
@@ -280,7 +287,7 @@ def extract_numeric_token(s):
 # ---------------------------
 # Format Excel sheet helper
 # ---------------------------
-def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_threshold):
+def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_threshold, apply_state_colors=True, highlight_passing_scores=True):
     ws = wb[ws_name]
     header_font = Font(bold=True, size=12)
     for cell in ws[1]:
@@ -304,32 +311,43 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
     for r in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in r:
             cell.border = border
+            # Apply bold formatting to "Overall Average" row
+            if cell.row > 1 and ws.cell(row=cell.row, column=1).value == "Overall Average":
+                cell.font = Font(bold=True)
 
-    try:
-        state_col_index = list(cleaned.columns).index("STATE") + 1
-        for row_idx in range(2, ws.max_row + 1):
-            state_val = ws.cell(row=row_idx, column=state_col_index).value
-            fill = state_color_for(state_val)
-            for col_idx in range(1, ws.max_column + 1):
-                ws.cell(row=row_idx, column=col_idx).fill = fill
-    except Exception:
-        pass
-
-    score_cols_indices = [i + 1 for i, c in enumerate(cleaned.columns) if str(c).startswith("Score/")]
-    pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-    pass_font = Font(color="006100")
-    for col_idx in score_cols_indices:
-        for row_idx in range(2, ws.max_row + 1):
-            cell = ws.cell(row=row_idx, column=col_idx)
-            try:
-                if cell.value is None or str(cell.value).strip() == "":
+    if apply_state_colors:
+        try:
+            state_col_index = list(cleaned.columns).index("STATE") + 1
+            for row_idx in range(2, ws.max_row + 1):
+                state_val = ws.cell(row=row_idx, column=state_col_index).value
+                # Skip coloring for "Overall Average" row
+                if ws.cell(row=row_idx, column=1).value == "Overall Average":
                     continue
-                val = float(cell.value)
-                if val >= pass_threshold:
-                    cell.fill = pass_fill
-                    cell.font = pass_font
-            except Exception:
-                continue
+                fill = state_color_for(state_val)
+                for col_idx in range(1, ws.max_column + 1):
+                    ws.cell(row=row_idx, column=col_idx).fill = fill
+        except Exception:
+            pass
+
+    if highlight_passing_scores:
+        score_cols_indices = [i + 1 for i, c in enumerate(cleaned.columns) if str(c).startswith("Score/")]
+        pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        pass_font = Font(color="006100")
+        for col_idx in score_cols_indices:
+            for row_idx in range(2, ws.max_row + 1):
+                # Skip highlighting for "Overall Average" row
+                if ws.cell(row=row_idx, column=1).value == "Overall Average":
+                    continue
+                cell = ws.cell(row=row_idx, column=col_idx)
+                try:
+                    if cell.value is None or str(cell.value).strip() == "":
+                        continue
+                    val = float(cell.value)
+                    if val >= pass_threshold:
+                        cell.fill = pass_fill
+                        cell.font = pass_font
+                except Exception:
+                    continue
 
 # ---------------------------
 # Create Analysis and Charts sheets
@@ -602,7 +620,7 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
 
     # Calculate absent candidates and batch mismatches
     absent_count = 0
-    absent_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE"])
+    absent_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "Batch"])
     mismatch_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"])
     invalid_ids = []
     total_registered = len(candidates_df)
@@ -666,8 +684,8 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
         candidates_df["EXAM_NO_NORMAL"] = candidates_df["EXAM_NO"].apply(lambda x: extract_numeric_token(x) or normalize_id(x))
         candidate_ids = set(candidates_df["EXAM_NO_NORMAL"])
         absent_ids = sorted([cid for cid in candidate_ids if cid not in present_ids])
-        absent_df = candidates_df[candidates_df["EXAM_NO_NORMAL"].isin(absent_ids)][["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE"]].drop_duplicates()
-        absent_df = absent_df.rename(columns={"EXAM_NO": "APPLICATION ID", "FULL_NAME": "FULL NAME", "PHONE NUMBER": "PHONE NO.", "STATE": "STATE"})
+        absent_df = candidates_df[candidates_df["EXAM_NO_NORMAL"].isin(absent_ids)][["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]].drop_duplicates()
+        absent_df = absent_df.rename(columns={"EXAM_NO": "APPLICATION ID", "FULL_NAME": "FULL NAME", "PHONE NUMBER": "PHONE NO.", "STATE": "STATE", "BATCH_ID": "Batch"})
         absent_count = len(absent_df)
 
         # Handle batch mismatches
@@ -690,12 +708,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
     if "Absent" in wb.sheetnames:
         wb.remove(wb["Absent"])
     abs_ws = wb.create_sheet("Absent")
-    abs_ws.append(["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE"])
+    abs_ws.append(["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "Batch"])
     if absent_df.empty:
-        abs_ws.append(["No absent candidates found.", "", "", ""])
+        abs_ws.append(["No absent candidates found.", "", "", "", ""])
     else:
         for _, r in absent_df.iterrows():
-            abs_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE")])
+            abs_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE"), r.get("Batch")])
     auto_column_width(abs_ws)
 
     if not skip_batch_mismatches:
@@ -871,6 +889,121 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
     return cleaned, df, absent_df, mismatch_df
 
 # ---------------------------
+# Process file for unsorted result (minimal processing, no sorting)
+# ---------------------------
+def process_file_for_unsorted(path):
+    fname = os.path.basename(path)
+    print(f"Processing for unsorted result: {fname}")
+
+    batch_id_match = re.search(r"(Batch\s*\d+[A-Za-z]?)", fname, re.IGNORECASE)
+    batch_id = batch_id_match.group(1) if batch_id_match else os.path.splitext(fname)[0]
+
+    try:
+        if fname.lower().endswith(".csv"):
+            df = pd.read_csv(path, dtype=str)
+        else:
+            try:
+                df = pd.read_excel(path, dtype=str)
+            except Exception:
+                try:
+                    df = pd.read_excel(path, dtype=str, engine="openpyxl")
+                except Exception:
+                    df = pd.read_excel(path, dtype=str, engine="xlrd")
+    except Exception as e:
+        print(f"Error reading {fname} for unsorted result: {e}")
+        return None, None, None
+
+    df.rename(columns=lambda c: str(c).strip(), inplace=True)
+
+    fullname_col = find_column_by_names(df, ["First name", "Firstname", "Full name", "Name", "Surname"])
+    if fullname_col:
+        df.rename(columns={fullname_col: "FULL NAME"}, inplace=True)
+
+    appid_col = find_column_by_names(df, ["Surname", "Mat no", "Mat No", "MAT NO.", "APPLICATION ID", "Username"])
+    if appid_col and appid_col != fullname_col:
+        df.rename(columns={appid_col: "APPLICATION ID"}, inplace=True)
+
+    phone_col = find_column_by_names(df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"])
+    if phone_col:
+        df.rename(columns={phone_col: "PHONE NUMBER"}, inplace=True)
+
+    city_col = find_column_by_names(df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"])
+    if city_col:
+        df.rename(columns={city_col: "STATE"}, inplace=True)
+
+    for drop_col in ["Username", "Department", "State", "Started on", "Completed", "Time taken", "USERNAME", "DEPARTMENT"]:
+        if drop_col in df.columns:
+            df.drop(columns=[drop_col], inplace=True)
+
+    if "FULL NAME" not in df.columns:
+        df["FULL NAME"] = pd.NA
+    if "PHONE NUMBER" not in df.columns:
+        df["PHONE NUMBER"] = pd.NA
+    if "STATE" not in df.columns:
+        df["STATE"] = pd.NA
+
+    df["FULL NAME"] = df["FULL NAME"].astype(str).str.strip()
+    df["STATE"] = df["STATE"].astype(str).str.strip()
+    df["STATE"] = df["STATE"].replace(["", "nan", "None"], "NO STATE OF ORIGIN")
+    df["STATE"] = df["STATE"].fillna("NO STATE OF ORIGIN")
+
+    grade_col = find_grade_column(df)
+    if not grade_col:
+        print(f"Skipping {fname} for unsorted result: Missing required column: a 'Grade/...' or 'Grade' column was not found.")
+        return None, None, None
+
+    if str(grade_col).strip().lower().startswith("grade/"):
+        score_header = re.sub(r'(?i)^grade', 'Score', grade_col, flags=re.I)
+    else:
+        found = re.search(r"(\d+(?:\.\d+)?)", str(grade_col))
+        suffix = found.group(1) if found else ""
+        score_header = f"Score/{suffix}" if suffix else "Score"
+
+    df.rename(columns={grade_col: score_header}, inplace=True)
+
+    df["_ScoreNum"] = to_numeric_safe(df[score_header])
+
+    df = drop_overall_average_rows(df)
+    df["FULL NAME"] = df["FULL NAME"].astype(str).str.strip()
+    df = df[~df["FULL NAME"].isin(["", "nan", "None"])].copy()
+    df = df[df["_ScoreNum"].notna()].copy()
+
+    if df.empty:
+        print(f"No valid rows remain after cleaning {fname} for unsorted result; skipping file.")
+        return None, None, None
+
+    df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
+
+    out_cols = ["FULL NAME"]
+    if "APPLICATION ID" in df.columns:
+        out_cols.append("APPLICATION ID")
+    out_cols += ["PHONE NUMBER", "STATE", score_header]
+
+    for c in out_cols:
+        if c not in df.columns:
+            df[c] = pd.NA
+
+    cleaned = df[out_cols].copy()
+
+    found_max = re.search(r"(\d+(?:\.\d+)?)", str(score_header))
+    original_max = float(found_max.group(1)) if found_max else 100.0
+    cleaned["Score/100.00"] = ((df["_ScoreNum"].astype(float) / original_max) * 100).round(2)
+
+    cleaned = cleaned[~((cleaned["FULL NAME"].astype(str).str.strip() == "") &
+                        (cleaned["PHONE NUMBER"].astype(str).str.strip() == ""))].copy()
+
+    cleaned.insert(0, "S/N", range(1, len(cleaned) + 1))
+
+    out_cols = ["S/N", "FULL NAME", "APPLICATION ID", "PHONE NUMBER", "STATE", "Score/100.00"]
+    cleaned = cleaned[out_cols].copy()
+
+    # Calculate overall average for Score/100.00
+    avg_score = cleaned["Score/100.00"].mean()
+    avg_score = round(float(avg_score), 2) if pd.notna(avg_score) else None
+
+    return cleaned, batch_id, avg_score
+
+# ---------------------------
 # Combine all batches
 # ---------------------------
 def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, pass_threshold, candidate_dir, raw_dir, non_interactive=False, converted_score_max=None):
@@ -878,6 +1011,64 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
         print("No valid batches to combine.")
         return
 
+    # Create unsorted combined result with batch-specific worksheets and overall averages
+    raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
+    unsorted_dfs = []
+    batch_sheets = {}
+    batch_averages = {}
+    for f in sorted(raw_files):  # Sort files to ensure consistent order
+        cleaned, batch_id, avg_score = process_file_for_unsorted(os.path.join(raw_dir, f))
+        if cleaned is not None:
+            unsorted_dfs.append(cleaned)
+            batch_sheets[batch_id] = cleaned
+            batch_averages[batch_id] = avg_score
+            print(f"Prepared unsorted data for batch: {batch_id}, Overall Average: {avg_score}")
+
+    if unsorted_dfs:
+        unsorted_cleaned = pd.concat(unsorted_dfs, ignore_index=True)
+        unsorted_cols = ["S/N", "FULL NAME", "APPLICATION ID", "PHONE NUMBER", "STATE", "Score/100.00"]
+        missing_cols = [c for c in unsorted_cols if c not in unsorted_cleaned.columns]
+        if missing_cols:
+            print(f"Error: Missing required columns for unsorted result: {missing_cols}")
+        else:
+            unsorted_cleaned = unsorted_cleaned[unsorted_cols].copy()
+            if "STATE_SN" in unsorted_cleaned.columns:
+                unsorted_cleaned = unsorted_cleaned.drop(columns=["STATE_SN"])
+            # Calculate overall average for combined unsorted data
+            combined_avg = round(float(unsorted_cleaned["Score/100.00"].mean()), 2) if pd.notna(unsorted_cleaned["Score/100.00"].mean()) else None
+            out_unsorted_xlsx = os.path.join(output_dir, f"PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx")
+            try:
+                with pd.ExcelWriter(out_unsorted_xlsx, engine="openpyxl") as writer:
+                    # Write Unsorted Results sheet
+                    unsorted_cleaned.to_excel(writer, sheet_name="Unsorted Results", index=False)
+                    # Append overall average row
+                    wb = writer.book
+                    ws = wb["Unsorted Results"]
+                    avg_row = ["Overall Average"] + [""] * (len(unsorted_cols) - 2) + [combined_avg]
+                    ws.append(avg_row)
+                    # Write batch-specific sheets
+                    for batch_id, batch_df in batch_sheets.items():
+                        safe_batch_id = re.sub(r'[^\w\s]', '_', batch_id)[:31]
+                        batch_df.to_excel(writer, sheet_name=safe_batch_id, index=False)
+                        ws_batch = wb[safe_batch_id]
+                        avg_row_batch = ["Overall Average"] + [""] * (len(unsorted_cols) - 2) + [batch_averages.get(batch_id)]
+                        ws_batch.append(avg_row_batch)
+                print(f"Saved unsorted combined result with batch sheets: {os.path.basename(out_unsorted_xlsx)}")
+            except Exception as e:
+                print(f"Error saving unsorted combined result: {e}")
+                return
+
+            wb_unsorted = load_workbook(out_unsorted_xlsx)
+            format_excel_sheet(wb_unsorted, "Unsorted Results", unsorted_cleaned, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False)
+            for batch_id, batch_df in batch_sheets.items():
+                safe_batch_id = re.sub(r'[^\w\s]', '_', batch_id)[:31]
+                format_excel_sheet(wb_unsorted, safe_batch_id, batch_df, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False)
+            wb_unsorted.save(out_unsorted_xlsx)
+            print(f"Saved formatted unsorted combined result with batch sheets and overall averages: {os.path.basename(out_unsorted_xlsx)}")
+    else:
+        print("No valid data for unsorted combined result.")
+
+    # Create sorted combined result
     combined_cleaned = pd.concat(cleaned_dfs, ignore_index=True)
     duplicates = combined_cleaned[combined_cleaned["APPLICATION ID"].duplicated(keep=False)]
     if not duplicates.empty:
@@ -931,7 +1122,6 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
     mismatch_rows = []
     present_ids = set()
     invalid_ids = []
-    # Map APPLICATION IDs to their source batch
     id_to_source_batch = {}
     raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
     for df, fname in zip(cleaned_dfs, raw_files):
@@ -956,7 +1146,6 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
                 registered_batch = full_batch_id_map.get(norm_id, "")
             if registered_batch:
                 source_batch = id_to_source_batch.get(norm_id, "")
-                # Check if the candidate's registered batch differs from the batch they appeared in
                 if source_batch and re.sub(r'\s+', '', registered_batch.lower()) != re.sub(r'\s+', '', source_batch.lower()):
                     mismatch_row = full_candidates_df[full_candidates_df["EXAM_NO"].apply(normalize_id) == norm_id]
                     if not mismatch_row.empty:
@@ -1087,6 +1276,7 @@ def main():
             print(f" - Saved processed file: {os.path.basename(csvp)}")
             print(f" - Saved processed file: {os.path.basename(xl)}")
     print(f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_{ts}.xlsx'))}")
+    print(f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx'))}")
 
 if __name__ == "__main__":
     main()
