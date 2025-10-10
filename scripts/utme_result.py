@@ -27,7 +27,7 @@ Features:
  - Removes 'overall average' rows and invalid rows
  - Sorts combined result by STATE (A->Z) then Score (Z->A highest first)
  - Unsorted result preserves raw input order from RAW_PUTME_RESULT with columns: S/N, FULL NAME, APPLICATION ID, PHONE NUMBER, STATE, Score/100.00 (2 decimals), without state-based coloring or green highlighting for scores >= pass threshold
- - Adds batch-specific worksheets (e.g., Batch1A, Batch1B) in unsorted result, each with unsorted data, same columns as Unsorted Results, and an overall average row for Score/100.00
+ - Adds batch-specific worksheets (e.g., Batch1A, Batch1B) in unsorted result, each with a bold title row (e.g., BATCH1A UNSORTED), unsorted data, same columns as Unsorted Results, and an overall average row for Score/100.00
  - Adds an overall average row for Score/100.00 in the Unsorted Results sheet
  - Adds S/N (global) and STATE_SN (restarts per state, excluded in unsorted result)
  - Cleans phone numbers (remove .0, non-digits, ensure leading 0)
@@ -40,7 +40,7 @@ Features:
  - Generates unsorted combined result with specified columns, batch-specific worksheets, and overall averages
  - Enhanced logging for invalid APPLICATION IDs, batch-specific absent candidates, and batch mismatches
  - Supports batch IDs with or without spaces (e.g., Batch1A or Batch 1A)
- - Ensures absent counts reflect the exact difference between registered candidates and those who sat
+ - Ensures absent counts reflects the exact difference between registered candidates and those who sat
 """
 
 import os
@@ -287,23 +287,32 @@ def extract_numeric_token(s):
 # ---------------------------
 # Format Excel sheet helper
 # ---------------------------
-def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_threshold, apply_state_colors=True, highlight_passing_scores=True):
+def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_threshold, apply_state_colors=True, highlight_passing_scores=True, title_row=None):
     ws = wb[ws_name]
+    header_row = 1 if title_row is None else 2
     header_font = Font(bold=True, size=12)
-    for cell in ws[1]:
+    for cell in ws[header_row]:
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Apply title row formatting if provided
+    if title_row is not None:
+        for cell in ws[1]:
+            cell.font = Font(bold=True, size=14)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(cleaned.columns))
+        ws.cell(row=1, column=1).value = title_row
 
     if "APPLICATION ID" in cleaned.columns:
         try:
             col_idx = list(cleaned.columns).index("APPLICATION ID") + 1
-            for r in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx, max_row=ws.max_row):
+            for r in ws.iter_rows(min_row=header_row + 1, min_col=col_idx, max_col=col_idx, max_row=ws.max_row):
                 for cell in r:
                     cell.alignment = Alignment(horizontal="left")
         except Exception:
             pass
 
-    ws.freeze_panes = "A2"
+    ws.freeze_panes = f"A{header_row + 1}"
     auto_column_width(ws)
 
     thin = Side(border_style="thin", color="000000")
@@ -312,13 +321,13 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
         for cell in r:
             cell.border = border
             # Apply bold formatting to "Overall Average" row
-            if cell.row > 1 and ws.cell(row=cell.row, column=1).value == "Overall Average":
+            if cell.row > header_row and ws.cell(row=cell.row, column=1).value == "Overall Average":
                 cell.font = Font(bold=True)
 
     if apply_state_colors:
         try:
             state_col_index = list(cleaned.columns).index("STATE") + 1
-            for row_idx in range(2, ws.max_row + 1):
+            for row_idx in range(header_row + 1, ws.max_row + 1):
                 state_val = ws.cell(row=row_idx, column=state_col_index).value
                 # Skip coloring for "Overall Average" row
                 if ws.cell(row=row_idx, column=1).value == "Overall Average":
@@ -334,7 +343,7 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
         pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
         pass_font = Font(color="006100")
         for col_idx in score_cols_indices:
-            for row_idx in range(2, ws.max_row + 1):
+            for row_idx in range(header_row + 1, ws.max_row + 1):
                 # Skip highlighting for "Overall Average" row
                 if ws.cell(row=row_idx, column=1).value == "Overall Average":
                     continue
@@ -1046,11 +1055,14 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
                     ws = wb["Unsorted Results"]
                     avg_row = ["Overall Average"] + [""] * (len(unsorted_cols) - 2) + [combined_avg]
                     ws.append(avg_row)
-                    # Write batch-specific sheets
+                    # Write batch-specific sheets with title row
                     for batch_id, batch_df in batch_sheets.items():
                         safe_batch_id = re.sub(r'[^\w\s]', '_', batch_id)[:31]
-                        batch_df.to_excel(writer, sheet_name=safe_batch_id, index=False)
+                        title = f"{batch_id.upper()} UNSORTED"
+                        batch_df.to_excel(writer, sheet_name=safe_batch_id, index=False, startrow=1)
                         ws_batch = wb[safe_batch_id]
+                        ws_batch.insert_rows(1)
+                        ws_batch.cell(row=1, column=1).value = title
                         avg_row_batch = ["Overall Average"] + [""] * (len(unsorted_cols) - 2) + [batch_averages.get(batch_id)]
                         ws_batch.append(avg_row_batch)
                 print(f"Saved unsorted combined result with batch sheets: {os.path.basename(out_unsorted_xlsx)}")
@@ -1062,7 +1074,8 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
             format_excel_sheet(wb_unsorted, "Unsorted Results", unsorted_cleaned, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False)
             for batch_id, batch_df in batch_sheets.items():
                 safe_batch_id = re.sub(r'[^\w\s]', '_', batch_id)[:31]
-                format_excel_sheet(wb_unsorted, safe_batch_id, batch_df, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False)
+                title = f"{batch_id.upper()} UNSORTED"
+                format_excel_sheet(wb_unsorted, safe_batch_id, batch_df, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False, title_row=title)
             wb_unsorted.save(out_unsorted_xlsx)
             print(f"Saved formatted unsorted combined result with batch sheets and overall averages: {os.path.basename(out_unsorted_xlsx)}")
     else:

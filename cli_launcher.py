@@ -84,7 +84,10 @@ FOLDERS = {
     "PUTME_RAW_BATCH": os.path.join(BASE_DIR, "PUTME_RESULT/RAW_CANDIDATE_BATCHES"),
     "PUTME_CLEAN": os.path.join(BASE_DIR, "PUTME_RESULT/CLEAN_PUTME_RESULT"),
     "JAMB_RAW": os.path.join(BASE_DIR, "JAMB_DB/RAW_JAMB_DB"),
-    "JAMB_CLEAN": os.path.join(BASE_DIR, "JAMB_DB/CLEAN_JAMB_DB")
+    "JAMB_CLEAN": os.path.join(BASE_DIR, "JAMB_DB/CLEAN_JAMB_DB"),
+    "SET48_RAW": os.path.join(BASE_DIR, "SET48_RESULTS/RAW_RESULTS"),
+    "SET48_CLEAN": os.path.join(BASE_DIR, "SET48_RESULTS/CLEAN_RESULTS"),
+    "ND_COURSES": os.path.join(BASE_DIR, "EXAMS_INTERNAL/ND-COURSES")  # Added for clarity
 }
 
 # ---------------------------
@@ -103,7 +106,8 @@ SCRIPTS = {
     "1": ("CAOSCE Result Cleaning", os.path.join(SCRIPTS_DIR, "caosce_result.py")),
     "2": ("Internal Exam Cleaning", os.path.join(SCRIPTS_DIR, "clean_results.py")),
     "3": ("PUTME Result Cleaning", os.path.join(SCRIPTS_DIR, "utme_result.py")),
-    "4": ("JAMB Candidate Name Split", os.path.join(SCRIPTS_DIR, "split_names.py"))
+    "4": ("JAMB Candidate Name Split", os.path.join(SCRIPTS_DIR, "split_names.py")),
+    "5": ("ND Examination Results Processing", os.path.join(SCRIPTS_DIR, "exam_result_processor.py"))
 }
 
 # ---------------------------
@@ -114,7 +118,7 @@ for key, (desc, _) in SCRIPTS.items():
     print(f"{key}. {desc}")
 
 while True:
-    choice = input("Enter 1, 2, 3, or 4: ").strip()
+    choice = input("Enter 1, 2, 3, 4, or 5: ").strip()
     if choice in SCRIPTS:
         script_name, script_to_run = SCRIPTS[choice]
         if not os.path.exists(script_to_run):
@@ -122,7 +126,7 @@ while True:
             sys.exit(1)
         break
     else:
-        print(f"{RED}❌ Invalid selection. Please enter 1, 2, 3, or 4.{RESET}")
+        print(f"{RED}❌ Invalid selection. Please enter 1, 2, 3, 4, or 5.{RESET}")
 
 # ---------------------------
 # Run selected script using current venv Python
@@ -133,6 +137,7 @@ try:
     print(f"\n{GREEN}✅ {script_name} completed successfully!{RESET}")
 except subprocess.CalledProcessError as e:
     print(f"\n{RED}❌ An error occurred while running {script_name}.{RESET}")
-    print(str(e))
+    print(f"Command {e.cmd} returned non-zero exit status {e.returncode}.")
+    print(f"{YELLOW}Note: Ensure 'course-code-creditUnit.xlsx' exists in ~/Documents/PROCESS_RESULT/EXAMS_INTERNAL/ND-COURSES/.{RESET}")
 
 input("\nPress any key to exit . . .")
