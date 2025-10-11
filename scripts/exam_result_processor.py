@@ -2,7 +2,7 @@
 """
 exam_result_processor.py
 
-Complete script with proper semester ordering and Previous GPA tracking.
+Complete script with proper semester ordering, Previous GPA, and Overall GPA tracking.
 """
 
 from openpyxl.cell import MergedCell
@@ -361,6 +361,123 @@ def load_previous_gpas_from_processed_files(output_dir, current_semester_key, ti
     print(f"📊 FINAL: Loaded {len(previous_gpas)} previous GPAs")
     return previous_gpas
 
+def load_all_previous_gpas_for_cgpa(output_dir, current_semester_key, timestamp):
+    """
+    Load ALL previous GPAs from all completed semesters for CGPA calculation.
+    Returns dict: {exam_number: {'gpas': [gpa1, gpa2, ...], 'credits': [credits1, credits2, ...]}}
+    """
+    print(f"\n🔍 LOADING ALL PREVIOUS GPAs for CGPA calculation: {current_semester_key}")
+    
+    current_year, current_semester_num, _, _, _ = get_semester_display_info(current_semester_key)
+    
+    # Determine which semesters to load based on current semester
+    semesters_to_load = []
+    
+    if current_semester_num == 1 and current_year == 1:
+        # First semester - no previous data
+        return {}
+    elif current_semester_num == 2 and current_year == 1:
+        # Second semester of first year - load first semester
+        semesters_to_load = ["ND-FIRST-YEAR-FIRST-SEMESTER"]
+    elif current_semester_num == 1 and current_year == 2:
+        # First semester of second year - load both first year semesters
+        semesters_to_load = ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER"]
+    elif current_semester_num == 2 and current_year == 2:
+        # Second semester of second year - load all previous semesters
+        semesters_to_load = [
+            "ND-FIRST-YEAR-FIRST-SEMESTER", 
+            "ND-FIRST-YEAR-SECOND-SEMESTER",
+            "ND-SECOND-YEAR-FIRST-SEMESTER"
+        ]
+    
+    print(f"📚 Semesters to load for CGPA: {semesters_to_load}")
+    
+    all_student_data = {}
+    mastersheet_path = os.path.join(output_dir, f"ND_RESULT-{timestamp}", f"mastersheet_{timestamp}.xlsx")
+    
+    if not os.path.exists(mastersheet_path):
+        print(f"❌ Mastersheet not found: {mastersheet_path}")
+        return {}
+    
+    for semester in semesters_to_load:
+        print(f"📖 Loading data from: {semester}")
+        try:
+            # Load the semester data, skipping header rows
+            df = pd.read_excel(mastersheet_path, sheet_name=semester, header=5)
+            
+            # Find columns
+            exam_col = None
+            gpa_col = None
+            credit_col = None
+            
+            for col in df.columns:
+                col_str = str(col).upper().strip()
+                if 'EXAM' in col_str or 'REG' in col_str or 'NUMBER' in col_str:
+                    exam_col = col
+                elif 'GPA' in col_str:
+                    gpa_col = col
+                elif 'CU PASSED' in col_str or 'CREDIT' in col_str:
+                    credit_col = col
+            
+            if exam_col and gpa_col:
+                for idx, row in df.iterrows():
+                    exam_no = str(row[exam_col]).strip()
+                    gpa = row[gpa_col]
+                    
+                    if pd.notna(gpa) and pd.notna(exam_no) and exam_no != 'nan' and exam_no != '':
+                        try:
+                            # Get credits completed (use CU Passed if available, otherwise estimate)
+                            credits_completed = 0
+                            if credit_col and pd.notna(row[credit_col]):
+                                credits_completed = int(row[credit_col])
+                            else:
+                                # Estimate credits based on typical semester load
+                                if 'FIRST-YEAR-FIRST-SEMESTER' in semester:
+                                    credits_completed = 30  # Typical first semester credits
+                                elif 'FIRST-YEAR-SECOND-SEMESTER' in semester:
+                                    credits_completed = 30  # Typical second semester credits
+                                elif 'SECOND-YEAR-FIRST-SEMESTER' in semester:
+                                    credits_completed = 30  # Typical third semester credits
+                            
+                            if exam_no not in all_student_data:
+                                all_student_data[exam_no] = {'gpas': [], 'credits': []}
+                            
+                            all_student_data[exam_no]['gpas'].append(float(gpa))
+                            all_student_data[exam_no]['credits'].append(credits_completed)
+                            
+                        except (ValueError, TypeError):
+                            continue
+        
+        except Exception as e:
+            print(f"⚠️ Could not load data from {semester}: {str(e)}")
+    
+    print(f"📊 Loaded cumulative data for {len(all_student_data)} students")
+    return all_student_data
+
+def calculate_cgpa(student_data, current_gpa, current_credits):
+    """
+    Calculate Cumulative GPA (CGPA) based on all previous semesters and current semester.
+    """
+    if not student_data:
+        return current_gpa
+    
+    total_grade_points = 0.0
+    total_credits = 0
+    
+    # Add previous semesters
+    for prev_gpa, prev_credits in zip(student_data['gpas'], student_data['credits']):
+        total_grade_points += prev_gpa * prev_credits
+        total_credits += prev_credits
+    
+    # Add current semester
+    total_grade_points += current_gpa * current_credits
+    total_credits += current_credits
+    
+    if total_credits > 0:
+        return round(total_grade_points / total_credits, 2)
+    else:
+        return current_gpa
+
 def get_cumulative_gpa(current_gpa, previous_gpa, current_credits, previous_credits):
     """
     Calculate cumulative GPA based on current and previous semester performance.
@@ -381,7 +498,8 @@ def get_cumulative_gpa(current_gpa, previous_gpa, current_credits, previous_cred
 # ----------------------------
 def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, logo_path=None, 
                                    prev_mastersheet_df=None, filtered_credit_units=None, 
-                                   ordered_codes=None, course_titles_map=None, previous_gpas=None):
+                                   ordered_codes=None, course_titles_map=None, previous_gpas=None,
+                                   cgpa_data=None):
     """
     Create a PDF with one page per student matching the sample format exactly.
     """
@@ -618,11 +736,19 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
         exam_no = str(r.get("EXAMS NUMBER", "")).strip()
         previous_gpa = previous_gpas.get(exam_no, None) if previous_gpas else None
         
+        # Calculate CGPA if available
+        cgpa = None
+        if cgpa_data and exam_no in cgpa_data:
+            cgpa = calculate_cgpa(cgpa_data[exam_no], current_gpa, total_units_passed)
+        
         print(f"📊 PDF GENERATION for {exam_no}:")
         print(f"   Current GPA: {current_gpa}")
         print(f"   Previous GPA available: {previous_gpa is not None}")
+        print(f"   CGPA available: {cgpa is not None}")
         if previous_gpa is not None:
             print(f"   Previous GPA value: {previous_gpa}")
+        if cgpa is not None:
+            print(f"   CGPA value: {cgpa}")
         
         # Get values from dataframe
         tcpe = round(total_grade_points, 1)
@@ -630,7 +756,7 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
         tcuf = total_units_failed
         remarks = str(r.get("REMARKS", ""))
         
-        # Summary section - FIXED LOGIC
+        # Summary section - UPDATED TO INCLUDE CGPA
         summary_data = [
             [Paragraph("<b>SUMMARY</b>", styles['Normal']), "", "", ""],
             [Paragraph("<b>TCPE:</b>", styles['Normal']), str(tcpe), 
@@ -644,14 +770,19 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
                 Paragraph("<b>TCUP:</b>", styles['Normal']), str(tcup),
                 Paragraph("<b>PREVIOUS GPA:</b>", styles['Normal']), str(previous_gpa)
             ])
-            summary_data.append([
-                Paragraph("<b>TCUF:</b>", styles['Normal']), str(tcuf), "", ""
-            ])
         else:
-            print(f"❌ NO PREVIOUS GPA available for {exam_no}")
             summary_data.append([
                 Paragraph("<b>TCUP:</b>", styles['Normal']), str(tcup), "", ""
             ])
+        
+        # Add CGPA if available (from second semester onward)
+        if cgpa is not None:
+            print(f"✅ ADDING CGPA to PDF: {cgpa}")
+            summary_data.append([
+                Paragraph("<b>TCUF:</b>", styles['Normal']), str(tcuf),
+                Paragraph("<b>OVERALL GPA:</b>", styles['Normal']), str(cgpa)
+            ])
+        else:
             summary_data.append([
                 Paragraph("<b>TCUF:</b>", styles['Normal']), str(tcuf), "", ""
             ])
@@ -736,10 +867,13 @@ def process_semester_files(semester_key, raw_files, raw_dir, clean_dir, ts, pass
             # Load previous GPAs for this specific semester
             current_previous_gpas = load_previous_gpas_from_processed_files(clean_dir, semester_key, ts) if previous_gpas is None else previous_gpas
             
+            # Load CGPA data (all previous semesters)
+            cgpa_data = load_all_previous_gpas_for_cgpa(clean_dir, semester_key, ts)
+            
             # Process the file
             result = process_single_file(raw_path, clean_dir, ts, pass_threshold, semester_course_maps, 
                                        semester_credit_units, semester_lookup, semester_course_titles, 
-                                       logo_path, semester_key, current_previous_gpas)
+                                       logo_path, semester_key, current_previous_gpas, cgpa_data)
             
             if result is not None:
                 print(f"✅ Successfully processed {rf}")
@@ -752,7 +886,7 @@ def process_semester_files(semester_key, raw_files, raw_dir, clean_dir, ts, pass
             traceback.print_exc()
 
 def process_single_file(path, output_dir, ts, pass_threshold, semester_course_maps, semester_credit_units, 
-                       semester_lookup, semester_course_titles, logo_path, semester_key, previous_gpas):
+                       semester_lookup, semester_course_titles, logo_path, semester_key, previous_gpas, cgpa_data=None):
     """
     Process a single raw file and produce mastersheet Excel and PDFs.
     """
@@ -780,6 +914,7 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
     print(f"📊 Using course sheet: {sem}")
 
     print(f"📊 Previous GPAs provided: {len(previous_gpas)} students")
+    print(f"📊 CGPA data available for: {len(cgpa_data) if cgpa_data else 0} students")
     
     # Check if semester exists in course maps
     if sem not in semester_course_maps:
@@ -1097,12 +1232,13 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
     wb.save(out_xlsx)
     print(f"✅ Mastersheet saved: {out_xlsx}")
 
-    # Generate individual student PDF with previous GPAs
+    # Generate individual student PDF with previous GPAs and CGPA
     safe_sem = re.sub(r'[^\w\-]', '_', sem)
     student_pdf_path = os.path.join(output_subdir, f"mastersheet_students_{ts}_{safe_sem}.pdf")
     
     print(f"📊 FINAL CHECK before PDF generation:")
     print(f"   Previous GPAs loaded: {len(previous_gpas)}")
+    print(f"   CGPA data available for: {len(cgpa_data) if cgpa_data else 0} students")
     if previous_gpas:
         sample = list(previous_gpas.items())[:3]
         print(f"   Sample GPAs: {sample}")
@@ -1111,7 +1247,7 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
         generate_individual_student_pdf(mastersheet, student_pdf_path, sem, logo_path=logo_path_norm, 
                                        prev_mastersheet_df=None, filtered_credit_units=filtered_credit_units,
                                        ordered_codes=ordered_codes, course_titles_map=course_titles,
-                                       previous_gpas=previous_gpas)
+                                       previous_gpas=previous_gpas, cgpa_data=cgpa_data)
     except Exception as e:
         print(f"⚠ Failed to generate student PDF: {e}")
         import traceback
