@@ -1,0 +1,12 @@
+cd student_result_cleaner
+source venv/bin/activate
+gunicorn --workers 2 --bind 0.0.0.0:5000 --timeout 60 launcher.app:app
+
+==================
+hostname -I
+==================
+
+
+netsh interface portproxy reset
+netsh interface portproxy add v4tov4 listenport=5000 listenaddress=0.0.0.0 connectport=5000 connectaddress=172.28.160.62
+netsh advfirewall firewall add rule name="StudentCleaner" dir=in action=allow protocol=TCP localport=5000
