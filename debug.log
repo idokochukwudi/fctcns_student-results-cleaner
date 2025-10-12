@@ -1,0 +1,10 @@
+nohup: ignoring input
+[2025-10-12 15:34:06 +0100] [3864] [INFO] Starting gunicorn 23.0.0
+[2025-10-12 15:34:06 +0100] [3864] [INFO] Listening at: http://127.0.0.1:5000 (3864)
+[2025-10-12 15:34:06 +0100] [3864] [INFO] Using worker: sync
+[2025-10-12 15:34:06 +0100] [3866] [INFO] Booting worker with pid: 3866
+[2025-10-12 15:34:06 +0100] [3867] [INFO] Booting worker with pid: 3867
+[2025-10-12 15:38:21 +0100] [3867] [INFO] Worker exiting (pid: 3867)
+[2025-10-12 15:38:21 +0100] [3866] [INFO] Worker exiting (pid: 3866)
+[2025-10-12 15:38:21 +0100] [3864] [INFO] Handling signal: term
+[2025-10-12 15:38:21 +0100] [3864] [INFO] Shutting down: Master
