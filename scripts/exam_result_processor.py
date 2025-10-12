@@ -48,6 +48,10 @@ SEMESTER_ORDER = [
     "ND-SECOND-YEAR-SECOND-SEMESTER"
 ]
 
+# Global student tracker
+STUDENT_TRACKER = {}
+WITHDRAWN_STUDENTS = {}
+
 # ----------------------------
 # Utilities
 # ----------------------------
@@ -77,6 +81,161 @@ def normalize_for_matching(s):
     s = re.sub(r'[^a-z0-9\s]', ' ', s)
     s = re.sub(r'\s+', ' ', s).strip()
     return s
+
+# ----------------------------
+# Student Tracking Functions
+# ----------------------------
+def initialize_student_tracker():
+    """Initialize the global student tracker."""
+    global STUDENT_TRACKER, WITHDRAWN_STUDENTS
+    STUDENT_TRACKER = {}
+    WITHDRAWN_STUDENTS = {}
+
+def update_student_tracker(semester_key, exam_numbers, withdrawn_students=None):
+    """
+    Update the student tracker with current semester's students.
+    This helps track which students are present in each semester.
+    """
+    global STUDENT_TRACKER, WITHDRAWN_STUDENTS
+    
+    print(f"📊 Updating student tracker for {semester_key}")
+    print(f"📝 Current students in this semester: {len(exam_numbers)}")
+    
+    # Track withdrawn students
+    if withdrawn_students:
+        for exam_no in withdrawn_students:
+            if exam_no not in WITHDRAWN_STUDENTS:
+                WITHDRAWN_STUDENTS[exam_no] = {
+                    'withdrawn_semester': semester_key,
+                    'withdrawn_date': datetime.now().strftime(TIMESTAMP_FMT),
+                    'reappeared_semesters': []
+                }
+                print(f"🚫 Marked as withdrawn: {exam_no} in {semester_key}")
+    
+    for exam_no in exam_numbers:
+        if exam_no not in STUDENT_TRACKER:
+            STUDENT_TRACKER[exam_no] = {
+                'first_seen': semester_key,
+                'last_seen': semester_key,
+                'semesters_present': [semester_key],
+                'status': 'Active',
+                'withdrawn': False,
+                'withdrawn_semester': None
+            }
+        else:
+            STUDENT_TRACKER[exam_no]['last_seen'] = semester_key
+            if semester_key not in STUDENT_TRACKER[exam_no]['semesters_present']:
+                STUDENT_TRACKER[exam_no]['semesters_present'].append(semester_key)
+            
+            # Check if student was previously withdrawn and has reappeared
+            if STUDENT_TRACKER[exam_no]['withdrawn']:
+                print(f"⚠️ PREVIOUSLY WITHDRAWN STUDENT REAPPEARED: {exam_no}")
+                if exam_no in WITHDRAWN_STUDENTS:
+                    if semester_key not in WITHDRAWN_STUDENTS[exam_no]['reappeared_semesters']:
+                        WITHDRAWN_STUDENTS[exam_no]['reappeared_semesters'].append(semester_key)
+    
+    print(f"📈 Total unique students tracked: {len(STUDENT_TRACKER)}")
+    print(f"🚫 Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+
+def mark_student_withdrawn(exam_no, semester_key):
+    """Mark a student as withdrawn in a specific semester."""
+    global STUDENT_TRACKER, WITHDRAWN_STUDENTS
+    
+    if exam_no in STUDENT_TRACKER:
+        STUDENT_TRACKER[exam_no]['withdrawn'] = True
+        STUDENT_TRACKER[exam_no]['withdrawn_semester'] = semester_key
+        STUDENT_TRACKER[exam_no]['status'] = 'Withdrawn'
+    
+    if exam_no not in WITHDRAWN_STUDENTS:
+        WITHDRAWN_STUDENTS[exam_no] = {
+            'withdrawn_semester': semester_key,
+            'withdrawn_date': datetime.now().strftime(TIMESTAMP_FMT),
+            'reappeared_semesters': []
+        }
+
+def is_student_withdrawn(exam_no):
+    """Check if a student has been withdrawn in any previous semester."""
+    return exam_no in WITHDRAWN_STUDENTS
+
+def get_withdrawal_history(exam_no):
+    """Get withdrawal history for a student."""
+    if exam_no in WITHDRAWN_STUDENTS:
+        return WITHDRAWN_STUDENTS[exam_no]
+    return None
+
+def filter_out_withdrawn_students(mastersheet, semester_key):
+    """
+    Filter out students who were withdrawn in previous semesters.
+    Returns filtered mastersheet and list of removed students.
+    """
+    removed_students = []
+    filtered_mastersheet = mastersheet.copy()
+    
+    for idx, row in mastersheet.iterrows():
+        exam_no = str(row["EXAMS NUMBER"]).strip()
+        if is_student_withdrawn(exam_no):
+            withdrawal_history = get_withdrawal_history(exam_no)
+            # Only remove if student was withdrawn in a PREVIOUS semester
+            if withdrawal_history and withdrawal_history['withdrawn_semester'] != semester_key:
+                removed_students.append(exam_no)
+                filtered_mastersheet = filtered_mastersheet[filtered_mastersheet["EXAMS NUMBER"] != exam_no]
+    
+    if removed_students:
+        print(f"🚫 Removed {len(removed_students)} previously withdrawn students from {semester_key}:")
+        for exam_no in removed_students:
+            withdrawal_history = get_withdrawal_history(exam_no)
+            print(f"   - {exam_no} (withdrawn in {withdrawal_history['withdrawn_semester']})")
+    
+    return filtered_mastersheet, removed_students
+
+# ----------------------------
+# Set Selection Functions
+# ----------------------------
+def get_available_sets(base_dir):
+    """Get all available ND sets (ND-2024, ND-2025, etc.)"""
+    sets = []
+    for item in os.listdir(base_dir):
+        item_path = os.path.join(base_dir, item)
+        if os.path.isdir(item_path) and item.upper().startswith("ND-"):
+            sets.append(item)
+    return sorted(sets)
+
+def get_user_set_choice(available_sets):
+    """
+    Prompt user to choose which set to process.
+    Returns the selected set directory name.
+    """
+    print("\n🎯 AVAILABLE SETS:")
+    for i, set_name in enumerate(available_sets, 1):
+        print(f"{i}. {set_name}")
+    print(f"{len(available_sets) + 1}. Process ALL sets")
+    
+    while True:
+        try:
+            choice = input(f"\nEnter your choice (1-{len(available_sets) + 1}): ").strip()
+            if not choice:
+                print("❌ Please enter a choice.")
+                continue
+                
+            if choice.isdigit():
+                choice_num = int(choice)
+                if 1 <= choice_num <= len(available_sets):
+                    selected_set = available_sets[choice_num - 1]
+                    print(f"✅ Selected set: {selected_set}")
+                    return [selected_set]
+                elif choice_num == len(available_sets) + 1:
+                    print("✅ Selected: ALL sets")
+                    return available_sets
+                else:
+                    print(f"❌ Invalid choice. Please enter a number between 1-{len(available_sets) + 1}.")
+            else:
+                print("❌ Please enter a valid number.")
+                
+        except KeyboardInterrupt:
+            print("\n👋 Operation cancelled by user.")
+            sys.exit(0)
+        except Exception as e:
+            print(f"❌ Error: {e}. Please try again.")
 
 # ----------------------------
 # Grade and GPA calculation
@@ -191,9 +350,9 @@ def detect_semester_from_filename(filename):
     filename_upper = filename.upper()
     
     # Map filename patterns to actual course sheet names
-    if 'FIRST-YEAR-FIRST-SEMESTER' in filename_upper or 'FIRST_YEAR_FIRST_SEMESTER' in filename_upper:
+    if 'FIRST-YEAR-FIRST-SEMESTER' in filename_upper or 'FIRST_YEAR_FIRST_SEMESTER' in filename_upper or 'FIRST SEMESTER' in filename_upper:
         return "ND-FIRST-YEAR-FIRST-SEMESTER", 1, 1, "YEAR ONE", "FIRST SEMESTER", "NDI"
-    elif 'FIRST-YEAR-SECOND-SEMESTER' in filename_upper or 'FIRST_YEAR_SECOND_SEMESTER' in filename_upper:
+    elif 'FIRST-YEAR-SECOND-SEMESTER' in filename_upper or 'FIRST_YEAR_SECOND_SEMESTER' in filename_upper or 'SECOND SEMESTER' in filename_upper:
         return "ND-FIRST-YEAR-SECOND-SEMESTER", 1, 2, "YEAR ONE", "SECOND SEMESTER", "NDI"
     elif 'SECOND-YEAR-FIRST-SEMESTER' in filename_upper or 'SECOND_YEAR_FIRST_SEMESTER' in filename_upper:
         return "ND-SECOND-YEAR-FIRST-SEMESTER", 2, 1, "YEAR TWO", "FIRST SEMESTER", "NDII"
@@ -493,13 +652,156 @@ def get_cumulative_gpa(current_gpa, previous_gpa, current_credits, previous_cred
     total_credits = current_credits + previous_credits
     return round(total_points / total_credits, 2) if total_credits > 0 else 0.0
 
+def determine_student_status(row, total_cu, pass_threshold):
+    """
+    Determine student status based on performance metrics.
+    Returns: 'Pass', 'Carry Over', 'Probation', or 'Withdrawn'
+    """
+    gpa = row.get("GPA", 0)
+    cu_passed = row.get("CU Passed", 0)
+    cu_failed = row.get("CU Failed", 0)
+    
+    # Calculate percentage of failed credit units
+    failed_percentage = (cu_failed / total_cu) * 100 if total_cu > 0 else 0
+    
+    # Decision matrix based on the summary criteria
+    if cu_failed == 0:
+        return "Pass"
+    elif gpa >= 2.0 and failed_percentage <= 45:
+        return "Carry Over"
+    elif gpa < 2.0 and failed_percentage <= 45:
+        return "Probation"
+    elif failed_percentage > 45:
+        return "Withdrawn"
+    else:
+        return "Carry Over"
+
+def format_failed_courses_remark(failed_courses, max_line_length=60):
+    """
+    Format failed courses remark with line breaks for long lists.
+    Returns list of formatted lines.
+    """
+    if not failed_courses:
+        return [""]
+    
+    failed_str = ", ".join(sorted(failed_courses))
+    
+    # If the string is short enough, return as single line
+    if len(failed_str) <= max_line_length:
+        return [failed_str]
+    
+    # Split into multiple lines
+    lines = []
+    current_line = ""
+    
+    for course in sorted(failed_courses):
+        if not current_line:
+            current_line = course
+        elif len(current_line) + len(course) + 2 <= max_line_length:  # +2 for ", "
+            current_line += ", " + course
+        else:
+            lines.append(current_line)
+            current_line = course
+    
+    if current_line:
+        lines.append(current_line)
+    
+    return lines
+
+def get_user_semester_choice():
+    """
+    Prompt user to choose which semesters to process.
+    Returns list of semester keys to process.
+    """
+    print("\n🎯 SEMESTER PROCESSING OPTIONS:")
+    print("1. Process ALL semesters in order")
+    print("2. Process FIRST YEAR - FIRST SEMESTER only")
+    print("3. Process FIRST YEAR - SECOND SEMESTER only") 
+    print("4. Process SECOND YEAR - FIRST SEMESTER only")
+    print("5. Process SECOND YEAR - SECOND SEMESTER only")
+    print("6. Custom selection")
+    
+    while True:
+        try:
+            choice = input("\nEnter your choice (1-6): ").strip()
+            if choice == "1":
+                return SEMESTER_ORDER.copy()
+            elif choice == "2":
+                return ["ND-FIRST-YEAR-FIRST-SEMESTER"]
+            elif choice == "3":
+                return ["ND-FIRST-YEAR-SECOND-SEMESTER"]
+            elif choice == "4":
+                return ["ND-SECOND-YEAR-FIRST-SEMESTER"]
+            elif choice == "5":
+                return ["ND-SECOND-YEAR-SECOND-SEMESTER"]
+            elif choice == "6":
+                return get_custom_semester_selection()
+            else:
+                print("❌ Invalid choice. Please enter a number between 1-6.")
+        except KeyboardInterrupt:
+            print("\n👋 Operation cancelled by user.")
+            sys.exit(0)
+        except Exception as e:
+            print(f"❌ Error: {e}. Please try again.")
+
+def get_custom_semester_selection():
+    """
+    Allow user to select multiple semesters for processing.
+    """
+    print("\n📚 AVAILABLE SEMESTERS:")
+    for i, semester in enumerate(SEMESTER_ORDER, 1):
+        year, sem_num, level, sem_display, set_code = get_semester_display_info(semester)
+        print(f"{i}. {level} - {sem_display}")
+    
+    print(f"{len(SEMESTER_ORDER) + 1}. Select all")
+    
+    selected = []
+    while True:
+        try:
+            choices = input(f"\nEnter semester numbers separated by commas (1-{len(SEMESTER_ORDER) + 1}): ").strip()
+            if not choices:
+                print("❌ Please enter at least one semester number.")
+                continue
+                
+            choice_list = [c.strip() for c in choices.split(',')]
+            
+            # Check for "select all" option
+            if str(len(SEMESTER_ORDER) + 1) in choice_list:
+                return SEMESTER_ORDER.copy()
+            
+            # Validate and convert choices
+            valid_choices = []
+            for choice in choice_list:
+                if not choice.isdigit():
+                    print(f"❌ '{choice}' is not a valid number.")
+                    continue
+                    
+                choice_num = int(choice)
+                if 1 <= choice_num <= len(SEMESTER_ORDER):
+                    valid_choices.append(choice_num)
+                else:
+                    print(f"❌ '{choice}' is not a valid semester number.")
+            
+            if valid_choices:
+                selected_semesters = [SEMESTER_ORDER[i-1] for i in valid_choices]
+                print(f"✅ Selected semesters: {[get_semester_display_info(sem)[3] for sem in selected_semesters]}")
+                return selected_semesters
+            else:
+                print("❌ No valid semesters selected. Please try again.")
+                
+        except KeyboardInterrupt:
+            print("\n👋 Operation cancelled by user.")
+            sys.exit(0)
+        except Exception as e:
+            print(f"❌ Error: {e}. Please try again.")
+
 # ----------------------------
 # PDF Generation - Individual Student Report
 # ----------------------------
 def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, logo_path=None, 
                                    prev_mastersheet_df=None, filtered_credit_units=None, 
                                    ordered_codes=None, course_titles_map=None, previous_gpas=None,
-                                   cgpa_data=None):
+                                   cgpa_data=None, total_cu=None, pass_threshold=None):
     """
     Create a PDF with one page per student matching the sample format exactly.
     """
@@ -558,6 +860,14 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
         parent=styles['Normal'],
         fontSize=9,
         alignment=TA_CENTER
+    )
+    
+    # Style for remarks with smaller font
+    remarks_style = ParagraphStyle(
+        'RemarksStyle',
+        parent=styles['Normal'],
+        fontSize=8,
+        alignment=TA_LEFT
     )
     
     elems = []
@@ -670,6 +980,7 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
         total_units = 0
         total_units_passed = 0
         total_units_failed = 0
+        failed_courses_list = []
         
         for code in ordered_codes if ordered_codes else []:
             score = r.get(code)
@@ -695,11 +1006,12 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
             total_grade_points += grade_point * cu
             total_units += cu
             
-            # Track passed/failed units
-            if score_val >= DEFAULT_PASS_THRESHOLD:
+            # Track passed/failed units and courses
+            if score_val >= pass_threshold:
                 total_units_passed += cu
             else:
                 total_units_failed += cu
+                failed_courses_list.append(code)
             
             # LEFT-ALIGNED course code and title
             course_data.append([
@@ -754,13 +1066,74 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
         tcpe = round(total_grade_points, 1)
         tcup = total_units_passed
         tcuf = total_units_failed
-        remarks = str(r.get("REMARKS", ""))
         
-        # Summary section - UPDATED TO INCLUDE CGPA
+        # Determine student status based on performance
+        student_status = determine_student_status(r, total_cu, pass_threshold)
+        
+        # Check if student was previously withdrawn
+        withdrawal_history = get_withdrawal_history(exam_no)
+        previously_withdrawn = withdrawal_history is not None
+        
+        # Format failed courses with line breaks if needed
+        failed_courses_formatted = format_failed_courses_remark(failed_courses_list)
+        
+        # Combine course-specific remarks with overall status
+        final_remarks_lines = []
+        
+        # For withdrawn students in their withdrawal semester, show appropriate metrics
+        if previously_withdrawn and withdrawal_history['withdrawn_semester'] == semester_key:
+            # This is the actual withdrawal semester - show normal withdrawal remarks
+            if failed_courses_formatted:
+                final_remarks_lines.append(f"Failed: {failed_courses_formatted[0]}")
+                if len(failed_courses_formatted) > 1:
+                    final_remarks_lines.extend(failed_courses_formatted[1:])
+                final_remarks_lines.append("Advised to Withdraw")
+            else:
+                final_remarks_lines.append("Advised to Withdraw")
+        elif previously_withdrawn:
+            # Student was withdrawn in a previous semester but appears here - this shouldn't happen due to filtering
+            withdrawn_semester = withdrawal_history['withdrawn_semester']
+            year, sem_num, level, sem_display, set_code = get_semester_display_info(withdrawn_semester)
+            final_remarks_lines.append(f"STUDENT WAS WITHDRAWN FROM {level} - {sem_display}")
+            final_remarks_lines.append("This result should not be processed as student was previously withdrawn")
+        elif student_status == "Pass":
+            final_remarks_lines.append("Passed")
+        elif student_status == "Carry Over":
+            if failed_courses_formatted:
+                final_remarks_lines.append(f"Failed: {failed_courses_formatted[0]}")
+                if len(failed_courses_formatted) > 1:
+                    final_remarks_lines.extend(failed_courses_formatted[1:])
+                final_remarks_lines.append("To Carry Over Courses")
+            else:
+                final_remarks_lines.append("To Carry Over Courses")
+        elif student_status == "Probation":
+            if failed_courses_formatted:
+                final_remarks_lines.append(f"Failed: {failed_courses_formatted[0]}")
+                if len(failed_courses_formatted) > 1:
+                    final_remarks_lines.extend(failed_courses_formatted[1:])
+                final_remarks_lines.append("Placed on Probation")
+            else:
+                final_remarks_lines.append("Placed on Probation")
+        elif student_status == "Withdrawn":
+            if failed_courses_formatted:
+                final_remarks_lines.append(f"Failed: {failed_courses_formatted[0]}")
+                if len(failed_courses_formatted) > 1:
+                    final_remarks_lines.extend(failed_courses_formatted[1:])
+                final_remarks_lines.append("Advised to Withdraw")
+            else:
+                final_remarks_lines.append("Advised to Withdraw")
+        else:
+            final_remarks_lines.append(str(r.get("REMARKS", "")))
+        
+        final_remarks = "<br/>".join(final_remarks_lines)
+        display_gpa = current_gpa
+        display_cgpa = cgpa if cgpa is not None else current_gpa
+        
+        # Summary section - EXPANDED TO ACCOMMODATE LONG REMARKS
         summary_data = [
             [Paragraph("<b>SUMMARY</b>", styles['Normal']), "", "", ""],
             [Paragraph("<b>TCPE:</b>", styles['Normal']), str(tcpe), 
-             Paragraph("<b>CURRENT GPA:</b>", styles['Normal']), str(current_gpa)],
+             Paragraph("<b>CURRENT GPA:</b>", styles['Normal']), str(display_gpa)],
         ]
         
         # Add previous GPA if available (from first year second semester upward)
@@ -780,18 +1153,30 @@ def generate_individual_student_pdf(mastersheet_df, out_pdf_path, semester_key, 
             print(f"✅ ADDING CGPA to PDF: {cgpa}")
             summary_data.append([
                 Paragraph("<b>TCUF:</b>", styles['Normal']), str(tcuf),
-                Paragraph("<b>OVERALL GPA:</b>", styles['Normal']), str(cgpa)
+                Paragraph("<b>OVERALL GPA:</b>", styles['Normal']), str(display_cgpa)
             ])
         else:
             summary_data.append([
                 Paragraph("<b>TCUF:</b>", styles['Normal']), str(tcuf), "", ""
             ])
-            
+        
+        # Add remarks with multiple lines if needed
+        remarks_paragraph = Paragraph(final_remarks, remarks_style)
         summary_data.append([
-            Paragraph("<b>REMARKS:</b>", styles['Normal']), remarks, "", ""
+            Paragraph("<b>REMARKS:</b>", styles['Normal']), 
+            remarks_paragraph, "", ""
         ])
         
-        summary_table = Table(summary_data, colWidths=[1.5*inch, 1.0*inch, 1.5*inch, 1.0*inch])
+        # Calculate row heights based on content
+        row_heights = [0.3*inch] * len(summary_data)  # Default height
+        
+        # Adjust height for remarks row based on number of lines
+        total_remark_lines = len(final_remarks_lines)
+        if total_remark_lines > 1:
+            # Add extra height for multiple lines
+            row_heights[-1] = max(0.4*inch, 0.2*inch * (total_remark_lines + 1))
+        
+        summary_table = Table(summary_data, colWidths=[1.5*inch, 1.0*inch, 1.5*inch, 1.0*inch], rowHeights=row_heights)
         summary_table.setStyle(TableStyle([
             ('SPAN', (0,0), (3,0)),
             ('SPAN', (1,len(summary_data)-1), (3,len(summary_data)-1)),
@@ -929,6 +1314,7 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
     ordered_codes = [course_map[t] for t in ordered_titles if course_map.get(t)]
     ordered_codes = [c for c in ordered_codes if credit_units.get(c, 0) > 0]
     filtered_credit_units = {c: credit_units[c] for c in ordered_codes}
+    total_cu = sum(filtered_credit_units.values())
 
     reg_no_cols = {s: find_column_by_names(df, ["REG. No", "Reg No", "Registration Number", "Mat No", "Exam No", "Student ID"]) for s, df in dfs.items()}
     name_cols = {s: find_column_by_names(df, ["NAME", "Full Name", "Candidate Name"]) for s, df in dfs.items()}
@@ -1046,8 +1432,31 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
     mastersheet["REMARKS"] = mastersheet.apply(compute_remarks, axis=1)
 
     total_cu = sum(filtered_credit_units.values()) if filtered_credit_units else 0
-    mastersheet["GPA"] = mastersheet["TCPE"].apply(lambda x: round((x / total_cu), 2) if total_cu > 0 else 0.0)
+    
+    # Calculate GPA - ALWAYS calculate the actual GPA
+    def calculate_gpa(row):
+        tcpe = row["TCPE"]
+        return round((tcpe / total_cu), 2) if total_cu > 0 else 0.0
+    
+    mastersheet["GPA"] = mastersheet.apply(calculate_gpa, axis=1)
     mastersheet["AVERAGE"] = mastersheet[[c for c in ordered_codes]].mean(axis=1).round(0)
+
+    # FILTER OUT PREVIOUSLY WITHDRAWN STUDENTS
+    mastersheet, removed_students = filter_out_withdrawn_students(mastersheet, semester_key)
+
+    # Identify withdrawn students in this semester (after filtering)
+    withdrawn_students = []
+    for idx, row in mastersheet.iterrows():
+        student_status = determine_student_status(row, total_cu, pass_threshold)
+        if student_status == "Withdrawn":
+            exam_no = str(row["EXAMS NUMBER"]).strip()
+            withdrawn_students.append(exam_no)
+            mark_student_withdrawn(exam_no, semester_key)
+            print(f"🚫 Student {exam_no} marked as withdrawn in {semester_key}")
+
+    # Update student tracker with current semester's students (after filtering)
+    exam_numbers = mastersheet["EXAMS NUMBER"].astype(str).str.strip().tolist()
+    update_student_tracker(semester_key, exam_numbers, withdrawn_students)
 
     def sort_key(remark):
         if remark == "Passed":
@@ -1073,6 +1482,7 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
             mastersheet[c] = pd.NA
     mastersheet = mastersheet[out_cols]
 
+    # FIXED: Create proper output directory structure
     output_subdir = os.path.join(output_dir, f"ND_RESULT-{ts}")
     os.makedirs(output_subdir, exist_ok=True)
     out_xlsx = os.path.join(output_subdir, f"mastersheet_{ts}.xlsx")
@@ -1177,13 +1587,53 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
             except Exception:
                 continue
 
-    # Adjust column widths - EXPANDED REMARKS AND SEMESTER COLUMNS
+    # Apply specific column alignments
+    left_align_columns = ["CU Passed", "CU Failed", "TCPE", "GPA", "AVERAGE"]
+    
+    for col_idx, col_name in enumerate(headers, start=1):
+        if col_name in left_align_columns:
+            col_letter = get_column_letter(col_idx)
+            for row_idx in range(6, ws.max_row + 1):  # Start from row 6 (data rows)
+                cell = ws.cell(row=row_idx, column=col_idx)
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+        
+        # Center align S/N column
+        elif col_name == "S/N":
+            col_letter = get_column_letter(col_idx)
+            for row_idx in range(6, ws.max_row + 1):  # Start from row 6 (data rows)
+                cell = ws.cell(row=row_idx, column=col_idx)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Calculate optimal column widths with special handling for REMARKS column
     longest_name_len = max([len(str(x)) for x in mastersheet["NAME"].fillna("")]) if "NAME" in mastersheet.columns else 10
     name_col_width = min(max(longest_name_len + 2, 10), NAME_WIDTH_CAP)
     
-    # Find longest remarks for proper column width
-    longest_remark_len = max([len(str(x)) for x in mastersheet["REMARKS"].fillna("")]) if "REMARKS" in mastersheet.columns else 20
-    remarks_col_width = min(max(longest_remark_len + 4, 35), 60)  # Expanded remarks column
+    # Enhanced REMARKS column width calculation
+    longest_remark_len = 0
+    for remark in mastersheet["REMARKS"].fillna(""):
+        remark_str = str(remark)
+        # For "Failed" remarks, calculate the length considering all course codes
+        if remark_str.startswith("Failed:"):
+            # Count the total characters in failed courses list
+            failed_courses = remark_str.replace("Failed: ", "")
+            # Estimate width needed for the course codes
+            failed_length = len(failed_courses)
+            # Add some padding for the "Failed: " prefix and spacing
+            total_length = failed_length + 15
+        else:
+            total_length = len(remark_str)
+        
+        if total_length > longest_remark_len:
+            longest_remark_len = total_length
+    
+    # Set REMARKS column width based on the longest content, with reasonable limits
+    remarks_col_width = min(max(longest_remark_len + 4, 40), 80)  # Expanded range for REMARKS
+    
+    # Apply text wrapping and left alignment to REMARKS column
+    remarks_col_idx = headers.index("REMARKS") + 1
+    for row_idx in range(6, ws.max_row + 1):
+        cell = ws.cell(row=row_idx, column=remarks_col_idx)
+        cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
     for col_idx, col in enumerate(ws.columns, start=1):
         column_letter = get_column_letter(col_idx)
@@ -1196,7 +1646,7 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
         elif 4 <= col_idx < 4 + len(ordered_codes):  # course columns
             ws.column_dimensions[column_letter].width = 8
         elif headers[col_idx-1] in ["REMARKS"]:
-            ws.column_dimensions[column_letter].width = remarks_col_width  # Expanded remarks
+            ws.column_dimensions[column_letter].width = remarks_col_width  # Dynamic width for REMARKS
         else:
             ws.column_dimensions[column_letter].width = 12
 
@@ -1213,17 +1663,43 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center")
 
-    # Summary block
+    # COMPREHENSIVE SUMMARY BLOCK
     total_students = len(mastersheet)
     passed_all = len(mastersheet[mastersheet["REMARKS"] == "Passed"])
-    failed_over45 = len(mastersheet[mastersheet["CU Failed"] > 0.45 * total_cu]) if total_cu else 0
+    
+    # Calculate students with GPA >= 2.0 but failed some courses
+    gpa_above_2_failed = len(mastersheet[
+        (mastersheet["GPA"] >= 2.0) & 
+        (mastersheet["REMARKS"] != "Passed") &
+        (mastersheet["CU Passed"] >= 0.45 * total_cu)
+    ])
+    
+    # Calculate students with GPA < 2.0 but passed at least 45% of credits
+    gpa_below_2_failed = len(mastersheet[
+        (mastersheet["GPA"] < 2.0) & 
+        (mastersheet["REMARKS"] != "Passed") &
+        (mastersheet["CU Passed"] >= 0.45 * total_cu)
+    ])
+    
+    # Calculate students who failed more than 45% of credit units
+    failed_over_45_percent = len(mastersheet[
+        (mastersheet["CU Failed"] > 0.45 * total_cu)
+    ])
 
+    # Add withdrawn student tracking to summary
     ws.append([])
     ws.append(["SUMMARY"])
     ws.append([f"A total of {total_students} students registered and sat for the Examination"])
-    ws.append([f"A total of {passed_all} students passed in all courses registered."])
-    ws.append([f"A total of {failed_over45} students failed in more than 45% of their registered credit units."])
-    ws.append(["The above decisions are in line with the provisions of the General Information Section of the NMCN/NBTE Examinations Regulations."])
+    ws.append([f"A total of {passed_all} students passed in all courses registered and are to proceed to Second Semester, ND I"])
+    ws.append([f"A total of {gpa_above_2_failed} students with Grade Point Average (GPA) of 2.00 and above failed various courses, but passed at least 45% of the total registered credit units, and are to carry these courses over to the next session."])
+    ws.append([f"A total of {gpa_below_2_failed} students with Grade Point Average (GPA) below 2.00 failed various courses, but passed at least 45% of the total registered credit units, and are placed on Probation, to carry these courses over to the next session."])
+    ws.append([f"A total of {failed_over_45_percent} students failed in more than 45% of their registered credit units in various courses and have been advised to withdraw"])
+    
+    # Add removed withdrawn students info
+    if removed_students:
+        ws.append([f"NOTE: {len(removed_students)} previously withdrawn students were removed from this semester's results as they should not be processed."])
+    
+    ws.append(["The above decisions are in line with the provisions of the General Information Section of the NMCN/NBTE Examinations Regulations (Pg 4) adopted by the College."])
     ws.append([])
     ws.append(["________________________", "", "", "________________________", "", "", "", "", "", "", "", "", ""])
     ws.append(["Mrs. Abini Hauwa", "", "", "Mrs. Olukemi Ogunleye", "", "", "", "", "", "", "", "", ""])
@@ -1247,9 +1723,11 @@ def process_single_file(path, output_dir, ts, pass_threshold, semester_course_ma
         generate_individual_student_pdf(mastersheet, student_pdf_path, sem, logo_path=logo_path_norm, 
                                        prev_mastersheet_df=None, filtered_credit_units=filtered_credit_units,
                                        ordered_codes=ordered_codes, course_titles_map=course_titles,
-                                       previous_gpas=previous_gpas, cgpa_data=cgpa_data)
+                                       previous_gpas=previous_gpas, cgpa_data=cgpa_data, 
+                                       total_cu=total_cu, pass_threshold=pass_threshold)
+        print(f"✅ PDF generated successfully for {sem}")
     except Exception as e:
-        print(f"⚠ Failed to generate student PDF: {e}")
+        print(f"❌ Failed to generate student PDF for {sem}: {e}")
         import traceback
         traceback.print_exc()
 
@@ -1262,6 +1740,9 @@ def main():
     print("Starting ND Examination Results Processing...")
     ts = datetime.now().strftime(TIMESTAMP_FMT)
 
+    # Initialize student tracker
+    initialize_student_tracker()
+
     base_dir_norm = normalize_path(BASE_DIR)
     print(f"Using base directory: {base_dir_norm}")
 
@@ -1271,30 +1752,98 @@ def main():
         print(f"❌ Could not load course data: {e}")
         return
 
-    nd_dirs = [d for d in os.listdir(base_dir_norm) if os.path.isdir(os.path.join(base_dir_norm, d)) and d.upper().startswith("ND-")]
-    if not nd_dirs:
+    # Get available sets and let user choose
+    available_sets = get_available_sets(base_dir_norm)
+    
+    if not available_sets:
         print(f"No ND-* directories found in {base_dir_norm}. Nothing to process.")
+        print(f"Available directories: {os.listdir(base_dir_norm)}")
         return
 
-    for nd in nd_dirs:
-        print(f"\n--- Processing ND folder: {nd} ---")
-        raw_dir = normalize_path(os.path.join(base_dir_norm, nd, "RAW_RESULTS"))
-        clean_dir = normalize_path(os.path.join(base_dir_norm, nd, "CLEAN_RESULTS"))
+    print(f"📚 Found {len(available_sets)} available sets: {available_sets}")
+    
+    # Let user choose which set(s) to process
+    sets_to_process = get_user_set_choice(available_sets)
+    
+    print(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
+
+    for nd_set in sets_to_process:
+        print(f"\n{'='*60}")
+        print(f"PROCESSING SET: {nd_set}")
+        print(f"{'='*60}")
+        
+        raw_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "RAW_RESULTS"))
+        clean_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "CLEAN_RESULTS"))
+        
+        # Create directories if they don't exist
         os.makedirs(raw_dir, exist_ok=True)
         os.makedirs(clean_dir, exist_ok=True)
 
-        raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
-        if not raw_files:
-            print(f"⚠️ No raw files in {raw_dir}; skipping {nd}")
+        # Check if raw directory exists and has files
+        if not os.path.exists(raw_dir):
+            print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
             continue
 
-        print(f"📁 Found {len(raw_files)} raw files")
+        raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
+        if not raw_files:
+            print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
+            print(f"   Available files: {os.listdir(raw_dir)}")
+            continue
+
+        print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
         
-        # Process semesters in the correct order
-        for semester_key in SEMESTER_ORDER:
-            process_semester_files(semester_key, raw_files, raw_dir, clean_dir, ts, 
-                                 DEFAULT_PASS_THRESHOLD, semester_course_maps, semester_credit_units, 
-                                 semester_lookup, semester_course_titles, DEFAULT_LOGO_PATH)
+        # Get user choice for which semesters to process
+        semesters_to_process = get_user_semester_choice()
+        
+        print(f"\n🎯 PROCESSING SELECTED SEMESTERS for {nd_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
+        
+        # Process selected semesters in the correct order
+        for semester_key in semesters_to_process:
+            if semester_key not in SEMESTER_ORDER:
+                print(f"⚠️ Skipping unknown semester: {semester_key}")
+                continue
+                
+            # Check if there are files for this semester
+            semester_files_exist = False
+            for rf in raw_files:
+                detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
+                if detected_sem == semester_key:
+                    semester_files_exist = True
+                    break
+            
+            if semester_files_exist:
+                print(f"\n🎯 Processing {semester_key} in {nd_set}...")
+                process_semester_files(semester_key, raw_files, raw_dir, clean_dir, ts, 
+                                     DEFAULT_PASS_THRESHOLD, semester_course_maps, semester_credit_units, 
+                                     semester_lookup, semester_course_titles, DEFAULT_LOGO_PATH)
+            else:
+                print(f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
+
+    # Print student tracking summary
+    print(f"\n📊 STUDENT TRACKING SUMMARY:")
+    print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
+    print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+    
+    # Print withdrawn students who reappeared
+    reappeared_count = 0
+    for exam_no, data in WITHDRAWN_STUDENTS.items():
+        if data['reappeared_semesters']:
+            reappeared_count += 1
+            print(f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
+    
+    if reappeared_count > 0:
+        print(f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
+    
+    # Analyze student progression
+    sem_counts = {}
+    for student_data in STUDENT_TRACKER.values():
+        sem_count = len(student_data['semesters_present'])
+        if sem_count not in sem_counts:
+            sem_counts[sem_count] = 0
+        sem_counts[sem_count] += 1
+    
+    for sem_count, student_count in sorted(sem_counts.items()):
+        print(f"Students present in {sem_count} semester(s): {student_count}")
 
     print("\n✅ ND Examination Results Processing completed successfully.")
 
