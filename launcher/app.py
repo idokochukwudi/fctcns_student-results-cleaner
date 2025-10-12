@@ -80,7 +80,7 @@ def dashboard():
     return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT)
 
 def check_exam_processor_files(input_dir):
-    """Check for ND examination files in the actual directory structure - FIXED VERSION"""
+    """Check for ND examination files in the actual directory structure - UPDATED to check RAW_RESULTS subdirectory"""
     if not os.path.isdir(input_dir):
         return False
     
@@ -94,15 +94,20 @@ def check_exam_processor_files(input_dir):
     if not nd_sets:
         return False
     
-    # Check each ND set for Excel files directly in the set directory
+    # Check each ND set for Excel files in the RAW_RESULTS subdirectory
     total_files_found = 0
     for nd_set in nd_sets:
         set_path = os.path.join(input_dir, nd_set)
         if not os.path.isdir(set_path):
             continue
+        
+        # Look for RAW_RESULTS subdirectory
+        raw_results_path = os.path.join(set_path, "RAW_RESULTS")
+        if not os.path.isdir(raw_results_path):
+            continue
             
-        # Look for Excel files directly in the set directory
-        excel_files = [f for f in os.listdir(set_path) 
+        # Look for Excel files in the RAW_RESULTS subdirectory
+        excel_files = [f for f in os.listdir(raw_results_path) 
                      if f.lower().endswith(('.xlsx', '.xls')) and not f.startswith('~')]
         
         total_files_found += len(excel_files)
@@ -326,15 +331,19 @@ def run_script(script_name):
                     for item in os.listdir(input_dir):
                         item_path = os.path.join(input_dir, item)
                         if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
-                            # Check if this set has Excel files
-                            excel_files = [f for f in os.listdir(item_path) 
-                                         if f.lower().endswith(('.xlsx', '.xls')) and not f.startswith('~')]
-                            nd_sets_found.append(f"{item} ({len(excel_files)} files)")
+                            # Check if this set has RAW_RESULTS subdirectory and Excel files
+                            raw_results_path = os.path.join(item_path, "RAW_RESULTS")
+                            if os.path.isdir(raw_results_path):
+                                excel_files = [f for f in os.listdir(raw_results_path) 
+                                             if f.lower().endswith(('.xlsx', '.xls')) and not f.startswith('~')]
+                                nd_sets_found.append(f"{item} ({len(excel_files)} files in RAW_RESULTS)")
+                            else:
+                                nd_sets_found.append(f"{item} (no RAW_RESULTS folder)")
                 
                 if not nd_sets_found:
                     flash(f"No ND examination sets found in {input_dir}. Please ensure you have ND sets (ND-2024, ND-2025, etc.) with Excel files.")
                 else:
-                    flash(f"ND sets found but no Excel files detected. Sets: {', '.join(nd_sets_found)}. Please ensure Excel files are in the set directories.")
+                    flash(f"Found ND sets but issues with file detection: {', '.join(nd_sets_found)}. Please ensure Excel files are in the RAW_RESULTS subdirectory.")
                     
             elif script_name == "utme":
                 flash(f"No PUTME examination files found in {input_dir}. Please ensure you have PUTME Excel files and candidate batch CSV files.")
@@ -424,17 +433,68 @@ def run_script(script_name):
                 elif script_name == "exam_processor":
                     # Get form parameters for exam processor
                     selected_set = request.form.get("selected_set", "all")
+                    processing_mode = request.form.get("processing_mode", "auto")
+                    selected_semesters = request.form.getlist("semesters")
+                    pass_threshold = request.form.get("pass_threshold", "50.0")
+                    generate_pdf = "generate_pdf" in request.form
+                    track_withdrawn = "track_withdrawn" in request.form
                     
-                    # Build command - use non-interactive mode with set selection
-                    cmd = ["python3", script_path, "--non-interactive"]
+                    # Build the input string for the interactive script
+                    input_sequence = ""
                     
-                    # Add set selection
-                    if selected_set != "all":
-                        cmd.extend(["--set", selected_set])
+                    # Set selection (choice 1-4)
+                    if selected_set == "all":
+                        input_sequence += "4\n"  # Process ALL sets
+                    else:
+                        # Find the index of the selected set
+                        nd_sets = []
+                        if os.path.isdir(input_dir):
+                            for item in os.listdir(input_dir):
+                                item_path = os.path.join(input_dir, item)
+                                if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
+                                    nd_sets.append(item)
+                        
+                        if selected_set in nd_sets:
+                            set_index = nd_sets.index(selected_set) + 1
+                            input_sequence += f"{set_index}\n"
+                        else:
+                            input_sequence += "4\n"  # Fallback to ALL sets
+                    
+                    # Semester selection (choice 1-6)
+                    if processing_mode == "auto":
+                        input_sequence += "1\n"  # Process ALL semesters
+                    else:
+                        # Manual semester selection
+                        if not selected_semesters:
+                            input_sequence += "1\n"  # Fallback to ALL semesters
+                        else:
+                            # Map semester values to choices
+                            semester_map = {
+                                "first_first": "2",
+                                "first_second": "3", 
+                                "second_first": "4",
+                                "second_second": "5"
+                            }
+                            if len(selected_semesters) == 1:
+                                # Single semester selection
+                                semester_choice = semester_map.get(selected_semesters[0], "1")
+                                input_sequence += f"{semester_choice}\n"
+                            else:
+                                # Multiple semesters - use custom selection (choice 6)
+                                input_sequence += "6\n"
+                                # For custom selection, the script will ask for each semester
+                                # We'll need to provide Y/N for each semester
+                                all_semesters = ["first_first", "first_second", "second_first", "second_second"]
+                                for semester in all_semesters:
+                                    if semester in selected_semesters:
+                                        input_sequence += "y\n"
+                                    else:
+                                        input_sequence += "n\n"
                     
                     try:
                         result = subprocess.run(
-                            cmd,
+                            ["python3", script_path],
+                            input=input_sequence,
                             text=True,
                             capture_output=True,
                             check=True,
@@ -459,23 +519,7 @@ def run_script(script_name):
                     except subprocess.TimeoutExpired:
                         flash(f"Script timed out after 10 minutes. The exam processor may still be running in background.")
                     except subprocess.CalledProcessError as e:
-                        # Check if the error is due to unsupported parameters
-                        if "unrecognized arguments" in e.stderr or "No such option" in e.stderr:
-                            # Fallback: run without parameters
-                            try:
-                                fallback_cmd = ["python3", script_path]
-                                fallback_result = subprocess.run(
-                                    fallback_cmd,
-                                    text=True,
-                                    capture_output=True,
-                                    check=True,
-                                    timeout=600
-                                )
-                                flash("ND Examination processing completed (using default settings)!")
-                            except subprocess.CalledProcessError as fallback_error:
-                                flash(f"Error running exam processor: {fallback_error.stderr or str(fallback_error)}")
-                        else:
-                            flash(f"Error running exam processor: {e.stderr or str(e)}")
+                        flash(f"Error running exam processor: {e.stderr or str(e)}")
                     
                     return redirect(url_for("dashboard"))
 
