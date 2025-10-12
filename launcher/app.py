@@ -460,7 +460,7 @@ def run_script(script_name):
                         else:
                             input_sequence += "4\n"  # Fallback to ALL sets
                     
-                    # Semester selection (choice 1-6)
+                    # Semester selection (choice 1-6) - FIXED for multiple semesters
                     if processing_mode == "auto":
                         input_sequence += "1\n"  # Process ALL semesters
                     else:
@@ -475,6 +475,8 @@ def run_script(script_name):
                                 "second_first": "4",
                                 "second_second": "5"
                             }
+                            
+                            # Check if we have exactly one semester selected
                             if len(selected_semesters) == 1:
                                 # Single semester selection
                                 semester_choice = semester_map.get(selected_semesters[0], "1")
@@ -482,10 +484,11 @@ def run_script(script_name):
                             else:
                                 # Multiple semesters - use custom selection (choice 6)
                                 input_sequence += "6\n"
-                                # For custom selection, the script will ask for each semester
-                                # We'll need to provide Y/N for each semester
-                                all_semesters = ["first_first", "first_second", "second_first", "second_second"]
-                                for semester in all_semesters:
+                                # For custom selection, the script expects responses for 4 semesters
+                                # We need to provide Y/N for each of the 4 possible semesters in order
+                                all_possible_semesters = ["first_first", "first_second", "second_first", "second_second"]
+                                
+                                for semester in all_possible_semesters:
                                     if semester in selected_semesters:
                                         input_sequence += "y\n"
                                     else:
@@ -519,7 +522,21 @@ def run_script(script_name):
                     except subprocess.TimeoutExpired:
                         flash(f"Script timed out after 10 minutes. The exam processor may still be running in background.")
                     except subprocess.CalledProcessError as e:
-                        flash(f"Error running exam processor: {e.stderr or str(e)}")
+                        # Enhanced error handling with more details
+                        error_msg = e.stderr or str(e)
+                        stdout_msg = e.stdout or "No output"
+                        
+                        # Check for specific errors in the output
+                        if "IndexError" in error_msg or "index out of range" in error_msg:
+                            flash("Error: Semester selection issue. Please ensure all semesters are properly configured.")
+                        elif "No module named" in error_msg:
+                            flash(f"Module import error: {error_msg}")
+                        else:
+                            flash(f"Error running exam processor: {error_msg}")
+                        
+                        # Log the full error for debugging
+                        print(f"Exam processor error - stderr: {error_msg}")
+                        print(f"Exam processor error - stdout: {stdout_msg}")
                     
                     return redirect(url_for("dashboard"))
 
