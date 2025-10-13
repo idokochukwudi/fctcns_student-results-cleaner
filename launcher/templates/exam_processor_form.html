@@ -1,205 +1,225 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>ND Exam Processor</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    .form-section {
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .semester-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .semester-option {
-      background: white;
-      padding: 10px;
-      border: 1px solid #dee2e6;
-      border-radius: 4px;
-    }
-    .set-selection {
-      background: white;
-      padding: 15px;
-      border-radius: 6px;
-      border: 1px solid #dee2e6;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>ND Exam Processor - {{ college }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+        .threshold-info {
+            background: #e8f4fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #2c3e50;
+        }
+        .upgrade-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+    </style>
 </head>
-<body class="p-4">
-  <div class="container">
-    <h3>{{ college }}</h3>
-    <small class="text-muted">{{ department }}</small>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+        <h2>FCTCNS</h2>
+        <a href="{{ url_for('dashboard') }}">🏠 <span>Dashboard</span></a>
+        <a href="{{ url_for('run_script', script_name='utme') }}">📑 <span>PUTME</span></a>
+        <a href="{{ url_for('run_script', script_name='caosce') }}">📘 <span>CAOSCE</span></a>
+        <a href="{{ url_for('run_script', script_name='clean') }}">🗂 <span>Internal Exams</span></a>
+        <a href="{{ url_for('run_script', script_name='split') }}">📄 <span>JAMB Database</span></a>
+        <a href="{{ url_for('run_script', script_name='exam_processor') }}">🎓 <span>ND Exam Processor</span></a>
+        <a href="{{ url_for('logout') }}">🚪 <span>Logout</span></a>
+    </div>
 
-    <h4 class="mt-4">ND Examination Results Processor</h4>
-    
-    <form method="POST" action="{{ url_for('run_script', script_name='exam_processor') }}">
-      
-      <!-- Set Selection Section -->
-      <div class="form-section">
-        <h5>Academic Set Selection</h5>
-        <div class="set-selection">
-          <div class="mb-3">
-            <label class="form-label">Select Academic Set to Process</label>
-            <select class="form-select" name="selected_set" required>
-              <option value="all" selected>Process ALL Available Sets</option>
-              {% if nd_sets %}
-                {% for set_name in nd_sets %}
-                  <option value="{{ set_name }}">{{ set_name }}</option>
-                {% endfor %}
-              {% else %}
-                <option value="all">No ND sets found - will process all available</option>
-              {% endif %}
-            </select>
-            <small class="form-text text-muted">
-              {% if nd_sets %}
-                Available sets: {{ nd_sets|join(', ') }}
-              {% else %}
-                No ND sets detected. The processor will search for available sets.
-              {% endif %}
-            </small>
-          </div>
-        </div>
-      </div>
+    <!-- Main content -->
+    <div class="main-content" id="main">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
-      <!-- Processing Mode Section -->
-      <div class="form-section">
-        <h5>Processing Mode</h5>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="processing_mode" id="auto_mode" value="auto" checked>
-          <label class="form-check-label" for="auto_mode">
-            Automatic Mode (Process all available semesters)
-          </label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="processing_mode" id="manual_mode" value="manual">
-          <label class="form-check-label" for="manual_mode">
-            Manual Mode (Select specific semesters)
-          </label>
-        </div>
-      </div>
-
-      <!-- Semester Selection Section -->
-      <div class="form-section">
-        <h5>Semester Selection</h5>
-        <small class="text-muted">Select specific semesters to process (applies only in Manual Mode)</small>
-        
-        <div class="semester-options">
-          <div class="semester-option">
-            <div class="form-check">
-              <input class="form-check-input semester-checkbox" type="checkbox" name="semesters" value="first_first" id="first_first">
-              <label class="form-check-label" for="first_first">
-                First Year - First Semester
-              </label>
+        <!-- Header -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college }}</h1>
+                <h2>{{ department }}</h2>
             </div>
-          </div>
-          
-          <div class="semester-option">
-            <div class="form-check">
-              <input class="form-check-input semester-checkbox" type="checkbox" name="semesters" value="first_second" id="first_second">
-              <label class="form-check-label" for="first_second">
-                First Year - Second Semester
-              </label>
+            <div class="header-right">
+                <p><strong>Unit:</strong> Examination</p>
             </div>
-          </div>
-          
-          <div class="semester-option">
-            <div class="form-check">
-              <input class="form-check-input semester-checkbox" type="checkbox" name="semesters" value="second_first" id="second_first">
-              <label class="form-check-label" for="second_first">
-                Second Year - First Semester
-              </label>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="form-container">
+            <h2>ND Examination Results Processor</h2>
+            <p>Configure the processing parameters for ND examination results.</p>
+
+            <div class="upgrade-note">
+                <strong>🎯 New Flexible Upgrade Rule:</strong> During processing, you'll be prompted for each semester to choose which scores to upgrade (45-49 → 50). This allows flexible management decisions per semester.
             </div>
-          </div>
-          
-          <div class="semester-option">
-            <div class="form-check">
-              <input class="form-check-input semester-checkbox" type="checkbox" name="semesters" value="second_second" id="second_second">
-              <label class="form-check-label" for="second_second">
-                Second Year - Second Semester
-              </label>
-            </div>
-          </div>
+
+            <form method="POST" action="{{ url_for('run_script', script_name='exam_processor') }}">
+                <!-- Set Selection -->
+                <div class="form-group">
+                    <label for="selected_set">Select ND Set:</label>
+                    <select id="selected_set" name="selected_set">
+                        <option value="all">Process ALL Sets</option>
+                        {% for set_name in nd_sets %}
+                            <option value="{{ set_name }}">{{ set_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Processing Mode -->
+                <div class="form-group">
+                    <label for="processing_mode">Processing Mode:</label>
+                    <select id="processing_mode" name="processing_mode">
+                        <option value="auto">Automatic - Process All Semesters</option>
+                        <option value="manual">Manual - Select Specific Semesters</option>
+                    </select>
+                </div>
+
+                <!-- Semester Selection (shown only when manual mode is selected) -->
+                <div class="form-group" id="semester_selection" style="display: none;">
+                    <label>Select Semesters:</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="first_first" name="semesters" value="first_first">
+                            <label for="first_first">First Year - First Semester</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="first_second" name="semesters" value="first_second">
+                            <label for="first_second">First Year - Second Semester</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="second_first" name="semesters" value="second_first">
+                            <label for="second_first">Second Year - First Semester</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="second_second" name="semesters" value="second_second">
+                            <label for="second_second">Second Year - Second Semester</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pass Threshold -->
+                <div class="form-group">
+                    <label for="pass_threshold">Base Pass Threshold Score:</label>
+                    <select id="pass_threshold" name="pass_threshold">
+                        <option value="50.0">50 (Default)</option>
+                        <option value="45.0">45</option>
+                        <option value="46.0">46</option>
+                        <option value="47.0">47</option>
+                        <option value="48.0">48</option>
+                        <option value="49.0">49</option>
+                    </select>
+                    <div class="threshold-info">
+                        <strong>Note:</strong> This sets the base pass threshold. During processing, you'll be prompted separately for each semester to choose which scores to upgrade to 50 (45-49 range).
+                    </div>
+                </div>
+
+                <!-- Additional Options -->
+                <div class="form-group">
+                    <label>Additional Options:</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="generate_pdf" name="generate_pdf" checked>
+                            <label for="generate_pdf">Generate Individual Student PDF Reports</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="track_withdrawn" name="track_withdrawn" checked>
+                            <label for="track_withdrawn">Track Withdrawn Students</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">🎓 Process ND Examination Results</button>
+            </form>
         </div>
-      </div>
+    </div>
 
-      <!-- Pass Threshold Section -->
-      <div class="form-section">
-        <h5>Pass Threshold</h5>
-        <div class="mb-3">
-          <label class="form-label">Minimum Pass Score</label>
-          <input type="number" class="form-control" name="pass_threshold" value="50.0" min="0" max="100" step="0.5">
-          <small class="form-text text-muted">Default is 50.0. Adjust if needed.</small>
-        </div>
-      </div>
-
-      <!-- Additional Options Section -->
-      <div class="form-section">
-        <h5>Additional Options</h5>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="generate_pdf" id="generate_pdf" checked>
-          <label class="form-check-label" for="generate_pdf">
-            Generate individual student PDF reports
-          </label>
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" name="track_withdrawn" id="track_withdrawn" checked>
-          <label class="form-check-label" for="track_withdrawn">
-            Track withdrawn students across semesters
-          </label>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="mt-4">
-        <button type="submit" class="btn btn-success btn-lg">
-          🚀 Run Exam Processor
-        </button>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
-      </div>
-
-      <!-- Information Alert -->
-      <div class="alert alert-info mt-3">
-        <strong>Note:</strong> This processor will:
-        <ul class="mb-0 mt-2">
-          <li>Process ND examination results from multiple semesters and sets</li>
-          <li>Calculate GPA and track student progression</li>
-          <li>Generate comprehensive mastersheets and PDF reports</li>
-          <li>Identify withdrawn students and academic status</li>
-          <li>Support multiple academic sets (ND-2024, ND-2025, etc.)</li>
-        </ul>
-      </div>
-    </form>
-  </div>
-
-  <script>
-    // Enable/disable semester selection based on mode
-    document.addEventListener('DOMContentLoaded', function() {
-      const autoMode = document.getElementById('auto_mode');
-      const manualMode = document.getElementById('manual_mode');
-      const semesterCheckboxes = document.querySelectorAll('.semester-checkbox');
-      
-      function updateSemesterSelection() {
-        const isManual = manualMode.checked;
-        semesterCheckboxes.forEach(checkbox => {
-          checkbox.disabled = !isManual;
-          if (!isManual) {
-            checkbox.checked = false;
-          }
+    <script>
+        // Show/hide semester selection based on processing mode
+        document.getElementById('processing_mode').addEventListener('change', function() {
+            const semesterSelection = document.getElementById('semester_selection');
+            if (this.value === 'manual') {
+                semesterSelection.style.display = 'block';
+            } else {
+                semesterSelection.style.display = 'none';
+            }
         });
-      }
-      
-      autoMode.addEventListener('change', updateSemesterSelection);
-      manualMode.addEventListener('change', updateSemesterSelection);
-      
-      // Initialize
-      updateSemesterSelection();
-    });
-  </script>
+
+        // Initialize form state
+        document.addEventListener('DOMContentLoaded', function() {
+            const processingMode = document.getElementById('processing_mode');
+            const semesterSelection = document.getElementById('semester_selection');
+            
+            if (processingMode.value === 'manual') {
+                semesterSelection.style.display = 'block';
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </body>
 </html>

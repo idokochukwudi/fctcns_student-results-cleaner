@@ -10,6 +10,7 @@ Features:
 - Prompt to select which script to run
 - Works with WSL and Python 3
 - User-friendly prompts and messages
+- Enhanced support for interactive exam processor with upgrade prompts
 """
 
 import os
@@ -23,6 +24,7 @@ from getpass import getpass  # Hide password input
 RED = "\033[91m"
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
+BLUE = "\033[94m"
 RESET = "\033[0m"
 
 # ---------------------------
@@ -87,7 +89,7 @@ FOLDERS = {
     "JAMB_CLEAN": os.path.join(BASE_DIR, "JAMB_DB/CLEAN_JAMB_DB"),
     "SET48_RAW": os.path.join(BASE_DIR, "SET48_RESULTS/RAW_RESULTS"),
     "SET48_CLEAN": os.path.join(BASE_DIR, "SET48_RESULTS/CLEAN_RESULTS"),
-    "ND_COURSES": os.path.join(BASE_DIR, "EXAMS_INTERNAL/ND-COURSES")  # Added for clarity
+    "ND_COURSES": os.path.join(BASE_DIR, "EXAMS_INTERNAL/ND-COURSES")
 }
 
 # ---------------------------
@@ -113,12 +115,12 @@ SCRIPTS = {
 # ---------------------------
 # Menu prompt
 # ---------------------------
-print("\nSelect the script to run:")
+print(f"\n{BLUE}🎯 SELECT SCRIPT TO RUN:{RESET}")
 for key, (desc, _) in SCRIPTS.items():
     print(f"{key}. {desc}")
 
 while True:
-    choice = input("Enter 1, 2, 3, 4, or 5: ").strip()
+    choice = input("\nEnter 1, 2, 3, 4, or 5: ").strip()
     if choice in SCRIPTS:
         script_name, script_to_run = SCRIPTS[choice]
         if not os.path.exists(script_to_run):
@@ -129,15 +131,56 @@ while True:
         print(f"{RED}❌ Invalid selection. Please enter 1, 2, 3, 4, or 5.{RESET}")
 
 # ---------------------------
+# Special handling for exam processor
+# ---------------------------
+if choice == "5":  # ND Examination Results Processing
+    print(f"\n{BLUE}🎓 ND EXAMINATION PROCESSOR SETUP{RESET}")
+    print(f"{YELLOW}📚 This script now includes FLEXIBLE UPGRADE RULE{RESET}")
+    print(f"{YELLOW}🔹 You'll be prompted for each semester to choose score upgrades{RESET}")
+    print(f"{YELLOW}🔹 Options: 45, 46, 47, 48, 49 (upgrade range to 50) or 0 to skip{RESET}")
+    print(f"{YELLOW}🔹 Example: Enter '47' to upgrade scores 47-49 to 50{RESET}")
+    
+    # Set default pass threshold via environment
+    os.environ['PASS_THRESHOLD'] = '50.0'
+    
+    print(f"\n{BLUE}🚀 Starting ND Examination Results Processor...{RESET}")
+    print(f"{YELLOW}Note: Follow the interactive prompts for set selection and semester processing.{RESET}\n")
+
+# ---------------------------
 # Run selected script using current venv Python
 # ---------------------------
 print(f"\n{YELLOW}🚀 Running {script_name} ...{RESET}\n")
 try:
-    subprocess.run([sys.executable, script_to_run], check=True)
+    if choice == "5":
+        # For exam processor, run interactively (no timeout)
+        result = subprocess.run([sys.executable, script_to_run], check=True)
+    else:
+        # For other scripts, use standard execution
+        result = subprocess.run([sys.executable, script_to_run], check=True)
+    
     print(f"\n{GREEN}✅ {script_name} completed successfully!{RESET}")
+    
+    # Special success message for exam processor
+    if choice == "5":
+        print(f"{GREEN}🎉 ND Examination processing finished!{RESET}")
+        print(f"{YELLOW}📊 Check the CLEAN_RESULTS folder for mastersheets and PDFs{RESET}")
+        
 except subprocess.CalledProcessError as e:
     print(f"\n{RED}❌ An error occurred while running {script_name}.{RESET}")
     print(f"Command {e.cmd} returned non-zero exit status {e.returncode}.")
-    print(f"{YELLOW}Note: Ensure 'course-code-creditUnit.xlsx' exists in ~/Documents/PROCESS_RESULT/EXAMS_INTERNAL/ND-COURSES/.{RESET}")
+    
+    if choice == "5":
+        print(f"{YELLOW}Note for ND Processor:{RESET}")
+        print(f"{YELLOW}• Ensure 'course-code-creditUnit.xlsx' exists in ND-COURSES folder{RESET}")
+        print(f"{YELLOW}• Check that RAW_RESULTS folders contain Excel files{RESET}")
+        print(f"{YELLOW}• Verify semester files follow naming conventions{RESET}")
+    else:
+        print(f"{YELLOW}Note: Check input files and folder structure.{RESET}")
+
+except KeyboardInterrupt:
+    print(f"\n{YELLOW}⚠️  Script execution interrupted by user.{RESET}")
+    
+except Exception as e:
+    print(f"\n{RED}❌ Unexpected error: {e}{RESET}")
 
 input("\nPress any key to exit . . .")

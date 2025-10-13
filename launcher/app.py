@@ -46,7 +46,11 @@ SUCCESS_INDICATORS = {
         r"📁 Found \d+ raw files",
         r"Processing: (.*?\.xlsx)",
         r"✅ Processing complete",
-        r"✅ ND Examination Results Processing completed successfully"
+        r"✅ ND Examination Results Processing completed successfully",
+        r"ND Examination processing completed successfully!",
+        r"🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED",
+        r"🔄 Applying upgrade rule:.*",
+        r"✅ Upgraded.*scores.*to 50"
     ]
 }
 
@@ -235,6 +239,14 @@ def count_processed_files(output_lines, script_name):
                         files_match = re.search(r"📁 Found (\d+) raw files", line)
                         if files_match:
                             processed_files_set.add(f"Files found: {files_match.group(1)}")
+                    elif "🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED" in line:
+                        processed_files_set.add("Upgrade rule activated")
+                    elif "🔄 Applying upgrade rule:" in line:
+                        upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
+                        if upgrade_match:
+                            processed_files_set.add(f"Upgrade: {upgrade_match.group(1)}-49")
+                    elif "✅ Upgraded" in line and "scores" in line:
+                        processed_files_set.add("Scores upgraded")
                     elif "✅ ND Examination Results Processing completed successfully" in line:
                         processed_files_set.add("Processing completed")
                 else:
@@ -256,12 +268,22 @@ def get_success_message(script_name, processed_files, output_lines):
             return f"Processed {processed_files} internal examination file(s)."
     
     elif script_name == "exam_processor":
+        # Check for upgrade activity
+        upgrade_applied = any("🔄 Applying upgrade rule:" in line for line in output_lines)
+        upgrade_completed = any("✅ Upgraded" in line and "scores" in line for line in output_lines)
+        
         if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-            return f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s)."
+            if upgrade_applied and upgrade_completed:
+                return f"ND Examination processing completed successfully with score upgrades! Processed {processed_files} semester(s)/file(s)."
+            else:
+                return f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s)."
         elif any("✅ Processing complete" in line for line in output_lines):
             return f"ND Examination processing completed! Processed {processed_files} semester(s)/file(s)."
         else:
-            return f"Processed {processed_files} ND examination file(s)/semester(s)."
+            base_msg = f"Processed {processed_files} ND examination file(s)/semester(s)."
+            if upgrade_applied:
+                base_msg += " Score upgrades applied."
+            return base_msg
     
     elif script_name == "utme":
         if any("Processing completed successfully" in line for line in output_lines):
@@ -459,7 +481,7 @@ def run_script(script_name):
                             input_sequence += f"{set_index}\n"
                         else:
                             input_sequence += "4\n"  # Fallback to ALL sets
-                    
+                        
                     # Semester selection (choice 1-6) - FIXED for multiple semesters
                     if processing_mode == "auto":
                         input_sequence += "1\n"  # Process ALL semesters
@@ -495,13 +517,18 @@ def run_script(script_name):
                                         input_sequence += "n\n"
                     
                     try:
+                        # Pass the threshold value to the script via environment variable
+                        env = os.environ.copy()
+                        env['PASS_THRESHOLD'] = str(pass_threshold)
+                        
                         result = subprocess.run(
                             ["python3", script_path],
                             input=input_sequence,
                             text=True,
                             capture_output=True,
                             check=True,
-                            timeout=600
+                            timeout=600,
+                            env=env
                         )
                         
                         output_lines = result.stdout.splitlines()

@@ -2,7 +2,7 @@
 """
 exam_result_processor.py
 
-Complete script with flexible threshold upgrade rule for ND results.
+Complete script with proper semester ordering, Previous GPA, and Overall GPA tracking.
 """
 
 from openpyxl.cell import MergedCell
@@ -34,22 +34,33 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 BASE_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL"
 ND_COURSES_DIR = os.path.join(BASE_DIR, "ND-COURSES")
 
-# Global variables for threshold upgrade
-THRESHOLD_UPGRADED = False
-ORIGINAL_THRESHOLD = 50.0
-UPGRADE_MIN = None
-UPGRADE_MAX = 49
-
+# Get pass threshold from environment variable or use default
 def get_pass_threshold():
-    """Get pass threshold - now handles upgrade logic interactively."""
+    """Get pass threshold with upgrade logic for 45, 46, 47, 48, 49."""
     threshold_str = os.getenv('PASS_THRESHOLD', '50.0')
     try:
         threshold = float(threshold_str)
     except ValueError:
         threshold = 50.0
     
-    return threshold
+    # Track if threshold was upgraded
+    global THRESHOLD_UPGRADED, ORIGINAL_THRESHOLD
+    
+    # Check if threshold is in the upgrade range (45, 46, 47, 48, 49)
+    if threshold in [45.0, 46.0, 47.0, 48.0, 49.0]:
+        THRESHOLD_UPGRADED = True
+        ORIGINAL_THRESHOLD = threshold
+        upgraded_threshold = 50.0
+        print(f"🔧 THRESHOLD UPGRADE: {ORIGINAL_THRESHOLD} → {upgraded_threshold}")
+        return upgraded_threshold
+    else:
+        THRESHOLD_UPGRADED = False
+        ORIGINAL_THRESHOLD = threshold
+        return threshold
 
+# Initialize threshold variables
+THRESHOLD_UPGRADED = False
+ORIGINAL_THRESHOLD = 50.0
 DEFAULT_PASS_THRESHOLD = get_pass_threshold()
 
 TIMESTAMP_FMT = "%Y-%m-%d_%H%M%S"
@@ -75,81 +86,6 @@ SEMESTER_ORDER = [
 # Global student tracker
 STUDENT_TRACKER = {}
 WITHDRAWN_STUDENTS = {}
-
-# ----------------------------
-# Upgrade Rule Functions
-# ----------------------------
-
-def get_upgrade_threshold_from_user(semester_key, set_name):
-    """
-    Prompt user to choose upgrade threshold for ND results.
-    Returns: (min_threshold, upgraded_count) or (None, 0) if skipped
-    """
-    print(f"\n🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED")
-    print(f"📚 Semester: {semester_key}")
-    print(f"📁 Set: {set_name}")
-    print("\nSelect minimum score to upgrade (45-49). All scores >= selected value up to 49 will be upgraded to 50.")
-    print("Enter 0 to skip upgrade.")
-    
-    while True:
-        try:
-            choice = input("\nEnter your choice (0, 45, 46, 47, 48, 49): ").strip()
-            
-            if not choice:
-                print("❌ Please enter a value.")
-                continue
-                
-            if choice == '0':
-                print("⏭️ Skipping upgrade for this semester.")
-                return None, 0
-                
-            if choice in ['45', '46', '47', '48', '49']:
-                min_threshold = int(choice)
-                print(f"✅ Upgrade rule selected: {min_threshold}–49 → 50")
-                return min_threshold, 0
-            else:
-                print("❌ Invalid choice. Please enter 0, 45, 46, 47, 48, or 49.")
-                
-        except KeyboardInterrupt:
-            print("\n👋 Operation cancelled by user.")
-            sys.exit(0)
-        except Exception as e:
-            print(f"❌ Error: {e}. Please try again.")
-
-def apply_upgrade_rule(mastersheet, ordered_codes, min_threshold):
-    """
-    Apply upgrade rule to mastersheet scores.
-    Returns: (updated_mastersheet, upgraded_count)
-    """
-    if min_threshold is None:
-        return mastersheet, 0
-        
-    upgraded_count = 0
-    upgraded_students = set()
-    
-    print(f"🔄 Applying upgrade rule: {min_threshold}–49 → 50")
-    
-    for code in ordered_codes:
-        for idx in mastersheet.index:
-            score = mastersheet.at[idx, code]
-            if isinstance(score, (int, float)) and min_threshold <= score <= 49:
-                exam_no = mastersheet.at[idx, "EXAMS NUMBER"]
-                original_score = score
-                mastersheet.at[idx, code] = 50
-                upgraded_count += 1
-                upgraded_students.add(exam_no)
-                
-                # Log first few upgrades for visibility
-                if upgraded_count <= 5:
-                    print(f"🔼 {exam_no} - {code}: {original_score} → 50")
-    
-    if upgraded_count > 0:
-        print(f"✅ Upgraded {upgraded_count} scores from {min_threshold}–49 to 50")
-        print(f"📊 Affected {len(upgraded_students)} students")
-    else:
-        print(f"ℹ️ No scores found in range {min_threshold}–49 to upgrade")
-    
-    return mastersheet, upgraded_count
 
 # ----------------------------
 # Utilities
@@ -991,8 +927,7 @@ def generate_individual_student_pdf(
     previous_gpas=None,
     cgpa_data=None,
     total_cu=None,
-    pass_threshold=None,
-    upgrade_min_threshold=None):
+    pass_threshold=None):
     """
     Create a PDF with one page per student matching the sample format exactly.
     """
@@ -1217,37 +1152,39 @@ def generate_individual_student_pdf(
             try:
                 score_val = float(score)
 
-                # -----------------------
-                # FIX: Auto-upgrade borderline scores when threshold upgrade applies
-                # This ensures PDF shows the same upgraded scores as Excel
-                if upgrade_min_threshold is not None and upgrade_min_threshold <= score_val <= 49:
-                    # Use the upgraded score for PDF display
+                # ✅ FIX: Upgrade borderline scores when threshold upgrade applies
+                if THRESHOLD_UPGRADED and ORIGINAL_THRESHOLD <= score_val < 50.0:
+                    print(
+                        f"🔼 Upgraded score for {r.get('EXAMS NUMBER', '')} - {code}: {score_val} → 50.0")
                     score_val = 50.0
-                    score_display = "50"
-                    print(f"🔼 PDF: Upgraded score for {exam_no} - {code}: → 50")
-                else:
-                    score_display = str(int(round(score_val)))
-                # -----------------------
+                # ---------------------------------------------------------------
 
+                score_display = str(int(round(score_val)))
                 grade = get_grade(score_val)
                 grade_point = get_grade_point(score_val)
-            except Exception:
+            except BaseException:
                 score_display = str(score)
                 grade = "F"
                 grade_point = 0.0
 
             cu = filtered_credit_units.get(code, 0) if filtered_credit_units else 0
-            course_title = course_titles_map.get(code, code) if course_titles_map else code
 
+            # Get course title
+            course_title = course_titles_map.get(
+                code, code) if course_titles_map else code
+
+            # Calculate weighted grade points and unit counts
             total_grade_points += grade_point * cu
             total_units += cu
 
+            # Track passed/failed units and courses
             if score_val >= pass_threshold:
                 total_units_passed += cu
             else:
                 total_units_failed += cu
                 failed_courses_list.append(code)
 
+            # LEFT-ALIGNED course code and title
             course_data.append([
                 Paragraph(str(sn), center_align_style),
                 Paragraph(code, left_align_style),
@@ -1507,7 +1444,6 @@ def process_semester_files(
     semester_lookup,
     semester_course_titles,
     logo_path,
-    set_name,
     previous_gpas=None):
     """
     Process all files for a specific semester.
@@ -1556,7 +1492,6 @@ def process_semester_files(
                 semester_course_titles,
                 logo_path,
                 semester_key,
-                set_name,
                 current_previous_gpas,
                 cgpa_data)
 
@@ -1581,7 +1516,6 @@ def process_single_file(
         semester_course_titles,
         logo_path,
         semester_key,
-        set_name,
         previous_gpas,
         cgpa_data=None):
     """
@@ -1742,10 +1676,21 @@ def process_single_file(
         total = (ca_norm * 0.2) + (((obj_norm + exam_norm) / 2) * 0.8)
         mastersheet[code] = total.round(0).clip(upper=100).values
 
-    # NEW: APPLY FLEXIBLE UPGRADE RULE - Ask user for threshold per semester
-    upgrade_min_threshold, upgraded_scores_count = get_upgrade_threshold_from_user(semester_key, set_name)
-    if upgrade_min_threshold is not None:
-        mastersheet, upgraded_scores_count = apply_upgrade_rule(mastersheet, ordered_codes, upgrade_min_threshold)
+    # NEW: APPLY THRESHOLD UPGRADE - Change scores from original threshold
+    # range to 50
+    upgraded_scores_count = 0
+    if THRESHOLD_UPGRADED and ORIGINAL_THRESHOLD in [45, 46, 47, 48, 49]:
+        print(
+            f"🔄 APPLYING THRESHOLD UPGRADE: Changing scores {ORIGINAL_THRESHOLD}-49 to 50")
+        for code in ordered_codes:
+            for idx in mastersheet.index:
+                score = mastersheet.at[idx, code]
+                if isinstance(score, (int, float)
+                              ) and ORIGINAL_THRESHOLD <= score < 50:
+                    mastersheet.at[idx, code] = 50
+                    upgraded_scores_count += 1
+        print(
+            f"✅ Upgraded {upgraded_scores_count} scores from {ORIGINAL_THRESHOLD}-49 to 50")
 
     for c in ordered_codes:
         if c not in mastersheet.columns:
@@ -1912,14 +1857,25 @@ def process_single_file(
     subtitle_cell.font = Font(bold=True, size=12, color="000000")
     subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
 
-    # FIXED: Remove the upgrade notice from the header to prevent covering course titles
-    # The upgrade notice will only appear in the summary section
-    start_row = 3
+    # Add threshold upgrade notice if applicable
+    if THRESHOLD_UPGRADED:
+        ws.merge_cells("C3:Q3")
+        upgrade_cell = ws["C3"]
+        upgrade_cell.value = f"NOTE: Pass threshold upgraded from {ORIGINAL_THRESHOLD} to {DEFAULT_PASS_THRESHOLD} as per management decision"
+        upgrade_cell.font = Font(bold=True, size=10, color="FF0000")
+        upgrade_cell.alignment = Alignment(
+            horizontal="center", vertical="center")
+        upgrade_cell.fill = PatternFill(
+            start_color="FFFFCC",
+            end_color="FFFFCC",
+            fill_type="solid")
 
     display_course_titles = []
     for t, c in zip(ordered_titles, [course_map[t] for t in ordered_titles]):
         if c in ordered_codes:
             display_course_titles.append(t)
+
+    start_row = 4 if THRESHOLD_UPGRADED else 3
 
     ws.append([""] * 3 + display_course_titles + [""] * 5)
     for i, cell in enumerate(
@@ -1964,9 +1920,8 @@ def process_single_file(
         rowvals = [r[col] for col in headers]
         ws.append(rowvals)
 
-    # FIXED: Freeze the column headers (S/N, EXAMS NUMBER, NAME, etc.) at row start_row + 3
-    # This ensures all column headers remain visible when scrolling
-    ws.freeze_panes = ws.cell(row=start_row + 3, column=1)
+    # Freeze column F (column 6 - first course column)
+    ws.freeze_panes = f"F{start_row + 3}"
 
     thin_border = Border(
         left=Side(
@@ -2002,7 +1957,7 @@ def process_single_file(
             cell = ws.cell(row=r_idx, column=idx)
             try:
                 val = float(cell.value) if cell.value not in (None, "") else 0
-                if upgrade_min_threshold is not None and upgrade_min_threshold <= val <= 49:
+                if THRESHOLD_UPGRADED and ORIGINAL_THRESHOLD <= val < 50:
                     # This score was upgraded - use special color
                     cell.fill = upgraded_fill
                     # Dark green for upgraded scores
@@ -2144,10 +2099,10 @@ def process_single_file(
     ws.append(
         [f"A total of {failed_over_45_percent} students failed in more than 45% of their registered credit units in various courses and have been advised to withdraw"])
 
-    # FIXED: Keep the upgrade notice only in the summary section, not in the header
-    if upgrade_min_threshold is not None:
+    # Add threshold upgrade info to summary
+    if THRESHOLD_UPGRADED:
         ws.append(
-            [f"✅ Upgraded all scores between {upgrade_min_threshold}–49 to 50 as per management decision ({upgraded_scores_count} scores upgraded)"])
+            [f"NOTE: {upgraded_scores_count} scores were upgraded from {ORIGINAL_THRESHOLD}-49 to 50 as per management decision"])
 
     # Add removed withdrawn students info
     if removed_students:
@@ -2204,8 +2159,7 @@ def process_single_file(
             previous_gpas=previous_gpas,
             cgpa_data=cgpa_data,
             total_cu=total_cu,
-            pass_threshold=pass_threshold,
-            upgrade_min_threshold=upgrade_min_threshold)  # PASS THE UPGRADE THRESHOLD TO PDF
+            pass_threshold=pass_threshold)
         print(f"✅ PDF generated successfully for {sem}")
     except Exception as e:
         print(f"❌ Failed to generate student PDF for {sem}: {e}")
@@ -2318,8 +2272,7 @@ def main():
                     semester_credit_units,
                     semester_lookup,
                     semester_course_titles,
-                    DEFAULT_LOGO_PATH,
-                    nd_set)
+                    DEFAULT_LOGO_PATH)
             else:
                 print(
                     f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
