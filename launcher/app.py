@@ -22,36 +22,6 @@ SCRIPT_MAP = {
     "split": "scripts/split_names.py",
     "exam_processor": "scripts/exam_result_processor.py"
 }
-SUCCESS_INDICATORS = {
-    "utme": [
-        r"Processing: (PUTME 2025-Batch\d+[A-Z] Post-UTME Quiz-grades\.xlsx)",
-        r"Saved processed file: (UTME_RESULT_.*?\.csv)",
-        r"Saved processed file: (UTME_RESULT_.*?\.xlsx)",
-        r"Saved processed file: (PUTME_COMBINE_RESULT_.*?\.xlsx)"
-    ],
-    "caosce": [
-        r"Processed (CAOSCE SET2023A.*?|VIVA \([0-9]+\)\.xlsx) \(\d+ rows read\)",
-        r"Saved processed file: (CAOSCE_RESULT_.*?\.csv)"
-    ],
-    "clean": [
-        r"Processing: (Set2025-.*?\.xlsx)",
-        r"✅ Cleaned CSV saved in.*?cleaned_(Set2025-.*?\.csv)",
-        r"🎉 Master CSV saved in.*?master_cleaned_results\.csv",
-        r"✅ All processing completed successfully!"
-    ],
-    "split": [r"Saved processed file: (clean_jamb_DB_.*?\.csv)"],
-    "exam_processor": [
-        r"PROCESSING SEMESTER: (ND-.*)", 
-        r"✅ Successfully processed .*", 
-        r"✅ Mastersheet saved:.*",
-        r"📁 Found \d+ raw files",
-        r"Processing: (.*?\.xlsx)",
-        r"✅ Processing complete",
-        r"✅ ND Examination Results Processing completed successfully",
-        r"🔄 Applying upgrade rule:.*→ 50",
-        r"✅ Upgraded \d+ scores from.*to 50"
-    ]
-}
 
 def login_required(f):
     @wraps(f)
@@ -194,77 +164,44 @@ def check_input_files(input_dir, script_name):
     except Exception:
         return False
 
-def count_processed_files(output_lines, script_name):
-    """Count processed files based on script output"""
-    success_indicators = SUCCESS_INDICATORS.get(script_name, [])
-    processed_files_set = set()
+def count_processed_semesters(output_lines):
+    """Count actual semesters processed - FIXED VERSION"""
+    processed_semesters = set()
     
     for line in output_lines:
-        for indicator in success_indicators:
-            match = re.search(indicator, line)
-            if match:
-                if script_name == "utme":
-                    # For UTME, count unique file patterns
-                    if "Processing:" in line:
-                        file_name = match.group(1)
-                        processed_files_set.add(f"Processed: {file_name}")
-                    elif "Saved processed file:" in line:
-                        file_name = match.group(1)
-                        processed_files_set.add(f"Saved: {file_name}")
-                elif script_name == "clean":
-                    # For internal exam cleaning
-                    if "Processing:" in line:
-                        file_name = match.group(1)
-                        processed_files_set.add(f"Processed: {file_name}")
-                    elif "✅ Cleaned CSV saved" in line:
-                        file_name = match.group(1) if match.groups() else "cleaned_file"
-                        processed_files_set.add(f"Cleaned: {file_name}")
-                    elif "🎉 Master CSV saved" in line:
-                        processed_files_set.add("Master file created")
-                    elif "✅ All processing completed successfully!" in line:
-                        processed_files_set.add("Processing completed")
-                elif script_name == "exam_processor":
-                    # For exam processor
-                    if "PROCESSING SEMESTER:" in line:
-                        semester = match.group(1)
-                        processed_files_set.add(f"Semester: {semester}")
-                    elif "Processing:" in line:
-                        file_name = match.group(1)
-                        processed_files_set.add(f"Processed: {file_name}")
-                    elif "✅ Successfully processed" in line:
-                        processed_files_set.add("Successfully processed")
-                    elif "📁 Found" in line:
-                        # Extract number of files found
-                        files_match = re.search(r"📁 Found (\d+) raw files", line)
-                        if files_match:
-                            processed_files_set.add(f"Files found: {files_match.group(1)}")
-                    elif "✅ ND Examination Results Processing completed successfully" in line:
-                        processed_files_set.add("Processing completed")
-                    elif "🔄 Applying upgrade rule:" in line:
-                        upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
-                        if upgrade_match:
-                            processed_files_set.add(f"Upgrade rule: {upgrade_match.group(1)}-49")
-                    elif "✅ Upgraded" in line:
-                        upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
-                        if upgrade_count_match:
-                            processed_files_set.add(f"Upgraded: {upgrade_count_match.group(1)} scores")
-                else:
-                    # For other scripts
-                    file_name = match.group(1) if match.groups() else line
-                    processed_files_set.add(file_name)
+        # Look for semester processing indicators
+        if "PROCESSING SEMESTER:" in line:
+            # Extract semester name
+            semester_match = re.search(r"PROCESSING SEMESTER:\s*(ND-[A-Za-z\-]+)", line)
+            if semester_match:
+                semester_name = semester_match.group(1)
+                processed_semesters.add(semester_name)
+                print(f"✅ Found processed semester: {semester_name}")
+        
+        # Also look for successful semester completion
+        elif "✅ Successfully processed" in line and "ND-" in line:
+            # Extract semester from context
+            for word in line.split():
+                if word.startswith("ND-"):
+                    processed_semesters.add(word)
+                    print(f"✅ Found completed semester: {word}")
     
-    return len(processed_files_set)
+    print(f"📊 Total unique semesters processed: {len(processed_semesters)}")
+    if processed_semesters:
+        print(f"📋 Semesters: {list(processed_semesters)}")
+    
+    return len(processed_semesters)
 
-def get_success_message(script_name, processed_files, output_lines):
+def get_success_message(script_name, processed_count, output_lines):
     """Generate appropriate success message based on script and output"""
-    if processed_files == 0:
+    if processed_count == 0:
         return None
     
     if script_name == "clean":
         if any("✅ All processing completed successfully!" in line for line in output_lines):
             return f"Successfully processed internal examination results! Generated master file and individual cleaned files."
         else:
-            return f"Processed {processed_files} internal examination file(s)."
+            return f"Processed {processed_count} internal examination file(s)."
     
     elif script_name == "exam_processor":
         # Check for upgrade information
@@ -274,41 +211,43 @@ def get_success_message(script_name, processed_files, output_lines):
             if "🔄 Applying upgrade rule:" in line:
                 upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
                 if upgrade_match:
-                    upgrade_info = f" (Upgrade rule: {upgrade_match.group(1)}-49 → 50)"
+                    upgrade_info = f" Upgrade rule applied: {upgrade_match.group(1)}-49 → 50"
                     break
             elif "✅ Upgraded" in line:
                 upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
                 if upgrade_count_match:
-                    upgrade_count = f" (Upgraded {upgrade_count_match.group(1)} scores)"
+                    upgrade_count = f" Upgraded {upgrade_count_match.group(1)} scores"
                     break
         
         if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-            return f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s).{upgrade_info}{upgrade_count}"
+            return f"ND Examination processing completed successfully! Processed {processed_count} semester(s).{upgrade_info}{upgrade_count}"
         elif any("✅ Processing complete" in line for line in output_lines):
-            return f"ND Examination processing completed! Processed {processed_files} semester(s)/file(s).{upgrade_info}{upgrade_count}"
+            return f"ND Examination processing completed! Processed {processed_count} semester(s).{upgrade_info}{upgrade_count}"
+        elif processed_count > 0:
+            return f"Successfully processed {processed_count} semester(s).{upgrade_info}{upgrade_count}"
         else:
-            return f"Processed {processed_files} ND examination file(s)/semester(s).{upgrade_info}{upgrade_count}"
+            return f"Script completed but no specific success indicators found.{upgrade_info}{upgrade_count}"
     
     elif script_name == "utme":
         if any("Processing completed successfully" in line for line in output_lines):
-            return f"PUTME processing completed successfully! Processed {processed_files} batch file(s)."
+            return f"PUTME processing completed successfully! Processed {processed_count} batch file(s)."
         else:
-            return f"Processed {processed_files} PUTME batch file(s)."
+            return f"Processed {processed_count} PUTME batch file(s)."
     
     elif script_name == "caosce":
         if any("Processed" in line for line in output_lines):
-            return f"CAOSCE processing completed! Processed {processed_files} file(s)."
+            return f"CAOSCE processing completed! Processed {processed_count} file(s)."
         else:
-            return f"Processed {processed_files} CAOSCE file(s)."
+            return f"Processed {processed_count} CAOSCE file(s)."
     
     elif script_name == "split":
         if any("Saved processed file:" in line for line in output_lines):
-            return f"JAMB name splitting completed! Processed {processed_files} file(s)."
+            return f"JAMB name splitting completed! Processed {processed_count} file(s)."
         else:
-            return f"Processed {processed_files} JAMB file(s)."
+            return f"Processed {processed_count} JAMB file(s)."
     
     else:
-        return f"Successfully processed {processed_files} file(s)."
+        return f"Successfully processed {processed_count} file(s)."
 
 @app.route("/run/<script_name>", methods=["GET", "POST"])
 @login_required
@@ -432,8 +371,8 @@ def run_script(script_name):
                             timeout=300
                         )
                         output_lines = result.stdout.splitlines()
-                        processed_files = count_processed_files(output_lines, script_name)
-                        success_msg = get_success_message(script_name, processed_files, output_lines)
+                        processed_count = count_processed_semesters(output_lines)
+                        success_msg = get_success_message(script_name, processed_count, output_lines)
                         
                         if success_msg:
                             flash(success_msg)
@@ -448,8 +387,8 @@ def run_script(script_name):
                     except subprocess.CalledProcessError as e:
                         # Even if there's an error, check if any files were processed
                         output_lines = e.stdout.splitlines() if e.stdout else []
-                        processed_files = count_processed_files(output_lines, script_name)
-                        success_msg = get_success_message(script_name, processed_files, output_lines)
+                        processed_count = count_processed_semesters(output_lines)
+                        success_msg = get_success_message(script_name, processed_count, output_lines)
                         if success_msg:
                             flash(f"Partially completed: {success_msg}, but encountered an error: {e.stderr or str(e)}")
                         else:
@@ -471,7 +410,7 @@ def run_script(script_name):
                     print(f"   Processing Mode: {processing_mode}") 
                     print(f"   Selected Semesters: {selected_semesters}")
                     print(f"   Pass Threshold: {pass_threshold}")
-                    print(f"   Upgrade Threshold: {upgrade_threshold}")
+                    print(f"   Upgrade Threshold: '{upgrade_threshold}'")  # Show what we're getting
                     print(f"   Generate PDF: {generate_pdf}")
                     print(f"   Track Withdrawn: {track_withdrawn}")
 
@@ -492,15 +431,24 @@ def run_script(script_name):
                     env['SELECTED_SET'] = selected_set
                     env['PROCESSING_MODE'] = processing_mode
                     env['PASS_THRESHOLD'] = pass_threshold
-                    env['UPGRADE_THRESHOLD'] = upgrade_threshold  # Pass upgrade threshold
+                    
+                    # FIXED: Properly handle upgrade threshold
+                    if upgrade_threshold and upgrade_threshold.strip() and upgrade_threshold != "0":
+                        env['UPGRADE_THRESHOLD'] = upgrade_threshold.strip()
+                        print(f"   UPGRADE THRESHOLD SET: {upgrade_threshold}")
+                    else:
+                        # Don't set it at all if no upgrade threshold
+                        if 'UPGRADE_THRESHOLD' in env:
+                            del env['UPGRADE_THRESHOLD']
+                        print(f"   NO UPGRADE THRESHOLD SET")
+
                     env['GENERATE_PDF'] = str(generate_pdf)
                     env['TRACK_WITHDRAWN'] = str(track_withdrawn)
                     
-                    # Handle semester selection
-                    if selected_semesters:
-                        # Convert semester values to semester keys
+                    # FIXED: Handle semester selection properly
+                    if processing_mode == "manual" and selected_semesters:
+                        # Convert semester values to proper semester keys
                         semester_mapping = {
-                            'all': 'all',
                             'first_first': 'ND-FIRST-YEAR-FIRST-SEMESTER',
                             'first_second': 'ND-FIRST-YEAR-SECOND-SEMESTER',
                             'second_first': 'ND-SECOND-YEAR-FIRST-SEMESTER', 
@@ -511,10 +459,21 @@ def run_script(script_name):
                         for semester in selected_semesters:
                             if semester in semester_mapping:
                                 selected_semester_keys.append(semester_mapping[semester])
+                            else:
+                                # If it's already a proper semester key, use it directly
+                                if semester.startswith('ND-'):
+                                    selected_semester_keys.append(semester)
                         
-                        env['SELECTED_SEMESTERS'] = ','.join(selected_semester_keys)
+                        if selected_semester_keys:
+                            env['SELECTED_SEMESTERS'] = ','.join(selected_semester_keys)
+                            print(f"   SELECTED SEMESTERS SET: {selected_semester_keys}")
+                        else:
+                            env['SELECTED_SEMESTERS'] = ''
+                            print(f"   NO SPECIFIC SEMESTERS SELECTED")
                     else:
+                        # Auto mode or no specific semesters selected
                         env['SELECTED_SEMESTERS'] = ''
+                        print(f"   AUTO MODE - PROCESSING ALL SEMESTERS")
                     
                     print(f"Environment variables set:")
                     for key in ['SELECTED_SET', 'PROCESSING_MODE', 'PASS_THRESHOLD', 'UPGRADE_THRESHOLD', 'GENERATE_PDF', 'TRACK_WITHDRAWN', 'SELECTED_SEMESTERS']:
@@ -545,9 +504,9 @@ def run_script(script_name):
                     if result.stderr:
                         print(f"STDERR: {result.stderr}")
                     
-                    # Process results
+                    # Process results - FIXED: Use the new counting function
                     output_lines = result.stdout.splitlines() if result.stdout else []
-                    processed_files = count_processed_files(output_lines, script_name)
+                    processed_count = count_processed_semesters(output_lines)
                     
                     if result.returncode == 0:
                         # Check for upgrade information
@@ -568,11 +527,11 @@ def run_script(script_name):
                                     break
                         
                         if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-                            flash(f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s).{upgrade_details}{upgrade_count}")
+                            flash(f"ND Examination processing completed successfully! Processed {processed_count} semester(s).{upgrade_details}{upgrade_count}")
                         elif any("✅ Processing complete" in line for line in output_lines):
-                            flash(f"ND Examination processing completed! Processed {processed_files} semester(s)/file(s).{upgrade_details}{upgrade_count}")
-                        elif processed_files > 0:
-                            flash(f"Successfully processed {processed_files} semester(s)/file(s).{upgrade_details}{upgrade_count}")
+                            flash(f"ND Examination processing completed! Processed {processed_count} semester(s).{upgrade_details}{upgrade_count}")
+                        elif processed_count > 0:
+                            flash(f"Successfully processed {processed_count} semester(s).{upgrade_details}{upgrade_count}")
                         else:
                             flash(f"Script completed but no specific success indicators found.{upgrade_details}{upgrade_count}")
                     else:
@@ -598,8 +557,8 @@ def run_script(script_name):
                 timeout=300
             )
             output_lines = result.stdout.splitlines()
-            processed_files = count_processed_files(output_lines, script_name)
-            success_msg = get_success_message(script_name, processed_files, output_lines)
+            processed_count = count_processed_semesters(output_lines)
+            success_msg = get_success_message(script_name, processed_count, output_lines)
             
             if success_msg:
                 flash(success_msg)
@@ -615,8 +574,8 @@ def run_script(script_name):
             flash(f"Script timed out but may still be running in background.")
         except subprocess.CalledProcessError as e:
             output_lines = e.stdout.splitlines() if e.stdout else []
-            processed_files = count_processed_files(output_lines, script_name)
-            success_msg = get_success_message(script_name, processed_files, output_lines)
+            processed_count = count_processed_semesters(output_lines)
+            success_msg = get_success_message(script_name, processed_count, output_lines)
             if success_msg:
                 flash(f"Partially completed: {success_msg}, but encountered an error: {e.stderr or str(e)}")
             else:

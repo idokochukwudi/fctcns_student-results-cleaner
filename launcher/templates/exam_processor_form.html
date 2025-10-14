@@ -280,23 +280,23 @@
                     <label>Select Semesters to Process:</label>
                     <div class="checkbox-group">
                         <div class="checkbox-item">
-                            <input type="checkbox" id="first_first" name="semesters" value="ND-FIRST-YEAR-FIRST-SEMESTER">
+                            <input type="checkbox" id="first_first" name="semesters" value="first_first">
                             <label for="first_first">First Year - First Semester</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="first_second" name="semesters" value="ND-FIRST-YEAR-SECOND-SEMESTER">
+                            <input type="checkbox" id="first_second" name="semesters" value="first_second">
                             <label for="first_second">First Year - Second Semester</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="second_first" name="semesters" value="ND-SECOND-YEAR-FIRST-SEMESTER">
+                            <input type="checkbox" id="second_first" name="semesters" value="second_first">
                             <label for="second_first">Second Year - First Semester</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="second_second" name="semesters" value="ND-SECOND-YEAR-SECOND-SEMESTER">
+                            <input type="checkbox" id="second_second" name="semesters" value="second_second">
                             <label for="second_second">Second Year - Second Semester</label>
                         </div>
                     </div>
-                    <div class="form-note">Select specific semesters to process. If none selected, all semesters will be processed.</div>
+                    <div class="form-note">Select specific semesters to process. Only selected semesters will be processed.</div>
                 </div>
 
                 <!-- Pass Threshold -->
@@ -460,7 +460,7 @@
                     const selectedSemesters = document.querySelectorAll('input[name="semesters"]:checked');
                     if (selectedSemesters.length === 0) {
                         e.preventDefault();
-                        alert('Please select at least one semester to process, or switch to Automatic mode.');
+                        alert('Please select at least one semester to process in Manual mode, or switch to Automatic mode.');
                         return false;
                     }
                 }
