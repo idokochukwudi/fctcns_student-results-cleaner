@@ -2,12 +2,10 @@ import os
 import subprocess
 import re
 import sys
-from flask import Flask, request, redirect, url_for, render_template, flash, session, jsonify
+from flask import Flask, request, redirect, url_for, render_template, flash, session
 from functools import wraps
 from dotenv import load_dotenv
 from jinja2 import TemplateNotFound, UndefinedError
-import tempfile
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET", "default_secret_key_1234567890")
@@ -17,39 +15,42 @@ PASSWORD = os.getenv("STUDENT_CLEANER_PASSWORD", "admin")
 COLLEGE = os.getenv("COLLEGE_NAME", "FCT College of Nursing Sciences, Gwagwalada")
 DEPARTMENT = os.getenv("DEPARTMENT", "Examinations Office")
 
-# Allowed file extensions
-ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def is_running_on_railway():
-    """Check if we're running on Railway (web deployment)"""
-    return 'RAILWAY_ENVIRONMENT' in os.environ or 'RAILWAY_STATIC_URL' in os.environ
-
-def get_exam_paths():
-    """Get appropriate file paths based on environment"""
-    if is_running_on_railway():
-        # On Railway - use file uploads
-        return None
-    else:
-        # Local development - use local file paths
-        local_paths = {
-            'nd_exam_path': '/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL',
-            'hnd_exam_path': '/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL_HND',
-            'putme_path': '/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT',
-            'caosce_path': '/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT',
-            'internal_path': '/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT',
-            'jamb_path': '/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB'
-        }
-        return local_paths
-
 SCRIPT_MAP = {
     "utme": "scripts/utme_result.py",
     "caosce": "scripts/caosce_result.py",
     "clean": "scripts/clean_results.py",
     "split": "scripts/split_names.py",
     "exam_processor": "scripts/exam_result_processor.py"
+}
+SUCCESS_INDICATORS = {
+    "utme": [
+        r"Processing: (PUTME 2025-Batch\d+[A-Z] Post-UTME Quiz-grades\.xlsx)",
+        r"Saved processed file: (UTME_RESULT_.*?\.csv)",
+        r"Saved processed file: (UTME_RESULT_.*?\.xlsx)",
+        r"Saved processed file: (PUTME_COMBINE_RESULT_.*?\.xlsx)"
+    ],
+    "caosce": [
+        r"Processed (CAOSCE SET2023A.*?|VIVA \([0-9]+\)\.xlsx) \(\d+ rows read\)",
+        r"Saved processed file: (CAOSCE_RESULT_.*?\.csv)"
+    ],
+    "clean": [
+        r"Processing: (Set2025-.*?\.xlsx)",
+        r"✅ Cleaned CSV saved in.*?cleaned_(Set2025-.*?\.csv)",
+        r"🎉 Master CSV saved in.*?master_cleaned_results\.csv",
+        r"✅ All processing completed successfully!"
+    ],
+    "split": [r"Saved processed file: (clean_jamb_DB_.*?\.csv)"],
+    "exam_processor": [
+        r"PROCESSING SEMESTER: (ND-.*)", 
+        r"✅ Successfully processed .*", 
+        r"✅ Mastersheet saved:.*",
+        r"📁 Found \d+ raw files",
+        r"Processing: (.*?\.xlsx)",
+        r"✅ Processing complete",
+        r"✅ ND Examination Results Processing completed successfully",
+        r"🔄 Applying upgrade rule:.*→ 50",
+        r"✅ Upgraded \d+ scores from.*to 50"
+    ]
 }
 
 def login_required(f):
@@ -79,15 +80,13 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    environment = "Web Deployment" if is_running_on_railway() else "Local Development"
-    return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT, environment=environment)
+    return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT)
 
 def check_exam_processor_files(input_dir):
-    """Check for ND examination files in the actual directory structure - UPDATED to check RAW_RESULTS subdirectory"""
+    """Check for ND examination files in the actual directory structure"""
     if not os.path.isdir(input_dir):
         return False
     
-    # Check for ND sets (ND-2024, ND-2025, etc.)
     nd_sets = []
     for item in os.listdir(input_dir):
         item_path = os.path.join(input_dir, item)
@@ -97,19 +96,16 @@ def check_exam_processor_files(input_dir):
     if not nd_sets:
         return False
     
-    # Check each ND set for Excel files in the RAW_RESULTS subdirectory
     total_files_found = 0
     for nd_set in nd_sets:
         set_path = os.path.join(input_dir, nd_set)
         if not os.path.isdir(set_path):
             continue
         
-        # Look for RAW_RESULTS subdirectory
         raw_results_path = os.path.join(set_path, "RAW_RESULTS")
         if not os.path.isdir(raw_results_path):
             continue
             
-        # Look for Excel files in the RAW_RESULTS subdirectory
         excel_files = [f for f in os.listdir(raw_results_path) 
                      if f.lower().endswith(('.xlsx', '.xls')) and not f.startswith('~')]
         
@@ -122,11 +118,9 @@ def check_putme_files(input_dir):
     if not os.path.isdir(input_dir):
         return False
     
-    # Check for Excel files in PUTME directory
     excel_files = [f for f in os.listdir(input_dir) 
                   if f.lower().endswith(('.xlsx', '.xls')) and 'PUTME' in f.upper()]
     
-    # Also check for candidate batch files in RAW_CANDIDATE_BATCHES
     candidate_batches_dir = os.path.join(os.path.dirname(input_dir), "RAW_CANDIDATE_BATCHES")
     batch_files = []
     if os.path.isdir(candidate_batches_dir):
@@ -140,7 +134,6 @@ def check_internal_exam_files(input_dir):
     if not os.path.isdir(input_dir):
         return False
     
-    # Check for Excel files in internal exam directory
     excel_files = [f for f in os.listdir(input_dir) 
                   if f.lower().endswith(('.xlsx', '.xls')) and 'Set2025' in f]
     
@@ -151,18 +144,16 @@ def check_caosce_files(input_dir):
     if not os.path.isdir(input_dir):
         return False
     
-    # Check for Excel files in CAOSCE directory
     excel_files = [f for f in os.listdir(input_dir) 
                   if f.lower().endswith(('.xlsx', '.xls')) and 'CAOSCE' in f.upper()]
     
     return len(excel_files) > 0
 
 def check_split_files(input_dir):
-    """Check for JAMB split files - FIXED VERSION to handle both CSV and Excel files"""
+    """Check for JAMB split files"""
     if not os.path.isdir(input_dir):
         return False
     
-    # Check for ANY CSV or Excel files in JAMB directory (not just those with 'JAMB' in name)
     valid_files = [f for f in os.listdir(input_dir) 
                   if f.lower().endswith(('.csv', '.xlsx', '.xls')) and not f.startswith('~')]
     
@@ -173,7 +164,6 @@ def check_input_files(input_dir, script_name):
     if not os.path.isdir(input_dir):
         return False
     
-    # Special handling for different script types
     if script_name == "exam_processor":
         return check_exam_processor_files(input_dir)
     elif script_name == "utme":
@@ -185,7 +175,6 @@ def check_input_files(input_dir, script_name):
     elif script_name == "split":
         return check_split_files(input_dir)
     
-    # For other scripts, check for CSV/Excel files directly in the directory
     try:
         dir_contents = os.listdir(input_dir)
         valid_extensions = ('.csv', '.xlsx', '.xls')
@@ -194,47 +183,77 @@ def check_input_files(input_dir, script_name):
     except Exception:
         return False
 
-def count_processed_semesters(output_lines):
-    """Count actual semesters processed - FIXED VERSION"""
-    processed_semesters = set()
+def count_processed_files(output_lines, script_name, selected_semesters=None):
+    """Count processed semesters based on script output"""
+    success_indicators = SUCCESS_INDICATORS.get(script_name, [])
+    processed_files_set = set()
+    
+    # Log all output lines for debugging
+    print(f"Raw output lines for {script_name}:")
+    for line in output_lines:
+        if line.strip():
+            print(f"  OUTPUT: {line}")
     
     for line in output_lines:
-        # Look for semester processing indicators
-        if "PROCESSING SEMESTER:" in line:
-            # Extract semester name
-            semester_match = re.search(r"PROCESSING SEMESTER:\s*(ND-[A-Za-z\-]+)", line)
-            if semester_match:
-                semester_name = semester_match.group(1)
-                processed_semesters.add(semester_name)
-                print(f"✅ Found processed semester: {semester_name}")
-        
-        # Also look for successful semester completion
-        elif "✅ Successfully processed" in line and "ND-" in line:
-            # Extract semester from context
-            for word in line.split():
-                if word.startswith("ND-"):
-                    processed_semesters.add(word)
-                    print(f"✅ Found completed semester: {word}")
+        for indicator in success_indicators:
+            match = re.search(indicator, line)
+            if match:
+                if script_name == "utme":
+                    if "Processing:" in line:
+                        file_name = match.group(1)
+                        processed_files_set.add(f"Processed: {file_name}")
+                    elif "Saved processed file:" in line:
+                        file_name = match.group(1)
+                        processed_files_set.add(f"Saved: {file_name}")
+                elif script_name == "clean":
+                    if "Processing:" in line:
+                        file_name = match.group(1)
+                        processed_files_set.add(f"Processed: {file_name}")
+                    elif "✅ Cleaned CSV saved" in line:
+                        file_name = match.group(1) if match.groups() else "cleaned_file"
+                        processed_files_set.add(f"Cleaned: {file_name}")
+                    elif "🎉 Master CSV saved" in line:
+                        processed_files_set.add("Master file created")
+                    elif "✅ All processing completed successfully!" in line:
+                        processed_files_set.add("Processing completed")
+                elif script_name == "exam_processor":
+                    # Only count semesters explicitly processed
+                    if "PROCESSING SEMESTER:" in line:
+                        semester = match.group(1)
+                        processed_files_set.add(f"Semester: {semester}")
+                else:
+                    file_name = match.group(1) if match.groups() else line
+                    processed_files_set.add(file_name)
     
-    print(f"📊 Total unique semesters processed: {len(processed_semesters)}")
-    if processed_semesters:
-        print(f"📋 Semesters: {list(processed_semesters)}")
+    # For exam_processor in manual mode, strictly validate against selected semesters
+    if script_name == "exam_processor" and selected_semesters:
+        semester_mapping = {
+            'first_first': 'ND-First-YEAR-First-SEMESTER',
+            'first_second': 'ND-First-YEAR-SECOND-SEMESTER',
+            'second_first': 'ND-SECOND-YEAR-First-SEMESTER', 
+            'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
+        }
+        expected_semesters = {f"Semester: {semester_mapping.get(sem, sem)}" for sem in selected_semesters}
+        processed_files_set = processed_files_set.intersection(expected_semesters)
+        print(f"Expected semesters: {expected_semesters}")
+        if len(processed_files_set) != len(expected_semesters):
+            print(f"WARNING: Processed semester count ({len(processed_files_set)}) does not match expected ({len(expected_semesters)})")
     
-    return len(processed_semesters)
+    print(f"Processed items for {script_name}: {processed_files_set}")
+    return len(processed_files_set)
 
-def get_success_message(script_name, processed_count, output_lines):
+def get_success_message(script_name, processed_files, output_lines, selected_semesters=None):
     """Generate appropriate success message based on script and output"""
-    if processed_count == 0:
+    if processed_files == 0:
         return None
     
     if script_name == "clean":
         if any("✅ All processing completed successfully!" in line for line in output_lines):
             return f"Successfully processed internal examination results! Generated master file and individual cleaned files."
         else:
-            return f"Processed {processed_count} internal examination file(s)."
+            return f"Processed {processed_files} internal examination file(s)."
     
     elif script_name == "exam_processor":
-        # Check for upgrade information
         upgrade_info = ""
         upgrade_count = ""
         for line in output_lines:
@@ -249,73 +268,37 @@ def get_success_message(script_name, processed_count, output_lines):
                     upgrade_count = f" Upgraded {upgrade_count_match.group(1)} scores"
                     break
         
+        # Check for mismatch in manual mode
+        if selected_semesters and len(selected_semesters) != processed_files:
+            return f"Warning: Expected to process {len(selected_semesters)} semester(s), but processed {processed_files}. Please check logs.{upgrade_info}{upgrade_count}"
+        
         if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-            return f"ND Examination processing completed successfully! Processed {processed_count} semester(s).{upgrade_info}{upgrade_count}"
+            return f"ND Examination processing completed successfully! Processed {processed_files} semester(s).{upgrade_info}{upgrade_count}"
         elif any("✅ Processing complete" in line for line in output_lines):
-            return f"ND Examination processing completed! Processed {processed_count} semester(s).{upgrade_info}{upgrade_count}"
-        elif processed_count > 0:
-            return f"Successfully processed {processed_count} semester(s).{upgrade_info}{upgrade_count}"
+            return f"ND Examination processing completed! Processed {processed_files} semester(s).{upgrade_info}{upgrade_count}"
         else:
-            return f"Script completed but no specific success indicators found.{upgrade_info}{upgrade_count}"
+            return f"Processed {processed_files} ND examination semester(s).{upgrade_info}{upgrade_count}"
     
     elif script_name == "utme":
         if any("Processing completed successfully" in line for line in output_lines):
-            return f"PUTME processing completed successfully! Processed {processed_count} batch file(s)."
+            return f"PUTME processing completed successfully! Processed {processed_files} batch file(s)."
         else:
-            return f"Processed {processed_count} PUTME batch file(s)."
+            return f"Processed {processed_files} PUTME batch file(s)."
     
     elif script_name == "caosce":
         if any("Processed" in line for line in output_lines):
-            return f"CAOSCE processing completed! Processed {processed_count} file(s)."
+            return f"CAOSCE processing completed! Processed {processed_files} file(s)."
         else:
-            return f"Processed {processed_count} CAOSCE file(s)."
+            return f"Processed {processed_files} CAOSCE file(s)."
     
     elif script_name == "split":
         if any("Saved processed file:" in line for line in output_lines):
-            return f"JAMB name splitting completed! Processed {processed_count} file(s)."
+            return f"JAMB name splitting completed! Processed {processed_files} file(s)."
         else:
-            return f"Processed {processed_count} JAMB file(s)."
+            return f"Processed {processed_files} JAMB file(s)."
     
     else:
-        return f"Successfully processed {processed_count} file(s)."
-
-def handle_web_file_upload(script_name, uploaded_file):
-    """Handle file upload for web deployment"""
-    try:
-        # Save uploaded file to temporary directory
-        filename = secure_filename(uploaded_file.filename)
-        temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, filename)
-        uploaded_file.save(file_path)
-        
-        # Set environment variable to indicate web mode
-        env = os.environ.copy()
-        env['WEB_MODE'] = 'true'
-        env['UPLOADED_FILE_PATH'] = file_path
-        
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        script_path = os.path.join(project_root, SCRIPT_MAP[script_name])
-        
-        # Run the script with the uploaded file
-        result = subprocess.run(
-            [sys.executable, script_path],
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=600
-        )
-        
-        # Clean up temporary file
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            
-        return result
-        
-    except Exception as e:
-        # Ensure cleanup on error
-        if 'file_path' in locals() and os.path.exists(file_path):
-            os.remove(file_path)
-        raise e
+        return f"Successfully processed {processed_files} file(s)."
 
 @app.route("/run/<script_name>", methods=["GET", "POST"])
 @login_required
@@ -324,46 +307,6 @@ def run_script(script_name):
         if script_name not in SCRIPT_MAP:
             flash("Invalid script requested.")
             return redirect(url_for("dashboard"))
-
-        # Check if we're running on web (Railway) and handle file upload
-        if is_running_on_railway() and request.method == "POST":
-            if 'file' not in request.files:
-                flash("No file uploaded.")
-                return redirect(url_for("dashboard"))
-                
-            file = request.files['file']
-            if file.filename == '':
-                flash("No file selected.")
-                return redirect(url_for("dashboard"))
-                
-            if file and allowed_file(file.filename):
-                try:
-                    result = handle_web_file_upload(script_name, file)
-                    output_lines = result.stdout.splitlines() if result.stdout else []
-                    processed_count = count_processed_semesters(output_lines)
-                    success_msg = get_success_message(script_name, processed_count, output_lines)
-                    
-                    if result.returncode == 0:
-                        if success_msg:
-                            flash(success_msg)
-                        else:
-                            flash(f"Script completed but no files were processed.")
-                    else:
-                        error_msg = result.stderr or "Unknown error occurred"
-                        if success_msg:
-                            flash(f"Partially completed: {success_msg}, but encountered an error: {error_msg}")
-                        else:
-                            flash(f"Error processing: {error_msg}")
-                            
-                except subprocess.TimeoutExpired:
-                    flash("Script timed out. Please try again with a smaller file.")
-                except Exception as e:
-                    flash(f"Error processing uploaded file: {str(e)}")
-                    
-                return redirect(url_for("dashboard"))
-            else:
-                flash("Invalid file type. Please upload Excel or CSV files.")
-                return redirect(url_for("dashboard"))
 
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         script_path = os.path.join(project_root, SCRIPT_MAP[script_name])
@@ -379,7 +322,6 @@ def run_script(script_name):
             flash(f"Script file not found: {script_path}")
             return redirect(url_for("dashboard"))
 
-        # Ensure script is executable
         if not os.access(script_path, os.X_OK):
             try:
                 os.chmod(script_path, 0o755)
@@ -387,25 +329,6 @@ def run_script(script_name):
                 flash(f"Script permissions error: {script_path}")
                 return redirect(url_for("dashboard"))
 
-        # For web deployment without file upload, show upload form
-        if is_running_on_railway() and request.method == "GET":
-            if script_name in ["utme", "exam_processor"]:
-                if script_name == "utme":
-                    return render_template("utme_form.html", college=COLLEGE, department=DEPARTMENT, web_mode=True)
-                elif script_name == "exam_processor":
-                    # For web mode, we'll use file upload instead of local directory
-                    return render_template(
-                        "exam_processor_form.html", 
-                        college=COLLEGE,
-                        department=DEPARTMENT,
-                        nd_sets=["Upload File"],
-                        web_mode=True
-                    )
-            else:
-                # For other scripts, show simple upload form
-                return render_template("upload_form.html", script_name=script_name, script_desc=script_desc, college=COLLEGE)
-
-        # Local development mode - use existing file paths
         input_dir = {
             "utme": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT",
             "caosce": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT", 
@@ -414,16 +337,13 @@ def run_script(script_name):
             "exam_processor": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL"
         }.get(script_name, "the input directory")
         
-        # Check for input files with proper directory structure handling
         if not check_input_files(input_dir, script_name):
             if script_name == "exam_processor":
-                # Provide more detailed information about what's missing
                 nd_sets_found = []
                 if os.path.isdir(input_dir):
                     for item in os.listdir(input_dir):
                         item_path = os.path.join(input_dir, item)
                         if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
-                            # Check if this set has RAW_RESULTS subdirectory and Excel files
                             raw_results_path = os.path.join(item_path, "RAW_RESULTS")
                             if os.path.isdir(raw_results_path):
                                 excel_files = [f for f in os.listdir(raw_results_path) 
@@ -444,7 +364,6 @@ def run_script(script_name):
             elif script_name == "caosce":
                 flash(f"No CAOSCE examination files found in {input_dir}. Please ensure you have CAOSCE Excel files.")
             elif script_name == "split":
-                # Provide more detailed info for JAMB database
                 files_found = []
                 if os.path.isdir(input_dir):
                     files_found = [f for f in os.listdir(input_dir) 
@@ -458,252 +377,232 @@ def run_script(script_name):
                 flash(f"No CSV or Excel files found in {input_dir}")
             return redirect(url_for("dashboard"))
 
-        # Handle scripts that need forms (local mode only)
-        if script_name in ["utme", "exam_processor"] and request.method == "GET":
-            if script_name == "utme":
-                return render_template("utme_form.html", college=COLLEGE, department=DEPARTMENT, web_mode=False)
-            elif script_name == "exam_processor":
-                # Get available ND sets for the form
-                nd_sets = []
-                if os.path.isdir(input_dir):
-                    for item in os.listdir(input_dir):
-                        item_path = os.path.join(input_dir, item)
-                        if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
-                            nd_sets.append(item)
-                
-                return render_template(
-                    "exam_processor_form.html", 
-                    college=COLLEGE,
-                    department=DEPARTMENT,
-                    nd_sets=nd_sets,
-                    web_mode=False
-                )
-
-        # Handle POST requests for local processing
-        if request.method == "POST" and not is_running_on_railway():
-            if script_name == "utme":
-                convert_value = request.form.get("convert_value", "").strip()
-                convert_column = request.form.get("convert_column", "n")
-
-                cmd = ["python3", script_path]
-                if convert_value:
-                    cmd.extend(["--non-interactive", "--converted-score-max", convert_value])
-
-                try:
-                    result = subprocess.run(
-                        cmd,
-                        input=f"{convert_column}\n",
-                        text=True,
-                        capture_output=True,
-                        check=True,
-                        timeout=300
+        if script_name in ["utme", "exam_processor"]:
+            if request.method == "GET":
+                if script_name == "utme":
+                    return render_template("utme_form.html", college=COLLEGE, department=DEPARTMENT)
+                elif script_name == "exam_processor":
+                    nd_sets = []
+                    if os.path.isdir(input_dir):
+                        for item in os.listdir(input_dir):
+                            item_path = os.path.join(input_dir, item)
+                            if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
+                                nd_sets.append(item)
+                    
+                    return render_template(
+                        "exam_processor_form.html", 
+                        college=COLLEGE,
+                        department=DEPARTMENT,
+                        nd_sets=nd_sets
                     )
-                    output_lines = result.stdout.splitlines()
-                    processed_count = count_processed_semesters(output_lines)
-                    success_msg = get_success_message(script_name, processed_count, output_lines)
-                    
-                    if success_msg:
-                        flash(success_msg)
-                    else:
-                        if "No CSV or Excel files found" in result.stdout:
-                            flash(f"No CSV or Excel files found in {input_dir} for {script_desc}.")
-                        else:
-                            flash(f"No files processed for {script_desc}. Check input files in {input_dir}.")
+
+            if request.method == "POST":
+                if script_name == "utme":
+                    convert_value = request.form.get("convert_value", "").strip()
+                    convert_column = request.form.get("convert_column", "n")
+
+                    cmd = ["python3", script_path]
+                    if convert_value:
+                        cmd.extend(["--non-interactive", "--converted-score-max", convert_value])
+
+                    try:
+                        result = subprocess.run(
+                            cmd,
+                            input=f"{convert_column}\n",
+                            text=True,
+                            capture_output=True,
+                            check=True,
+                            timeout=300
+                        )
+                        output_lines = result.stdout.splitlines()
+                        processed_files = count_processed_files(output_lines, script_name)
+                        success_msg = get_success_message(script_name, processed_files, output_lines)
                         
-                except subprocess.TimeoutExpired:
-                    flash(f"Script timed out but may still be running in background.")
-                except subprocess.CalledProcessError as e:
-                    # Even if there's an error, check if any files were processed
-                    output_lines = e.stdout.splitlines() if e.stdout else []
-                    processed_count = count_processed_semesters(output_lines)
-                    success_msg = get_success_message(script_name, processed_count, output_lines)
-                    if success_msg:
-                        flash(f"Partially completed: {success_msg}, but encountered an error: {e.stderr or str(e)}")
-                    else:
-                        flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
-                return redirect(url_for("dashboard"))
-
-            elif script_name == "exam_processor":
-                # Get form parameters for exam processor
-                selected_set = request.form.get("selected_set", "all")
-                processing_mode = request.form.get("processing_mode", "auto")
-                selected_semesters = request.form.getlist("semesters")
-                pass_threshold = request.form.get("pass_threshold", "50.0")
-                upgrade_threshold = request.form.get("upgrade_threshold", "0")
-                generate_pdf = "generate_pdf" in request.form
-                track_withdrawn = "track_withdrawn" in request.form
-                
-                print(f"FORM DATA RECEIVED for exam_processor:")
-                print(f"   Selected Set: {selected_set}")
-                print(f"   Processing Mode: {processing_mode}") 
-                print(f"   Selected Semesters: {selected_semesters}")
-                print(f"   Pass Threshold: {pass_threshold}")
-                print(f"   Upgrade Threshold: '{upgrade_threshold}'")
-                print(f"   Generate PDF: {generate_pdf}")
-                print(f"   Track Withdrawn: {track_withdrawn}")
-
-                # Verify script exists and is accessible
-                script_path = os.path.join(project_root, SCRIPT_MAP[script_name])
-                print(f"Script path: {script_path}")
-                
-                if not os.path.exists(script_path):
-                    flash(f"Exam processor script not found at: {script_path}")
-                    return redirect(url_for("dashboard"))
-                
-                if not os.access(script_path, os.R_OK):
-                    flash(f"No read permission for script: {script_path}")
-                    return redirect(url_for("dashboard"))
-
-                # Set environment variables for non-interactive mode
-                env = os.environ.copy()
-                env['SELECTED_SET'] = selected_set
-                env['PROCESSING_MODE'] = processing_mode
-                env['PASS_THRESHOLD'] = pass_threshold
-                
-                # Handle upgrade threshold
-                if upgrade_threshold and upgrade_threshold.strip() and upgrade_threshold != "0":
-                    env['UPGRADE_THRESHOLD'] = upgrade_threshold.strip()
-                    print(f"   UPGRADE THRESHOLD SET: {upgrade_threshold}")
-                else:
-                    if 'UPGRADE_THRESHOLD' in env:
-                        del env['UPGRADE_THRESHOLD']
-                    print(f"   NO UPGRADE THRESHOLD SET")
-
-                env['GENERATE_PDF'] = str(generate_pdf)
-                env['TRACK_WITHDRAWN'] = str(track_withdrawn)
-                
-                # Handle semester selection properly
-                if processing_mode == "manual" and selected_semesters:
-                    semester_mapping = {
-                        'first_first': 'ND-FIRST-YEAR-FIRST-SEMESTER',
-                        'first_second': 'ND-FIRST-YEAR-SECOND-SEMESTER',
-                        'second_first': 'ND-SECOND-YEAR-FIRST-SEMESTER', 
-                        'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
-                    }
-                    
-                    selected_semester_keys = []
-                    for semester in selected_semesters:
-                        if semester in semester_mapping:
-                            selected_semester_keys.append(semester_mapping[semester])
+                        if success_msg:
+                            flash(success_msg)
                         else:
-                            if semester.startswith('ND-'):
-                                selected_semester_keys.append(semester)
+                            if "No CSV or Excel files found" in result.stdout:
+                                flash(f"No CSV or Excel files found in {input_dir} for {script_desc}.")
+                            else:
+                                flash(f"No files processed for {script_desc}. Check input files in {input_dir}.")
+                            
+                    except subprocess.TimeoutExpired:
+                        flash(f"Script timed out but may still be running in background.")
+                    except subprocess.CalledProcessError as e:
+                        output_lines = e.stdout.splitlines() if e.stdout else []
+                        processed_files = count_processed_files(output_lines, script_name)
+                        success_msg = get_success_message(script_name, processed_files, output_lines)
+                        if success_msg:
+                            flash(f"Partially completed: {success_msg}, but encountered an error: {e.stderr or str(e)}")
+                        else:
+                            flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
+                    return redirect(url_for("dashboard"))
+
+                elif script_name == "exam_processor":
+                    selected_set = request.form.get("selected_set", "all")
+                    processing_mode = request.form.get("processing_mode", "auto")
+                    selected_semesters = request.form.getlist("semesters")
+                    pass_threshold = request.form.get("pass_threshold", "50.0")
+                    upgrade_threshold = request.form.get("upgrade_threshold", "0")
+                    generate_pdf = "generate_pdf" in request.form
+                    track_withdrawn = "track_withdrawn" in request.form
                     
-                    if selected_semester_keys:
-                        env['SELECTED_SEMESTERS'] = ','.join(selected_semester_keys)
-                        print(f"   SELECTED SEMESTERS SET: {selected_semester_keys}")
+                    print(f"FORM DATA RECEIVED for exam_processor:")
+                    print(f"   Selected Set: {selected_set}")
+                    print(f"   Processing Mode: {processing_mode}") 
+                    print(f"   Selected Semesters: {selected_semesters}")
+                    print(f"   Pass Threshold: {pass_threshold}")
+                    print(f"   Upgrade Threshold: '{upgrade_threshold}'")
+                    print(f"   Generate PDF: {generate_pdf}")
+                    print(f"   Track Withdrawn: {track_withdrawn}")
+
+                    if not os.path.exists(script_path):
+                        flash(f"Exam processor script not found at: {script_path}")
+                        return redirect(url_for("dashboard"))
+                    
+                    if not os.access(script_path, os.R_OK):
+                        flash(f"No read permission for script: {script_path}")
+                        return redirect(url_for("dashboard"))
+
+                    env = os.environ.copy()
+                    env['SELECTED_SET'] = selected_set
+                    env['PROCESSING_MODE'] = processing_mode
+                    env['PASS_THRESHOLD'] = pass_threshold
+                    
+                    if upgrade_threshold and upgrade_threshold.strip() and upgrade_threshold != "0":
+                        env['UPGRADE_THRESHOLD'] = upgrade_threshold.strip()
+                        print(f"   UPGRADE THRESHOLD SET: {upgrade_threshold}")
+                    else:
+                        if 'UPGRADE_THRESHOLD' in env:
+                            del env['UPGRADE_THRESHOLD']
+                        print(f"   NO UPGRADE THRESHOLD SET")
+
+                    env['GENERATE_PDF'] = str(generate_pdf)
+                    env['TRACK_WITHDRAWN'] = str(track_withdrawn)
+                    
+                    if processing_mode == "manual" and selected_semesters:
+                        semester_mapping = {
+                            'first_first': 'ND-First-YEAR-First-SEMESTER',
+                            'first_second': 'ND-First-YEAR-SECOND-SEMESTER',
+                            'second_first': 'ND-SECOND-YEAR-First-SEMESTER', 
+                            'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
+                        }
+                        
+                        selected_semester_keys = []
+                        for semester in selected_semesters:
+                            if semester in semester_mapping:
+                                selected_semester_keys.append(semester_mapping[semester])
+                            elif semester.startswith('ND-'):
+                                selected_semester_keys.append(semester)
+                        
+                        if selected_semester_keys:
+                            env['SELECTED_SEMESTERS'] = ','.join(selected_semester_keys)
+                            print(f"   SELECTED SEMESTERS SET: {selected_semester_keys}")
+                        else:
+                            env['SELECTED_SEMESTERS'] = ''
+                            print(f"   NO SPECIFIC SEMESTERS SELECTED")
                     else:
                         env['SELECTED_SEMESTERS'] = ''
-                        print(f"   NO SPECIFIC SEMESTERS SELECTED")
-                else:
-                    env['SELECTED_SEMESTERS'] = ''
-                    print(f"   AUTO MODE - PROCESSING ALL SEMESTERS")
-                
-                print(f"Environment variables set:")
-                for key in ['SELECTED_SET', 'PROCESSING_MODE', 'PASS_THRESHOLD', 'UPGRADE_THRESHOLD', 'GENERATE_PDF', 'TRACK_WITHDRAWN', 'SELECTED_SEMESTERS']:
-                    print(f"   {key}: {env.get(key)}")
-
-                # Run the script with environment variables
-                print(f"Starting exam processor script...")
-                result = subprocess.run(
-                    [sys.executable, script_path],
-                    env=env,
-                    text=True,
-                    capture_output=True,
-                    timeout=600
-                )
-                
-                print(f"Script execution completed")
-                print(f"   Return code: {result.returncode}")
-                print(f"   stdout length: {len(result.stdout)}")
-                print(f"   stderr length: {len(result.stderr)}")
-                
-                if result.stdout:
-                    output_lines = result.stdout.splitlines()
-                    for line in output_lines[:20]:
-                        if line.strip():
-                            print(f"STDOUT: {line}")
-                
-                if result.stderr:
-                    print(f"STDERR: {result.stderr}")
-                
-                # Process results
-                output_lines = result.stdout.splitlines() if result.stdout else []
-                processed_count = count_processed_semesters(output_lines)
-                
-                if result.returncode == 0:
-                    upgrade_applied = False
-                    upgrade_details = ""
-                    upgrade_count = ""
-                    for line in output_lines:
-                        if "🔄 Applying upgrade rule:" in line:
-                            upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
-                            if upgrade_match:
-                                upgrade_applied = True
-                                upgrade_details = f" Upgrade rule applied: {upgrade_match.group(1)}-49 → 50"
-                                break
-                        elif "✅ Upgraded" in line:
-                            upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
-                            if upgrade_count_match:
-                                upgrade_count = f" Upgraded {upgrade_count_match.group(1)} scores"
-                                break
+                        print(f"   AUTO MODE - PROCESSING ALL SEMESTERS")
                     
-                    if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-                        flash(f"ND Examination processing completed successfully! Processed {processed_count} semester(s).{upgrade_details}{upgrade_count}")
-                    elif any("✅ Processing complete" in line for line in output_lines):
-                        flash(f"ND Examination processing completed! Processed {processed_count} semester(s).{upgrade_details}{upgrade_count}")
-                    elif processed_count > 0:
-                        flash(f"Successfully processed {processed_count} semester(s).{upgrade_details}{upgrade_count}")
-                    else:
-                        flash(f"Script completed but no specific success indicators found.{upgrade_details}{upgrade_count}")
-                else:
-                    error_msg = result.stderr or "No error output"
-                    if "No module named" in error_msg:
-                        flash("Missing Python dependencies. Please install: pandas openpyxl reportlab")
-                    elif "FileNotFoundError" in error_msg:
-                        flash("Required files not found. Check if ND sets have RAW_RESULTS folders with Excel files.")
-                    elif "Permission denied" in error_msg:
-                        flash("Permission error. Check file permissions in the exam directory.")
-                    else:
-                        flash(f"Script failed: {error_msg[:100]}...")
+                    print(f"Environment variables set:")
+                    for key in ['SELECTED_SET', 'PROCESSING_MODE', 'PASS_THRESHOLD', 'UPGRADE_THRESHOLD', 'GENERATE_PDF', 'TRACK_WITHDRAWN', 'SELECTED_SEMESTERS']:
+                        print(f"   {key}: {env.get(key)}")
+
+                    print(f"Starting exam processor script...")
+                    result = subprocess.run(
+                        [sys.executable, script_path],
+                        env=env,
+                        text=True,
+                        capture_output=True,
+                        timeout=600
+                    )
+                    
+                    print(f"Script execution completed")
+                    print(f"   Return code: {result.returncode}")
+                    print(f"   stdout length: {len(result.stdout)}")
+                    print(f"   stderr length: {len(result.stderr)}")
+                    
+                    output_lines = result.stdout.splitlines() if result.stdout else []
+                    processed_files = count_processed_files(
+                        output_lines,
+                        script_name,
+                        selected_semesters if processing_mode == "manual" else None
+                    )
+                    
+                    if result.returncode == 0:
+                        upgrade_applied = False
+                        upgrade_details = ""
+                        upgrade_count = ""
+                        for line in output_lines:
+                            if "🔄 Applying upgrade rule:" in line:
+                                upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
+                                if upgrade_match:
+                                    upgrade_applied = True
+                                    upgrade_details = f" Upgrade rule applied: {upgrade_match.group(1)}-49 → 50"
+                                    break
+                            elif "✅ Upgraded" in line:
+                                upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
+                                if upgrade_count_match:
+                                    upgrade_count = f" Upgraded {upgrade_count_match.group(1)} scores"
+                                    break
                         
-                return redirect(url_for("dashboard"))
-
-        # Handle scripts that run directly (no form needed) - LOCAL MODE ONLY
-        if not is_running_on_railway():
-            try:
-                result = subprocess.run(
-                    [sys.executable, script_path],
-                    text=True,
-                    capture_output=True,
-                    check=True,
-                    timeout=300
-                )
-                output_lines = result.stdout.splitlines()
-                processed_count = count_processed_semesters(output_lines)
-                success_msg = get_success_message(script_name, processed_count, output_lines)
-                
-                if success_msg:
-                    flash(success_msg)
-                else:
-                    if "No CSV or Excel files found" in result.stdout:
-                        flash(f"No CSV or Excel files found in {input_dir} for {script_desc}.")
-                    elif "No valid files were processed" in result.stdout:
-                        flash(f"No files processed for {script_desc}. Check input files for required columns in {input_dir}.")
+                        success_msg = get_success_message(
+                            script_name,
+                            processed_files,
+                            output_lines,
+                            selected_semesters if processing_mode == "manual" else None
+                        )
+                        if success_msg:
+                            flash(success_msg)
+                        else:
+                            flash(f"Script completed but no semesters processed.{upgrade_details}{upgrade_count}")
                     else:
-                        flash(f"No files processed for {script_desc}. Check logs for details.")
-                    
-            except subprocess.TimeoutExpired:
-                flash(f"Script timed out but may still be running in background.")
-            except subprocess.CalledProcessError as e:
-                output_lines = e.stdout.splitlines() if e.stdout else []
-                processed_count = count_processed_semesters(output_lines)
-                success_msg = get_success_message(script_name, processed_count, output_lines)
-                if success_msg:
-                    flash(f"Partially completed: {success_msg}, but encountered an error: {e.stderr or str(e)}")
+                        error_msg = result.stderr or "No error output"
+                        if "No module named" in error_msg:
+                            flash("Missing Python dependencies. Please install: pandas openpyxl reportlab")
+                        elif "FileNotFoundError" in error_msg:
+                            flash("Required files not found. Check if ND sets have RAW_RESULTS folders with Excel files.")
+                        elif "Permission denied" in error_msg:
+                            flash("Permission error. Check file permissions in the exam directory.")
+                        else:
+                            flash(f"Script failed: {error_msg[:100]}...")
+                            
+                    return redirect(url_for("dashboard"))
+
+        try:
+            result = subprocess.run(
+                [sys.executable, script_path],
+                text=True,
+                capture_output=True,
+                check=True,
+                timeout=300
+            )
+            output_lines = result.stdout.splitlines()
+            processed_files = count_processed_files(output_lines, script_name)
+            success_msg = get_success_message(script_name, processed_files, output_lines)
+            
+            if success_msg:
+                flash(success_msg)
+            else:
+                if "No CSV or Excel files found" in result.stdout:
+                    flash(f"No CSV or Excel files found in {input_dir} for {script_desc}.")
+                elif "No valid files were processed" in result.stdout:
+                    flash(f"No files processed for {script_desc}. Check input files for required columns in {input_dir}.")
                 else:
-                    flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
+                    flash(f"No files processed for {script_desc}. Check logs for details.")
                 
+        except subprocess.TimeoutExpired:
+            flash(f"Script timed out but may still be running in background.")
+        except subprocess.CalledProcessError as e:
+            output_lines = e.stdout.splitlines() if e.stdout else []
+            processed_files = count_processed_files(output_lines, script_name)
+            success_msg = get_success_message(script_name, processed_files, output_lines)
+            if success_msg:
+                flash(f"Partially completed: {success_msg}, but encountered an error: {e.stderr or str(e)}")
+            else:
+                flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
+            
     except Exception as e:
         flash(f"Server error processing {script_desc}: {str(e)}")
     return redirect(url_for("dashboard"))
@@ -716,5 +615,4 @@ def logout():
     return redirect(url_for("login"))
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

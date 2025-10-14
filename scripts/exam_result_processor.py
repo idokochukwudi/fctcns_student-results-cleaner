@@ -3,6 +3,7 @@
 exam_result_processor.py
 
 Complete script with flexible threshold upgrade rule for ND results.
+Web-compatible version with file upload support.
 """
 
 from openpyxl.cell import MergedCell
@@ -19,6 +20,8 @@ import platform
 import difflib
 import math
 import glob
+import tempfile
+import shutil
 
 # PDF generation
 from reportlab.lib.pagesizes import A4
@@ -40,16 +43,109 @@ ORIGINAL_THRESHOLD = 50.0
 UPGRADE_MIN = None
 UPGRADE_MAX = 49
 
+def is_web_mode():
+    """Check if running in web mode (file upload)"""
+    return os.getenv('WEB_MODE') == 'true'
+
+def get_uploaded_file_path():
+    """Get path of uploaded file in web mode"""
+    return os.getenv('UPLOADED_FILE_PATH')
+
+def is_running_on_railway():
+    """Check if we're running on Railway"""
+    return 'RAILWAY_ENVIRONMENT' in os.environ or 'RAILWAY_STATIC_URL' in os.environ
+
 def should_use_interactive_mode():
     """Check if we should use interactive mode (CLI) or non-interactive mode (web)."""
     # If specific environment variables are set by web form, use non-interactive
-    if os.getenv('SELECTED_SET') or os.getenv('PROCESSING_MODE'):
+    if os.getenv('SELECTED_SET') or os.getenv('PROCESSING_MODE') or is_web_mode():
         return False
     # If we're running in a terminal with stdin available, use interactive mode
     if sys.stdin.isatty():
         return True
     # Default to interactive for backward compatibility
     return True
+
+def process_uploaded_file(uploaded_file_path, base_dir_norm):
+    """
+    Process uploaded file in web mode.
+    This function handles the single uploaded file for web processing.
+    """
+    print("🔧 Processing uploaded file in web mode")
+    
+    # Extract set name from filename or use default
+    filename = os.path.basename(uploaded_file_path)
+    set_name = "ND-UPLOADED"
+    
+    # Create temporary directory structure
+    temp_dir = tempfile.mkdtemp()
+    raw_dir = os.path.join(temp_dir, set_name, "RAW_RESULTS")
+    clean_dir = os.path.join(temp_dir, set_name, "CLEAN_RESULTS")
+    os.makedirs(raw_dir, exist_ok=True)
+    os.makedirs(clean_dir, exist_ok=True)
+    
+    # Copy uploaded file to raw directory
+    dest_path = os.path.join(raw_dir, filename)
+    shutil.copy2(uploaded_file_path, dest_path)
+    
+    # Get parameters from environment
+    params = get_form_parameters()
+    ts = datetime.now().strftime(TIMESTAMP_FMT)
+    
+    try:
+        # Load course data
+        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+        
+        # Process the single file
+        raw_files = [filename]
+        
+        # Detect semester from filename
+        semester_key, _, _, _, _, _ = detect_semester_from_filename(filename)
+        
+        print(f"🎯 Detected semester: {semester_key}")
+        print(f"📁 Processing uploaded file: {filename}")
+        
+        # Process the file
+        result = process_single_file(
+            dest_path,
+            clean_dir,
+            ts,
+            params['pass_threshold'],
+            semester_course_maps,
+            semester_credit_units,
+            semester_lookup,
+            semester_course_titles,
+            DEFAULT_LOGO_PATH,
+            semester_key,
+            set_name,
+            previous_gpas=None,
+            upgrade_min_threshold=get_upgrade_threshold_from_env()
+        )
+        
+        if result is not None:
+            print(f"✅ Successfully processed uploaded file")
+            return True
+        else:
+            print(f"❌ Failed to process uploaded file")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error processing uploaded file: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    finally:
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+def get_upgrade_threshold_from_env():
+    """Get upgrade threshold from environment variables"""
+    upgrade_threshold_str = os.getenv('UPGRADE_THRESHOLD', '0').strip()
+    if upgrade_threshold_str and upgrade_threshold_str.isdigit():
+        upgrade_value = int(upgrade_threshold_str)
+        if 45 <= upgrade_value <= 49:
+            return upgrade_value
+    return None
 
 def process_in_non_interactive_mode(params, base_dir_norm):
     """Process exams in non-interactive mode for web interface."""
@@ -61,22 +157,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     selected_semesters = params['selected_semesters']
     
     # Get upgrade threshold from environment variable if provided
-    upgrade_threshold_str = os.getenv('UPGRADE_THRESHOLD', '0').strip()
-    upgrade_min_threshold = None
-    if upgrade_threshold_str and upgrade_threshold_str.isdigit():
-        upgrade_value = int(upgrade_threshold_str)
-        if upgrade_value == 0:
-            print("ℹ️ No upgrade threshold provided, scores will not be upgraded")
-            upgrade_min_threshold = None
-        elif 45 <= upgrade_value <= 49:
-            upgrade_min_threshold = upgrade_value
-            print(f"🎯 Upgrade threshold from form: {upgrade_min_threshold}–49 → 50")
-        else:
-            print(f"⚠️ Invalid upgrade threshold: {upgrade_value}, disabling upgrade")
-            upgrade_min_threshold = None
-    else:
-        print("ℹ️ No upgrade threshold provided, scores will not be upgraded")
-        upgrade_min_threshold = None
+    upgrade_min_threshold = get_upgrade_threshold_from_env()
     
     # Get available sets
     available_sets = get_available_sets(base_dir_norm)
@@ -178,7 +259,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
                         DEFAULT_LOGO_PATH,
                         nd_set,
                         previous_gpas=None,
-                        upgrade_min_threshold=upgrade_min_threshold  # Pass the actual upgrade threshold
+                        upgrade_min_threshold=upgrade_min_threshold
                     )
                     
                     if result is not None:
@@ -2423,6 +2504,21 @@ def main():
 
     # Initialize student tracker
     initialize_student_tracker()
+
+    # Check if running in web mode
+    if is_web_mode():
+        uploaded_file_path = get_uploaded_file_path()
+        if uploaded_file_path and os.path.exists(uploaded_file_path):
+            print("🔧 Running in WEB MODE with uploaded file")
+            success = process_uploaded_file(uploaded_file_path, normalize_path(BASE_DIR))
+            if success:
+                print("✅ Uploaded file processing completed successfully")
+            else:
+                print("❌ Uploaded file processing failed")
+            return
+        else:
+            print("❌ No uploaded file found in web mode")
+            return
 
     # Get parameters from form
     params = get_form_parameters()

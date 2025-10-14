@@ -11,10 +11,14 @@
     <div class="card-body">
       <h4 class="card-title">{{ college }}</h4>
       <p class="text-muted">{{ department }}</p>
-      <form method="post">
-        {% if error %}
-          <div class="alert alert-danger">{{ error }}</div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
         {% endif %}
+      {% endwith %}
+      <form method="post">
         <div class="mb-3">
           <label>Password</label>
           <input type="password" name="password" class="form-control" autofocus required>
