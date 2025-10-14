@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ script_desc }} - {{ college }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        .upload-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .upload-form {
+            margin: 20px 0;
+        }
+        .file-input {
+            margin: 15px 0;
+        }
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+        <h2>FCTCNS</h2>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('run_script', script_name='utme') }}">PUTME</a>
+        <a href="{{ url_for('run_script', script_name='caosce') }}">CAOSCE</a>
+        <a href="{{ url_for('run_script', script_name='clean') }}">Internal Exams</a>
+        <a href="{{ url_for('run_script', script_name='split') }}">JAMB Database</a>
+        <a href="{{ url_for('run_script', script_name='exam_processor') }}">ND Exam Processor</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content" id="main">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+        <!-- Header -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college }}</h1>
+                <h2>{{ department }}</h2>
+            </div>
+            <div class="header-right">
+                <p><strong>Unit:</strong> Examination</p>
+            </div>
+        </div>
+
+        <div class="upload-container">
+            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+            
+            <h2>{{ script_desc }}</h2>
+            <p>Upload file for processing:</p>
+            
+            <form method="POST" enctype="multipart/form-data" class="upload-form">
+                <div class="file-input">
+                    <label for="file"><strong>Select File:</strong></label>
+                    <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv" required>
+                    <small>Supported formats: Excel (.xlsx, .xls) or CSV (.csv)</small>
+                </div>
+                
+                <button type="submit" class="submit-btn">Upload and Process</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>
