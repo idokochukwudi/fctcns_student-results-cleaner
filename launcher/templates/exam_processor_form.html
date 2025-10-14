@@ -49,9 +49,17 @@
             font-size: 16px;
             cursor: pointer;
             font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
         }
         .submit-btn:hover {
             opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .submit-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
         }
         .threshold-info {
             background: #e8f4fd;
@@ -69,20 +77,126 @@
             margin: 10px 0;
             font-size: 13px;
         }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .flash-messages {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        .flash-messages p {
+            padding: 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .flash-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .flash-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .flash-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .form-note {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        .upgrade-options {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .upgrade-options label {
+            font-weight: normal;
+            margin-bottom: 8px;
+        }
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <h3>Processing ND Examination Results...</h3>
+            <p>This may take several minutes. Please do not close this page.</p>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
         <h2>FCTCNS</h2>
-        <a href="{{ url_for('dashboard') }}">🏠 <span>Dashboard</span></a>
-        <a href="{{ url_for('run_script', script_name='utme') }}">📑 <span>PUTME</span></a>
-        <a href="{{ url_for('run_script', script_name='caosce') }}">📘 <span>CAOSCE</span></a>
-        <a href="{{ url_for('run_script', script_name='clean') }}">🗂 <span>Internal Exams</span></a>
-        <a href="{{ url_for('run_script', script_name='split') }}">📄 <span>JAMB Database</span></a>
-        <a href="{{ url_for('run_script', script_name='exam_processor') }}">🎓 <span>ND Exam Processor</span></a>
-        <a href="{{ url_for('logout') }}">🚪 <span>Logout</span></a>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('run_script', script_name='utme') }}">PUTME</a>
+        <a href="{{ url_for('run_script', script_name='caosce') }}">CAOSCE</a>
+        <a href="{{ url_for('run_script', script_name='clean') }}">Internal Exams</a>
+        <a href="{{ url_for('run_script', script_name='split') }}">JAMB Database</a>
+        <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="active">ND Exam Processor</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
     </div>
 
     <!-- Main content -->
@@ -105,7 +219,15 @@
             {% if messages %}
                 <div class="flash-messages">
                     {% for message in messages %}
-                        <p>{{ message }}</p>
+                        {% if 'success' in message.lower() or '✅' in message %}
+                            <p class="flash-success">{{ message }}</p>
+                        {% elif 'error' in message.lower() or '❌' in message or 'failed' in message.lower() %}
+                            <p class="flash-error">{{ message }}</p>
+                        {% elif 'warning' in message.lower() or '⚠️' in message %}
+                            <p class="flash-warning">{{ message }}</p>
+                        {% else %}
+                            <p class="flash-info">{{ message }}</p>
+                        {% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
@@ -113,28 +235,41 @@
 
         <div class="form-container">
             <h2>ND Examination Results Processor</h2>
-            <p>Configure the processing parameters for ND examination results.</p>
+            <p>Configure the processing parameters for ND examination results. This processor handles all ND semester results with score upgrade capability.</p>
 
-            <div class="upgrade-note">
-                <strong>🎯 New Flexible Upgrade Rule:</strong> During processing, you'll be prompted for each semester to choose which scores to upgrade (45-49 → 50). This allows flexible management decisions per semester.
-            </div>
+            {% if nd_sets %}
+                <div class="info-box">
+                    <strong>Available ND Sets:</strong> {{ nd_sets|length }} set(s) found
+                    <br>
+                    <small>Sets detected: {{ nd_sets|join(', ') }}</small>
+                </div>
+            {% else %}
+                <div class="warning-box">
+                    <strong>No ND Sets Found</strong>
+                    <br>
+                    <small>Please ensure your ND sets (ND-2024, ND-2025, etc.) are properly configured in the input directory with RAW_RESULTS subfolders containing Excel files.</small>
+                </div>
+            {% endif %}
 
-            <form method="POST" action="{{ url_for('run_script', script_name='exam_processor') }}">
+            <form method="POST" action="{{ url_for('run_script', script_name='exam_processor') }}" id="examProcessorForm">
                 <!-- Set Selection -->
                 <div class="form-group">
                     <label for="selected_set">Select ND Set:</label>
-                    <select id="selected_set" name="selected_set">
+                    <select id="selected_set" name="selected_set" required {% if not nd_sets %}disabled{% endif %}>
                         <option value="all">Process ALL Sets</option>
                         {% for set_name in nd_sets %}
                             <option value="{{ set_name }}">{{ set_name }}</option>
                         {% endfor %}
                     </select>
+                    {% if not nd_sets %}
+                        <div class="form-note">No sets available. Please check your file structure.</div>
+                    {% endif %}
                 </div>
 
                 <!-- Processing Mode -->
                 <div class="form-group">
                     <label for="processing_mode">Processing Mode:</label>
-                    <select id="processing_mode" name="processing_mode">
+                    <select id="processing_mode" name="processing_mode" required {% if not nd_sets %}disabled{% endif %}>
                         <option value="auto">Automatic - Process All Semesters</option>
                         <option value="manual">Manual - Select Specific Semesters</option>
                     </select>
@@ -142,32 +277,33 @@
 
                 <!-- Semester Selection (shown only when manual mode is selected) -->
                 <div class="form-group" id="semester_selection" style="display: none;">
-                    <label>Select Semesters:</label>
+                    <label>Select Semesters to Process:</label>
                     <div class="checkbox-group">
                         <div class="checkbox-item">
-                            <input type="checkbox" id="first_first" name="semesters" value="first_first">
+                            <input type="checkbox" id="first_first" name="semesters" value="ND-FIRST-YEAR-FIRST-SEMESTER">
                             <label for="first_first">First Year - First Semester</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="first_second" name="semesters" value="first_second">
+                            <input type="checkbox" id="first_second" name="semesters" value="ND-FIRST-YEAR-SECOND-SEMESTER">
                             <label for="first_second">First Year - Second Semester</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="second_first" name="semesters" value="second_first">
+                            <input type="checkbox" id="second_first" name="semesters" value="ND-SECOND-YEAR-FIRST-SEMESTER">
                             <label for="second_first">Second Year - First Semester</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="second_second" name="semesters" value="second_second">
+                            <input type="checkbox" id="second_second" name="semesters" value="ND-SECOND-YEAR-SECOND-SEMESTER">
                             <label for="second_second">Second Year - Second Semester</label>
                         </div>
                     </div>
+                    <div class="form-note">Select specific semesters to process. If none selected, all semesters will be processed.</div>
                 </div>
 
                 <!-- Pass Threshold -->
                 <div class="form-group">
                     <label for="pass_threshold">Base Pass Threshold Score:</label>
-                    <select id="pass_threshold" name="pass_threshold">
-                        <option value="50.0">50 (Default)</option>
+                    <select id="pass_threshold" name="pass_threshold" {% if not nd_sets %}disabled{% endif %}>
+                        <option value="50.0" selected>50 (Default Pass Mark)</option>
                         <option value="45.0">45</option>
                         <option value="46.0">46</option>
                         <option value="47.0">47</option>
@@ -175,7 +311,44 @@
                         <option value="49.0">49</option>
                     </select>
                     <div class="threshold-info">
-                        <strong>Note:</strong> This sets the base pass threshold. During processing, you'll be prompted separately for each semester to choose which scores to upgrade to 50 (45-49 range).
+                        <strong>Note:</strong> This sets the base pass threshold. Scores below this value are considered failed.
+                    </div>
+                </div>
+
+                <!-- Score Upgrade Options -->
+                <div class="form-group">
+                    <label>Score Upgrade Rule:</label>
+                    <div class="upgrade-options">
+                        <label>Select minimum score to upgrade to 50:</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="no_upgrade" name="upgrade_threshold" value="0" checked>
+                                <label for="no_upgrade">No Upgrade</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="upgrade_45" name="upgrade_threshold" value="45">
+                                <label for="upgrade_45">45-49 → 50</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="upgrade_46" name="upgrade_threshold" value="46">
+                                <label for="upgrade_46">46-49 → 50</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="upgrade_47" name="upgrade_threshold" value="47">
+                                <label for="upgrade_47">47-49 → 50</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="upgrade_48" name="upgrade_threshold" value="48">
+                                <label for="upgrade_48">48-49 → 50</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="upgrade_49" name="upgrade_threshold" value="49">
+                                <label for="upgrade_49">49 → 50</label>
+                            </div>
+                        </div>
+                        <div class="form-note">
+                            <strong>Management Decision:</strong> All scores from the selected minimum up to 49 will be upgraded to 50. This applies to all processed semesters.
+                        </div>
                     </div>
                 </div>
 
@@ -184,22 +357,41 @@
                     <label>Additional Options:</label>
                     <div class="checkbox-group">
                         <div class="checkbox-item">
-                            <input type="checkbox" id="generate_pdf" name="generate_pdf" checked>
+                            <input type="checkbox" id="generate_pdf" name="generate_pdf" value="true" checked {% if not nd_sets %}disabled{% endif %}>
                             <label for="generate_pdf">Generate Individual Student PDF Reports</label>
                         </div>
                         <div class="checkbox-item">
-                            <input type="checkbox" id="track_withdrawn" name="track_withdrawn" checked>
+                            <input type="checkbox" id="track_withdrawn" name="track_withdrawn" value="true" checked {% if not nd_sets %}disabled{% endif %}>
                             <label for="track_withdrawn">Track Withdrawn Students</label>
                         </div>
                     </div>
+                    <div class="form-note">PDF generation creates individual student reports. Withdrawn student tracking prevents previously withdrawn students from appearing in later semesters.</div>
                 </div>
 
-                <button type="submit" class="submit-btn">🎓 Process ND Examination Results</button>
+                <button type="submit" class="submit-btn" id="submitBtn" {% if not nd_sets %}disabled{% endif %}>
+                    Process ND Examination Results
+                </button>
+                
+                {% if not nd_sets %}
+                    <div class="warning-box">
+                        <strong>Cannot Process</strong>
+                        <br>
+                        <small>No ND sets found. Please ensure your file structure is correct and contains ND sets with RAW_RESULTS folders.</small>
+                    </div>
+                {% endif %}
             </form>
         </div>
     </div>
 
     <script>
+        // Toggle sidebar function
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+
         // Show/hide semester selection based on processing mode
         document.getElementById('processing_mode').addEventListener('change', function() {
             const semesterSelection = document.getElementById('semester_selection');
@@ -207,7 +399,34 @@
                 semesterSelection.style.display = 'block';
             } else {
                 semesterSelection.style.display = 'none';
+                // Clear any selected semesters when switching to auto mode
+                document.querySelectorAll('input[name="semesters"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
             }
+        });
+
+        // Form submission handler
+        document.getElementById('examProcessorForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            // Show loading overlay
+            loadingOverlay.style.display = 'flex';
+            
+            // Disable submit button to prevent double submission
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Processing... Please wait';
+            
+            // Optional: Add a timeout to re-enable button if something goes wrong
+            setTimeout(() => {
+                if (loadingOverlay.style.display === 'flex') {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Process ND Examination Results';
+                    loadingOverlay.style.display = 'none';
+                    alert('Processing is taking longer than expected. Please check the server logs.');
+                }
+            }, 300000); // 5 minutes timeout
         });
 
         // Initialize form state
@@ -217,6 +436,48 @@
             
             if (processingMode.value === 'manual') {
                 semesterSelection.style.display = 'block';
+            }
+
+            // Add visual feedback for checkboxes and radio buttons
+            document.querySelectorAll('.checkbox-item input[type="checkbox"], .radio-item input[type="radio"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    const label = this.parentElement.querySelector('label');
+                    if (this.checked) {
+                        label.style.fontWeight = 'bold';
+                        label.style.color = '#2c3e50';
+                    } else {
+                        label.style.fontWeight = 'normal';
+                        label.style.color = '';
+                    }
+                });
+            });
+
+            // Validate at least one semester selected in manual mode
+            const form = document.getElementById('examProcessorForm');
+            form.addEventListener('submit', function(e) {
+                const processingMode = document.getElementById('processing_mode').value;
+                if (processingMode === 'manual') {
+                    const selectedSemesters = document.querySelectorAll('input[name="semesters"]:checked');
+                    if (selectedSemesters.length === 0) {
+                        e.preventDefault();
+                        alert('Please select at least one semester to process, or switch to Automatic mode.');
+                        return false;
+                    }
+                }
+            });
+        });
+
+        // Handle page refresh/back button - ensure loading overlay is hidden
+        window.addEventListener('pageshow', function(event) {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Process ND Examination Results';
             }
         });
     </script>

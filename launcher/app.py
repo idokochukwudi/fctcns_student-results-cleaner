@@ -1,6 +1,7 @@
 import os
 import subprocess
 import re
+import sys
 from flask import Flask, request, redirect, url_for, render_template, flash, session
 from functools import wraps
 from dotenv import load_dotenv
@@ -47,10 +48,8 @@ SUCCESS_INDICATORS = {
         r"Processing: (.*?\.xlsx)",
         r"✅ Processing complete",
         r"✅ ND Examination Results Processing completed successfully",
-        r"ND Examination processing completed successfully!",
-        r"🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED",
-        r"🔄 Applying upgrade rule:.*",
-        r"✅ Upgraded.*scores.*to 50"
+        r"🔄 Applying upgrade rule:.*→ 50",
+        r"✅ Upgraded \d+ scores from.*to 50"
     ]
 }
 
@@ -239,16 +238,16 @@ def count_processed_files(output_lines, script_name):
                         files_match = re.search(r"📁 Found (\d+) raw files", line)
                         if files_match:
                             processed_files_set.add(f"Files found: {files_match.group(1)}")
-                    elif "🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED" in line:
-                        processed_files_set.add("Upgrade rule activated")
+                    elif "✅ ND Examination Results Processing completed successfully" in line:
+                        processed_files_set.add("Processing completed")
                     elif "🔄 Applying upgrade rule:" in line:
                         upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
                         if upgrade_match:
-                            processed_files_set.add(f"Upgrade: {upgrade_match.group(1)}-49")
-                    elif "✅ Upgraded" in line and "scores" in line:
-                        processed_files_set.add("Scores upgraded")
-                    elif "✅ ND Examination Results Processing completed successfully" in line:
-                        processed_files_set.add("Processing completed")
+                            processed_files_set.add(f"Upgrade rule: {upgrade_match.group(1)}-49")
+                    elif "✅ Upgraded" in line:
+                        upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
+                        if upgrade_count_match:
+                            processed_files_set.add(f"Upgraded: {upgrade_count_match.group(1)} scores")
                 else:
                     # For other scripts
                     file_name = match.group(1) if match.groups() else line
@@ -268,22 +267,27 @@ def get_success_message(script_name, processed_files, output_lines):
             return f"Processed {processed_files} internal examination file(s)."
     
     elif script_name == "exam_processor":
-        # Check for upgrade activity
-        upgrade_applied = any("🔄 Applying upgrade rule:" in line for line in output_lines)
-        upgrade_completed = any("✅ Upgraded" in line and "scores" in line for line in output_lines)
+        # Check for upgrade information
+        upgrade_info = ""
+        upgrade_count = ""
+        for line in output_lines:
+            if "🔄 Applying upgrade rule:" in line:
+                upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
+                if upgrade_match:
+                    upgrade_info = f" (Upgrade rule: {upgrade_match.group(1)}-49 → 50)"
+                    break
+            elif "✅ Upgraded" in line:
+                upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
+                if upgrade_count_match:
+                    upgrade_count = f" (Upgraded {upgrade_count_match.group(1)} scores)"
+                    break
         
         if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-            if upgrade_applied and upgrade_completed:
-                return f"ND Examination processing completed successfully with score upgrades! Processed {processed_files} semester(s)/file(s)."
-            else:
-                return f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s)."
+            return f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s).{upgrade_info}{upgrade_count}"
         elif any("✅ Processing complete" in line for line in output_lines):
-            return f"ND Examination processing completed! Processed {processed_files} semester(s)/file(s)."
+            return f"ND Examination processing completed! Processed {processed_files} semester(s)/file(s).{upgrade_info}{upgrade_count}"
         else:
-            base_msg = f"Processed {processed_files} ND examination file(s)/semester(s)."
-            if upgrade_applied:
-                base_msg += " Score upgrades applied."
-            return base_msg
+            return f"Processed {processed_files} ND examination file(s)/semester(s).{upgrade_info}{upgrade_count}"
     
     elif script_name == "utme":
         if any("Processing completed successfully" in line for line in output_lines):
@@ -458,119 +462,136 @@ def run_script(script_name):
                     processing_mode = request.form.get("processing_mode", "auto")
                     selected_semesters = request.form.getlist("semesters")
                     pass_threshold = request.form.get("pass_threshold", "50.0")
+                    upgrade_threshold = request.form.get("upgrade_threshold", "0")  # Get upgrade threshold
                     generate_pdf = "generate_pdf" in request.form
                     track_withdrawn = "track_withdrawn" in request.form
                     
-                    # Build the input string for the interactive script
-                    input_sequence = ""
+                    print(f"FORM DATA RECEIVED for exam_processor:")
+                    print(f"   Selected Set: {selected_set}")
+                    print(f"   Processing Mode: {processing_mode}") 
+                    print(f"   Selected Semesters: {selected_semesters}")
+                    print(f"   Pass Threshold: {pass_threshold}")
+                    print(f"   Upgrade Threshold: {upgrade_threshold}")
+                    print(f"   Generate PDF: {generate_pdf}")
+                    print(f"   Track Withdrawn: {track_withdrawn}")
+
+                    # Verify script exists and is accessible
+                    script_path = os.path.join(project_root, SCRIPT_MAP[script_name])
+                    print(f"Script path: {script_path}")
                     
-                    # Set selection (choice 1-4)
-                    if selected_set == "all":
-                        input_sequence += "4\n"  # Process ALL sets
-                    else:
-                        # Find the index of the selected set
-                        nd_sets = []
-                        if os.path.isdir(input_dir):
-                            for item in os.listdir(input_dir):
-                                item_path = os.path.join(input_dir, item)
-                                if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
-                                    nd_sets.append(item)
-                        
-                        if selected_set in nd_sets:
-                            set_index = nd_sets.index(selected_set) + 1
-                            input_sequence += f"{set_index}\n"
-                        else:
-                            input_sequence += "4\n"  # Fallback to ALL sets
-                        
-                    # Semester selection (choice 1-6) - FIXED for multiple semesters
-                    if processing_mode == "auto":
-                        input_sequence += "1\n"  # Process ALL semesters
-                    else:
-                        # Manual semester selection
-                        if not selected_semesters:
-                            input_sequence += "1\n"  # Fallback to ALL semesters
-                        else:
-                            # Map semester values to choices
-                            semester_map = {
-                                "first_first": "2",
-                                "first_second": "3", 
-                                "second_first": "4",
-                                "second_second": "5"
-                            }
-                            
-                            # Check if we have exactly one semester selected
-                            if len(selected_semesters) == 1:
-                                # Single semester selection
-                                semester_choice = semester_map.get(selected_semesters[0], "1")
-                                input_sequence += f"{semester_choice}\n"
-                            else:
-                                # Multiple semesters - use custom selection (choice 6)
-                                input_sequence += "6\n"
-                                # For custom selection, the script expects responses for 4 semesters
-                                # We need to provide Y/N for each of the 4 possible semesters in order
-                                all_possible_semesters = ["first_first", "first_second", "second_first", "second_second"]
-                                
-                                for semester in all_possible_semesters:
-                                    if semester in selected_semesters:
-                                        input_sequence += "y\n"
-                                    else:
-                                        input_sequence += "n\n"
+                    if not os.path.exists(script_path):
+                        flash(f"Exam processor script not found at: {script_path}")
+                        return redirect(url_for("dashboard"))
                     
-                    try:
-                        # Pass the threshold value to the script via environment variable
-                        env = os.environ.copy()
-                        env['PASS_THRESHOLD'] = str(pass_threshold)
+                    if not os.access(script_path, os.R_OK):
+                        flash(f"No read permission for script: {script_path}")
+                        return redirect(url_for("dashboard"))
+
+                    # Set environment variables for non-interactive mode
+                    env = os.environ.copy()
+                    env['SELECTED_SET'] = selected_set
+                    env['PROCESSING_MODE'] = processing_mode
+                    env['PASS_THRESHOLD'] = pass_threshold
+                    env['UPGRADE_THRESHOLD'] = upgrade_threshold  # Pass upgrade threshold
+                    env['GENERATE_PDF'] = str(generate_pdf)
+                    env['TRACK_WITHDRAWN'] = str(track_withdrawn)
+                    
+                    # Handle semester selection
+                    if selected_semesters:
+                        # Convert semester values to semester keys
+                        semester_mapping = {
+                            'all': 'all',
+                            'first_first': 'ND-FIRST-YEAR-FIRST-SEMESTER',
+                            'first_second': 'ND-FIRST-YEAR-SECOND-SEMESTER',
+                            'second_first': 'ND-SECOND-YEAR-FIRST-SEMESTER', 
+                            'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
+                        }
                         
-                        result = subprocess.run(
-                            ["python3", script_path],
-                            input=input_sequence,
-                            text=True,
-                            capture_output=True,
-                            check=True,
-                            timeout=600,
-                            env=env
-                        )
+                        selected_semester_keys = []
+                        for semester in selected_semesters:
+                            if semester in semester_mapping:
+                                selected_semester_keys.append(semester_mapping[semester])
                         
+                        env['SELECTED_SEMESTERS'] = ','.join(selected_semester_keys)
+                    else:
+                        env['SELECTED_SEMESTERS'] = ''
+                    
+                    print(f"Environment variables set:")
+                    for key in ['SELECTED_SET', 'PROCESSING_MODE', 'PASS_THRESHOLD', 'UPGRADE_THRESHOLD', 'GENERATE_PDF', 'TRACK_WITHDRAWN', 'SELECTED_SEMESTERS']:
+                        print(f"   {key}: {env.get(key)}")
+
+                    # Run the script with environment variables
+                    print(f"Starting exam processor script...")
+                    result = subprocess.run(
+                        [sys.executable, script_path],
+                        env=env,
+                        text=True,
+                        capture_output=True,
+                        timeout=600  # 10 minutes
+                    )
+                    
+                    print(f"Script execution completed")
+                    print(f"   Return code: {result.returncode}")
+                    print(f"   stdout length: {len(result.stdout)}")
+                    print(f"   stderr length: {len(result.stderr)}")
+                    
+                    if result.stdout:
+                        # Show first few lines for debugging
                         output_lines = result.stdout.splitlines()
-                        processed_files = count_processed_files(output_lines, script_name)
-                        
-                        # Check for success indicators
-                        if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
-                            flash("ND Examination processing completed successfully!")
-                        elif any("✅ Processing complete" in line for line in output_lines):
-                            flash("ND Examination processing completed!")
-                        elif processed_files > 0:
-                            flash(f"Successfully processed {processed_files} semester(s)/file(s).")
-                        elif result.returncode == 0:
-                            flash("Exam processor completed successfully!")
-                        else:
-                            flash("Exam processor ran but may not have processed any files. Check the output for details.")
-                            
-                    except subprocess.TimeoutExpired:
-                        flash(f"Script timed out after 10 minutes. The exam processor may still be running in background.")
-                    except subprocess.CalledProcessError as e:
-                        # Enhanced error handling with more details
-                        error_msg = e.stderr or str(e)
-                        stdout_msg = e.stdout or "No output"
-                        
-                        # Check for specific errors in the output
-                        if "IndexError" in error_msg or "index out of range" in error_msg:
-                            flash("Error: Semester selection issue. Please ensure all semesters are properly configured.")
-                        elif "No module named" in error_msg:
-                            flash(f"Module import error: {error_msg}")
-                        else:
-                            flash(f"Error running exam processor: {error_msg}")
-                        
-                        # Log the full error for debugging
-                        print(f"Exam processor error - stderr: {error_msg}")
-                        print(f"Exam processor error - stdout: {stdout_msg}")
+                        for line in output_lines[:20]:
+                            if line.strip():
+                                print(f"STDOUT: {line}")
                     
+                    if result.stderr:
+                        print(f"STDERR: {result.stderr}")
+                    
+                    # Process results
+                    output_lines = result.stdout.splitlines() if result.stdout else []
+                    processed_files = count_processed_files(output_lines, script_name)
+                    
+                    if result.returncode == 0:
+                        # Check for upgrade information
+                        upgrade_applied = False
+                        upgrade_details = ""
+                        upgrade_count = ""
+                        for line in output_lines:
+                            if "🔄 Applying upgrade rule:" in line:
+                                upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
+                                if upgrade_match:
+                                    upgrade_applied = True
+                                    upgrade_details = f" Upgrade rule applied: {upgrade_match.group(1)}-49 → 50"
+                                    break
+                            elif "✅ Upgraded" in line:
+                                upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
+                                if upgrade_count_match:
+                                    upgrade_count = f" Upgraded {upgrade_count_match.group(1)} scores"
+                                    break
+                        
+                        if any("✅ ND Examination Results Processing completed successfully" in line for line in output_lines):
+                            flash(f"ND Examination processing completed successfully! Processed {processed_files} semester(s)/file(s).{upgrade_details}{upgrade_count}")
+                        elif any("✅ Processing complete" in line for line in output_lines):
+                            flash(f"ND Examination processing completed! Processed {processed_files} semester(s)/file(s).{upgrade_details}{upgrade_count}")
+                        elif processed_files > 0:
+                            flash(f"Successfully processed {processed_files} semester(s)/file(s).{upgrade_details}{upgrade_count}")
+                        else:
+                            flash(f"Script completed but no specific success indicators found.{upgrade_details}{upgrade_count}")
+                    else:
+                        error_msg = result.stderr or "No error output"
+                        if "No module named" in error_msg:
+                            flash("Missing Python dependencies. Please install: pandas openpyxl reportlab")
+                        elif "FileNotFoundError" in error_msg:
+                            flash("Required files not found. Check if ND sets have RAW_RESULTS folders with Excel files.")
+                        elif "Permission denied" in error_msg:
+                            flash("Permission error. Check file permissions in the exam directory.")
+                        else:
+                            flash(f"Script failed: {error_msg[:100]}...")
+                            
                     return redirect(url_for("dashboard"))
 
         # Handle scripts that run directly (no form needed)
         try:
             result = subprocess.run(
-                ["python3", script_path],
+                [sys.executable, script_path],
                 text=True,
                 capture_output=True,
                 check=True,

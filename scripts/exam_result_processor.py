@@ -40,6 +40,194 @@ ORIGINAL_THRESHOLD = 50.0
 UPGRADE_MIN = None
 UPGRADE_MAX = 49
 
+def should_use_interactive_mode():
+    """Check if we should use interactive mode (CLI) or non-interactive mode (web)."""
+    # If specific environment variables are set by web form, use non-interactive
+    if os.getenv('SELECTED_SET') or os.getenv('PROCESSING_MODE'):
+        return False
+    # If we're running in a terminal with stdin available, use interactive mode
+    if sys.stdin.isatty():
+        return True
+    # Default to interactive for backward compatibility
+    return True
+
+def process_in_non_interactive_mode(params, base_dir_norm):
+    """Process exams in non-interactive mode for web interface."""
+    print("🔧 Running in NON-INTERACTIVE mode (web interface)")
+    
+    # Use parameters from environment variables
+    selected_set = params['selected_set']
+    processing_mode = params['processing_mode']
+    selected_semesters = params['selected_semesters']
+    
+    # Get upgrade threshold from environment variable if provided
+    upgrade_threshold_str = os.getenv('UPGRADE_THRESHOLD', '0').strip()
+    upgrade_min_threshold = None
+    if upgrade_threshold_str and upgrade_threshold_str.isdigit():
+        upgrade_value = int(upgrade_threshold_str)
+        if upgrade_value == 0:
+            print("ℹ️ No upgrade threshold provided, scores will not be upgraded")
+            upgrade_min_threshold = None
+        elif 45 <= upgrade_value <= 49:
+            upgrade_min_threshold = upgrade_value
+            print(f"🎯 Upgrade threshold from form: {upgrade_min_threshold}–49 → 50")
+        else:
+            print(f"⚠️ Invalid upgrade threshold: {upgrade_value}, disabling upgrade")
+            upgrade_min_threshold = None
+    else:
+        print("ℹ️ No upgrade threshold provided, scores will not be upgraded")
+        upgrade_min_threshold = None
+    
+    # Get available sets
+    available_sets = get_available_sets(base_dir_norm)
+    
+    if not available_sets:
+        print("❌ No ND sets found")
+        return False
+    
+    # Remove ND-COURSES from available sets if present
+    available_sets = [s for s in available_sets if s != 'ND-COURSES']
+    
+    if not available_sets:
+        print("❌ No valid ND sets found (only ND-COURSES present)")
+        return False
+    
+    # Determine which sets to process
+    if selected_set == "all":
+        sets_to_process = available_sets
+        print(f"🎯 Processing ALL sets: {sets_to_process}")
+    else:
+        if selected_set in available_sets:
+            sets_to_process = [selected_set]
+            print(f"🎯 Processing selected set: {selected_set}")
+        else:
+            print(f"⚠️ Selected set '{selected_set}' not found, processing all sets")
+            sets_to_process = available_sets
+    
+    # Determine which semesters to process
+    if processing_mode == "auto" or not selected_semesters or 'all' in selected_semesters:
+        semesters_to_process = SEMESTER_ORDER.copy()
+        print(f"🎯 Processing ALL semesters: {semesters_to_process}")
+    else:
+        semesters_to_process = selected_semesters
+        print(f"🎯 Processing selected semesters: {semesters_to_process}")
+    
+    # Load course data once
+    try:
+        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+    except Exception as e:
+        print(f"❌ Could not load course data: {e}")
+        return False
+    
+    ts = datetime.now().strftime(TIMESTAMP_FMT)
+    
+    # Process each set and semester
+    total_processed = 0
+    for nd_set in sets_to_process:
+        print(f"\n{'='*60}")
+        print(f"PROCESSING SET: {nd_set}")
+        print(f"{'='*60}")
+        
+        raw_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "RAW_RESULTS"))
+        clean_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "CLEAN_RESULTS"))
+        
+        # Create directories if they don't exist
+        os.makedirs(raw_dir, exist_ok=True)
+        os.makedirs(clean_dir, exist_ok=True)
+        
+        if not os.path.exists(raw_dir):
+            print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
+            continue
+        
+        raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
+        if not raw_files:
+            print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
+            continue
+        
+        print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
+        
+        # Process selected semesters
+        for semester_key in semesters_to_process:
+            if semester_key not in SEMESTER_ORDER:
+                print(f"⚠️ Skipping unknown semester: {semester_key}")
+                continue
+            
+            # Check if there are files for this semester
+            semester_files_exist = False
+            for rf in raw_files:
+                detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
+                if detected_sem == semester_key:
+                    semester_files_exist = True
+                    break
+            
+            if semester_files_exist:
+                print(f"\n🎯 Processing {semester_key} in {nd_set}...")
+                try:
+                    # Process the semester with the upgrade threshold
+                    result = process_semester_files(
+                        semester_key,
+                        raw_files,
+                        raw_dir,
+                        clean_dir,
+                        ts,
+                        params['pass_threshold'],
+                        semester_course_maps,
+                        semester_credit_units,
+                        semester_lookup,
+                        semester_course_titles,
+                        DEFAULT_LOGO_PATH,
+                        nd_set,
+                        previous_gpas=None,
+                        upgrade_min_threshold=upgrade_min_threshold  # Pass the actual upgrade threshold
+                    )
+                    
+                    if result is not None:
+                        print(f"✅ Successfully processed {semester_key}")
+                        total_processed += 1
+                    else:
+                        print(f"❌ Failed to process {semester_key}")
+                        
+                except Exception as e:
+                    print(f"❌ Error processing {semester_key}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
+    
+    print(f"\n📊 PROCESSING SUMMARY: {total_processed} semester(s) processed")
+    return total_processed > 0
+
+def get_form_parameters():
+    """Get parameters from environment variables set by the web form."""
+    selected_set = os.getenv('SELECTED_SET', 'all')
+    processing_mode = os.getenv('PROCESSING_MODE', 'auto')
+    selected_semesters_str = os.getenv('SELECTED_SEMESTERS', '')
+    pass_threshold = float(os.getenv('PASS_THRESHOLD', '50.0'))
+    generate_pdf = os.getenv('GENERATE_PDF', 'True').lower() == 'true'
+    track_withdrawn = os.getenv('TRACK_WITHDRAWN', 'True').lower() == 'true'
+    
+    # Convert semester string to list
+    selected_semesters = []
+    if selected_semesters_str:
+        selected_semesters = selected_semesters_str.split(',')
+    
+    print(f"🎯 FORM PARAMETERS:")
+    print(f"   Selected Set: {selected_set}")
+    print(f"   Processing Mode: {processing_mode}")
+    print(f"   Selected Semesters: {selected_semesters}")
+    print(f"   Pass Threshold: {pass_threshold}")
+    print(f"   Generate PDF: {generate_pdf}")
+    print(f"   Track Withdrawn: {track_withdrawn}")
+    
+    return {
+        'selected_set': selected_set,
+        'processing_mode': processing_mode,
+        'selected_semesters': selected_semesters,
+        'pass_threshold': pass_threshold,
+        'generate_pdf': generate_pdf,
+        'track_withdrawn': track_withdrawn
+    }
+
 def get_pass_threshold():
     """Get pass threshold - now handles upgrade logic interactively."""
     threshold_str = os.getenv('PASS_THRESHOLD', '50.0')
@@ -1508,7 +1696,8 @@ def process_semester_files(
     semester_course_titles,
     logo_path,
     set_name,
-    previous_gpas=None):
+    previous_gpas=None,
+    upgrade_min_threshold=None):
     """
     Process all files for a specific semester.
     """
@@ -1558,7 +1747,8 @@ def process_semester_files(
                 semester_key,
                 set_name,
                 current_previous_gpas,
-                cgpa_data)
+                cgpa_data,
+                upgrade_min_threshold)
 
             if result is not None:
                 print(f"✅ Successfully processed {rf}")
@@ -1583,7 +1773,8 @@ def process_single_file(
         semester_key,
         set_name,
         previous_gpas,
-        cgpa_data=None):
+        cgpa_data=None,
+        upgrade_min_threshold=None):
     """
     Process a single raw file and produce mastersheet Excel and PDFs.
     """
@@ -1743,7 +1934,15 @@ def process_single_file(
         mastersheet[code] = total.round(0).clip(upper=100).values
 
     # NEW: APPLY FLEXIBLE UPGRADE RULE - Ask user for threshold per semester
-    upgrade_min_threshold, upgraded_scores_count = get_upgrade_threshold_from_user(semester_key, set_name)
+    # Only ask in interactive mode
+    if should_use_interactive_mode():
+        upgrade_min_threshold, upgraded_scores_count = get_upgrade_threshold_from_user(semester_key, set_name)
+    else:
+        # In non-interactive mode, use the provided threshold or None
+        upgraded_scores_count = 0
+        if upgrade_min_threshold is not None:
+            print(f"🔄 Applying upgrade rule from parameters: {upgrade_min_threshold}–49 → 50")
+    
     if upgrade_min_threshold is not None:
         mastersheet, upgraded_scores_count = apply_upgrade_rule(mastersheet, ordered_codes, upgrade_min_threshold)
 
@@ -2225,134 +2424,153 @@ def main():
     # Initialize student tracker
     initialize_student_tracker()
 
+    # Get parameters from form
+    params = get_form_parameters()
+    
+    # Use the parameters
+    global DEFAULT_PASS_THRESHOLD
+    DEFAULT_PASS_THRESHOLD = params['pass_threshold']
+    
     base_dir_norm = normalize_path(BASE_DIR)
     print(f"Using base directory: {base_dir_norm}")
 
-    try:
-        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-    except Exception as e:
-        print(f"❌ Could not load course data: {e}")
-        return
+    # Check if we should use interactive or non-interactive mode
+    if should_use_interactive_mode():
+        print("🔧 Running in INTERACTIVE mode (CLI)")
+        
+        try:
+            semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+        except Exception as e:
+            print(f"❌ Could not load course data: {e}")
+            return
 
-    # Get available sets and let user choose
-    available_sets = get_available_sets(base_dir_norm)
+        # Get available sets and let user choose
+        available_sets = get_available_sets(base_dir_norm)
 
-    if not available_sets:
-        print(
-            f"No ND-* directories found in {base_dir_norm}. Nothing to process.")
-        print(f"Available directories: {os.listdir(base_dir_norm)}")
-        return
+        if not available_sets:
+            print(
+                f"No ND-* directories found in {base_dir_norm}. Nothing to process.")
+            print(f"Available directories: {os.listdir(base_dir_norm)}")
+            return
 
-    print(f"📚 Found {len(available_sets)} available sets: {available_sets}")
+        print(f"📚 Found {len(available_sets)} available sets: {available_sets}")
 
-    # Let user choose which set(s) to process
-    sets_to_process = get_user_set_choice(available_sets)
+        # Let user choose which set(s) to process
+        sets_to_process = get_user_set_choice(available_sets)
 
-    print(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
+        print(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
 
-    for nd_set in sets_to_process:
-        print(f"\n{'='*60}")
-        print(f"PROCESSING SET: {nd_set}")
-        print(f"{'='*60}")
+        for nd_set in sets_to_process:
+            print(f"\n{'='*60}")
+            print(f"PROCESSING SET: {nd_set}")
+            print(f"{'='*60}")
 
-        raw_dir = normalize_path(
-            os.path.join(
-                base_dir_norm,
-                nd_set,
-                "RAW_RESULTS"))
-        clean_dir = normalize_path(
-            os.path.join(
-                base_dir_norm,
-                nd_set,
-                "CLEAN_RESULTS"))
+            raw_dir = normalize_path(
+                os.path.join(
+                    base_dir_norm,
+                    nd_set,
+                    "RAW_RESULTS"))
+            clean_dir = normalize_path(
+                os.path.join(
+                    base_dir_norm,
+                    nd_set,
+                    "CLEAN_RESULTS"))
 
-        # Create directories if they don't exist
-        os.makedirs(raw_dir, exist_ok=True)
-        os.makedirs(clean_dir, exist_ok=True)
+            # Create directories if they don't exist
+            os.makedirs(raw_dir, exist_ok=True)
+            os.makedirs(clean_dir, exist_ok=True)
 
-        # Check if raw directory exists and has files
-        if not os.path.exists(raw_dir):
-            print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
-            continue
-
-        raw_files = [
-            f for f in os.listdir(raw_dir) if f.lower().endswith(
-                (".xlsx", ".xls")) and not f.startswith("~$")]
-        if not raw_files:
-            print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
-            print(f"   Available files: {os.listdir(raw_dir)}")
-            continue
-
-        print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
-
-        # Get user choice for which semesters to process
-        semesters_to_process = get_user_semester_choice()
-
-        print(
-            f"\n🎯 PROCESSING SELECTED SEMESTERS for {nd_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
-
-        # Process selected semesters in the correct order
-        for semester_key in semesters_to_process:
-            if semester_key not in SEMESTER_ORDER:
-                print(f"⚠️ Skipping unknown semester: {semester_key}")
+            # Check if raw directory exists and has files
+            if not os.path.exists(raw_dir):
+                print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
                 continue
 
-            # Check if there are files for this semester
-            semester_files_exist = False
-            for rf in raw_files:
-                detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-                if detected_sem == semester_key:
-                    semester_files_exist = True
-                    break
+            raw_files = [
+                f for f in os.listdir(raw_dir) if f.lower().endswith(
+                    (".xlsx", ".xls")) and not f.startswith("~$")]
+            if not raw_files:
+                print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
+                print(f"   Available files: {os.listdir(raw_dir)}")
+                continue
 
-            if semester_files_exist:
-                print(f"\n🎯 Processing {semester_key} in {nd_set}...")
-                process_semester_files(
-                    semester_key,
-                    raw_files,
-                    raw_dir,
-                    clean_dir,
-                    ts,
-                    DEFAULT_PASS_THRESHOLD,
-                    semester_course_maps,
-                    semester_credit_units,
-                    semester_lookup,
-                    semester_course_titles,
-                    DEFAULT_LOGO_PATH,
-                    nd_set)
-            else:
-                print(
-                    f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
+            print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
 
-    # Print student tracking summary
-    print(f"\n📊 STUDENT TRACKING SUMMARY:")
-    print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
-    print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+            # Get user choice for which semesters to process
+            semesters_to_process = get_user_semester_choice()
 
-    # Print withdrawn students who reappeared
-    reappeared_count = 0
-    for exam_no, data in WITHDRAWN_STUDENTS.items():
-        if data['reappeared_semesters']:
-            reappeared_count += 1
             print(
-                f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
+                f"\n🎯 PROCESSING SELECTED SEMESTERS for {nd_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
 
-    if reappeared_count > 0:
-        print(
-            f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
+            # Process selected semesters in the correct order
+            for semester_key in semesters_to_process:
+                if semester_key not in SEMESTER_ORDER:
+                    print(f"⚠️ Skipping unknown semester: {semester_key}")
+                    continue
 
-    # Analyze student progression
-    sem_counts = {}
-    for student_data in STUDENT_TRACKER.values():
-        sem_count = len(student_data['semesters_present'])
-        if sem_count not in sem_counts:
-            sem_counts[sem_count] = 0
-        sem_counts[sem_count] += 1
+                # Check if there are files for this semester
+                semester_files_exist = False
+                for rf in raw_files:
+                    detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
+                    if detected_sem == semester_key:
+                        semester_files_exist = True
+                        break
 
-    for sem_count, student_count in sorted(sem_counts.items()):
-        print(f"Students present in {sem_count} semester(s): {student_count}")
+                if semester_files_exist:
+                    print(f"\n🎯 Processing {semester_key} in {nd_set}...")
+                    process_semester_files(
+                        semester_key,
+                        raw_files,
+                        raw_dir,
+                        clean_dir,
+                        ts,
+                        DEFAULT_PASS_THRESHOLD,
+                        semester_course_maps,
+                        semester_credit_units,
+                        semester_lookup,
+                        semester_course_titles,
+                        DEFAULT_LOGO_PATH,
+                        nd_set)
+                else:
+                    print(
+                        f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
 
-    print("\n✅ ND Examination Results Processing completed successfully.")
+        # Print student tracking summary
+        print(f"\n📊 STUDENT TRACKING SUMMARY:")
+        print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
+        print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+
+        # Print withdrawn students who reappeared
+        reappeared_count = 0
+        for exam_no, data in WITHDRAWN_STUDENTS.items():
+            if data['reappeared_semesters']:
+                reappeared_count += 1
+                print(
+                    f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
+
+        if reappeared_count > 0:
+            print(
+                f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
+
+        # Analyze student progression
+        sem_counts = {}
+        for student_data in STUDENT_TRACKER.values():
+            sem_count = len(student_data['semesters_present'])
+            if sem_count not in sem_counts:
+                sem_counts[sem_count] = 0
+            sem_counts[sem_count] += 1
+
+        for sem_count, student_count in sorted(sem_counts.items()):
+            print(f"Students present in {sem_count} semester(s): {student_count}")
+
+        print("\n✅ ND Examination Results Processing completed successfully.")
+    else:
+        print("🔧 Running in NON-INTERACTIVE mode (Web)")
+        success = process_in_non_interactive_mode(params, base_dir_norm)
+        if success:
+            print("✅ ND Examination Results Processing completed successfully")
+        else:
+            print("❌ ND Examination Results Processing failed")
+        return
 
 if __name__ == "__main__":
     try:
