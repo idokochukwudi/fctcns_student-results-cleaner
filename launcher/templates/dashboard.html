@@ -280,6 +280,16 @@
       {% endif %}
       {% endwith %}
 
+    <!-- Optional: Download processed files -->
+    {% if session.get('last_processed_file') %}
+    <div style="margin-bottom: 20px; text-align:center;">
+      <a href="{{ url_for('download_file', filename=session.get('last_processed_file')) }}"
+        style="background: var(--secondary-color); color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
+        ⬇️ Download Last Processed File
+    </a>
+  </div>
+{% endif %}
+
       <div class="processing-modules">
         <div class="section-header">
           <h3>Processing Modules</h3>
