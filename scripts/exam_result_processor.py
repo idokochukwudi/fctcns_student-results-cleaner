@@ -23,6 +23,13 @@ import glob
 import tempfile
 import shutil
 
+SEMESTER_MAPPING = {
+    'first_first': 'ND-First-YEAR-First-SEMESTER',
+    'first_second': 'ND-First-YEAR-SECOND-SEMESTER',
+    'second_first': 'ND-SECOND-YEAR-First-SEMESTER',
+    'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
+}
+
 # PDF generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -316,10 +323,14 @@ def get_form_parameters():
     generate_pdf = os.getenv('GENERATE_PDF', 'True').lower() == 'true'
     track_withdrawn = os.getenv('TRACK_WITHDRAWN', 'True').lower() == 'true'
     
-    # Convert semester string to list
+    # Convert semester string to list using SEMESTER_MAPPING
     selected_semesters = []
     if selected_semesters_str:
-        selected_semesters = [s.strip().upper().replace(' ', '-').replace('YEAR', 'YEAR') for s in selected_semesters_str.split(',')]
+        selected_semesters = [
+            SEMESTER_MAPPING.get(s.strip(), s.strip().upper().replace(' ', '-').replace('YEAR', 'YEAR'))
+            for s in selected_semesters_str.split(',')
+            if s.strip()
+        ]
     
     print(f"🎯 FORM PARAMETERS:")
     print(f"   Selected Set: {selected_set}")
@@ -1811,9 +1822,9 @@ def process_semester_files(
     """
     Process all files for a specific semester.
     """
-    print(f"\n{'='*60}")
-    print(f"PROCESSING SEMESTER: {semester_key}")
-    print(f"{'='*60}")
+    logging.info(f"\n{'='*60}")
+    logging.info(f"PROCESSING SEMESTER: {semester_key}")
+    logging.info(f"{'='*60}")
 
     # Filter files for this semester
     semester_files = []
