@@ -41,16 +41,17 @@ SUCCESS_INDICATORS = {
     ],
     "split": [r"Saved processed file: (clean_jamb_DB_.*?\.csv)"],
     "exam_processor": [
-        r"PROCESSING SEMESTER: (ND-.*)", 
-        r"✅ Successfully processed .*", 
-        r"✅ Mastersheet saved:.*",
-        r"📁 Found \d+ raw files",
-        r"Processing: (.*?\.xlsx)",
-        r"✅ Processing complete",
-        r"✅ ND Examination Results Processing completed successfully",
-        r"🔄 Applying upgrade rule:.*→ 50",
-        r"✅ Upgraded \d+ scores from.*to 50"
-    ]
+        r"(?i)processing\s*semester[: ]+\s*(nd[-a-z0-9]+-semester)",
+        r"(?i)processing\s*nd[-a-z0-9]+-semester",
+        r"(?i)✅\s*successfully\s*processed.*\.xlsx",
+        r"(?i)✅\s*mastersheet\s*saved[: ]+.*\.xlsx",
+        r"(?i)✅\s*nd\s*examination\s*results\s*processing\s*completed\s*successfully",
+        r"(?i)📁\s*found\s*\d+\s*raw\s*files",
+        r"(?i)processing[: ]+.*\.xlsx",
+        r"(?i)🔄\s*applying\s*upgrade\s*rule[: ].*→\s*50",
+        r"(?i)✅\s*upgraded\s*\d+\s*scores\s*from.*to\s*50"
+]
+
 }
 
 def login_required(f):
@@ -135,7 +136,7 @@ def check_internal_exam_files(input_dir):
         return False
     
     excel_files = [f for f in os.listdir(input_dir) 
-                  if f.lower().endswith(('.xlsx', '.xls')) and 'Set2025' in f]
+                  if f.lower().endswith(('.xlsx', '.xls')) and f.startswith('Set')]
     
     return len(excel_files) > 0
 
@@ -194,9 +195,10 @@ def count_processed_files(output_lines, script_name, selected_semesters=None):
         if line.strip():
             print(f"  OUTPUT: {line}")
     
+    print(f"CHECKING LINE: {line}")
     for line in output_lines:
         for indicator in success_indicators:
-            match = re.search(indicator, line)
+            match = re.search(indicator, line, re.IGNORECASE)
             if match:
                 if script_name == "utme":
                     if "Processing:" in line:
@@ -228,9 +230,9 @@ def count_processed_files(output_lines, script_name, selected_semesters=None):
     # For exam_processor in manual mode, strictly validate against selected semesters
     if script_name == "exam_processor" and selected_semesters:
         semester_mapping = {
-            'first_first': 'ND-First-YEAR-First-SEMESTER',
-            'first_second': 'ND-First-YEAR-SECOND-SEMESTER',
-            'second_first': 'ND-SECOND-YEAR-First-SEMESTER', 
+            'first_first': 'ND-FIRST-YEAR-FIRST-SEMESTER',
+            'first_second': 'ND-FIRST-YEAR-SECOND-SEMESTER',
+            'second_first': 'ND-SECOND-YEAR-FIRST-SEMESTER', 
             'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
         }
         expected_semesters = {f"Semester: {semester_mapping.get(sem, sem)}" for sem in selected_semesters}
@@ -240,6 +242,10 @@ def count_processed_files(output_lines, script_name, selected_semesters=None):
             print(f"WARNING: Processed semester count ({len(processed_files_set)}) does not match expected ({len(expected_semesters)})")
     
     print(f"Processed items for {script_name}: {processed_files_set}")
+    if script_name == "exam_processor":
+        print("🔍 Detected semester lines:")
+        for item in processed_files_set:
+            print(f"   {item}")
     return len(processed_files_set)
 
 def get_success_message(script_name, processed_files, output_lines, selected_semesters=None):
@@ -482,9 +488,9 @@ def run_script(script_name):
                     
                     if processing_mode == "manual" and selected_semesters:
                         semester_mapping = {
-                            'first_first': 'ND-First-YEAR-First-SEMESTER',
-                            'first_second': 'ND-First-YEAR-SECOND-SEMESTER',
-                            'second_first': 'ND-SECOND-YEAR-First-SEMESTER', 
+                            'first_first': 'ND-FIRST-YEAR-FIRST-SEMESTER',
+                            'first_second': 'ND-FIRST-YEAR-SECOND-SEMESTER',
+                            'second_first': 'ND-SECOND-YEAR-FIRST-SEMESTER', 
                             'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
                         }
                         
