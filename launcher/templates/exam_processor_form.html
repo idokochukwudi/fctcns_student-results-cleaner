@@ -2,119 +2,304 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ND Exam Processor - {{ college }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #7c3aed;
+            --text-color: #1f2937;
+            --background-color: #f9fafb;
+            --border-color: #e5e7eb;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background-color);
+            margin: 0;
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: #fff;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            position: fixed;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .sidebar.collapsed {
+            width: 64px;
+        }
+
+        .sidebar img {
+            max-width: 80%;
+            margin: 0 auto 16px;
+            display: block;
+            border-radius: 8px;
+        }
+
+        .sidebar h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0 0 20px;
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .sidebar a span {
+            margin-left: 10px;
+        }
+
+        .main-content {
+            margin-left: 240px;
+            padding: 24px;
+            flex-grow: 1;
+            transition: var(--transition);
+        }
+
+        .main-content.expanded {
+            margin-left: 64px;
+        }
+
+        .toggle-btn {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1000;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .header-bar h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-bar h2 {
+            margin: 4px 0 0;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #6b7280;
+        }
+
         .form-container {
             max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
+            margin: 0 auto;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 24px;
+            border-radius: 6px;
+            box-shadow: var(--shadow);
         }
+
+        .form-container h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .form-container p {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
         .form-group {
             margin-bottom: 20px;
         }
+
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #2c3e50;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: var(--text-color);
         }
-        .form-group select, .form-group input {
+
+        .form-group select,
+        .form-group input {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
+            padding: 10px;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 0.9rem;
+            transition: var(--transition);
         }
-        .checkbox-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-top: 10px;
+
+        .form-group select:focus,
+        .form-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
         }
-        .checkbox-item {
+
+        .checkbox-group,
+        .radio-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .checkbox-item,
+        .radio-item {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
+            padding: 6px;
+            border-radius: 4px;
+            transition: var(--transition);
         }
+
+        .checkbox-item:hover,
+        .radio-item:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .checkbox-item label,
+        .radio-item label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
         .submit-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-size: 16px;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
-            font-weight: bold;
             width: 100%;
-            margin-top: 20px;
+            transition: var(--transition);
         }
+
         .submit-btn:hover {
-            opacity: 0.9;
+            opacity: 0.95;
             transform: translateY(-1px);
         }
+
         .submit-btn:disabled {
-            background: #6c757d;
+            background: #6b7280;
             cursor: not-allowed;
             transform: none;
         }
-        .threshold-info {
-            background: #e8f4fd;
-            padding: 10px;
+
+        .info-box,
+        .warning-box,
+        .flash-messages p {
+            padding: 12px;
             border-radius: 4px;
-            margin-top: 5px;
-            font-size: 12px;
-            color: #2c3e50;
+            margin: 12px 0;
+            font-size: 0.85rem;
         }
-        .upgrade-note {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 13px;
-        }
+
         .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 4px;
+            background: #eff6ff;
+            border-left: 3px solid var(--primary-color);
         }
+
         .warning-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 4px;
+            background: #fefce8;
+            border-left: 3px solid #eab308;
         }
+
         .flash-messages {
             max-width: 800px;
             margin: 20px auto;
         }
-        .flash-messages p {
-            padding: 12px;
-            border-radius: 4px;
-            margin: 5px 0;
-        }
+
         .flash-success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+            background: #ecfdf5;
+            border-left: 3px solid #10b981;
         }
+
         .flash-error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
+            background: #fee2e2;
+            border-left: 3px solid #ef4444;
         }
+
         .flash-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
+            background: #fefce8;
+            border-left: 3px solid #eab308;
         }
+
+        .threshold-info,
+        .form-note {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 6px;
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+
+        .upgrade-options {
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
         .loading-overlay {
             display: none;
             position: fixed;
@@ -122,269 +307,268 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.6);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
+
         .loading-spinner {
             background: white;
-            padding: 30px;
-            border-radius: 8px;
+            padding: 20px;
+            border-radius: 6px;
             text-align: center;
+            box-shadow: var(--shadow);
         }
+
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid var(--primary-color);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            width: 32px;
+            height: 32px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
         }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .form-note {
-            font-size: 12px;
-            color: #6c757d;
-            margin-top: 5px;
-            font-style: italic;
-        }
-        .upgrade-options {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 10px 0;
-        }
-        .upgrade-options label {
-            font-weight: normal;
-            margin-bottom: 8px;
-        }
-        .radio-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-top: 10px;
-        }
-        .radio-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 64px;
+            }
+
+            .main-content {
+                margin-left: 64px;
+            }
+
+            .toggle-btn {
+                display: block;
+            }
+
+            .sidebar h2,
+            .sidebar a:not(.active) span {
+                display: none;
+            }
+
+            .sidebar.collapsed {
+                width: 240px;
+            }
+
+            .sidebar.collapsed h2,
+            .sidebar.collapsed a span {
+                display: block;
+            }
+
+            .main-content.expanded {
+                margin-left: 240px;
+            }
+
+            .checkbox-group,
+            .radio-group {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <h3>Processing ND Examination Results...</h3>
-            <p>This may take several minutes. Please do not close this page.</p>
+            <h3>Processing ND Examination Results</h3>
+            <p>Please do not close this page</p>
         </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
-        <h2>FCTCNS</h2>
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('run_script', script_name='utme') }}">PUTME</a>
-        <a href="{{ url_for('run_script', script_name='caosce') }}">CAOSCE</a>
-        <a href="{{ url_for('run_script', script_name='clean') }}">Internal Exams</a>
-        <a href="{{ url_for('run_script', script_name='split') }}">JAMB Database</a>
-        <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="active">ND Exam Processor</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
-    </div>
-
-    <!-- Main content -->
-    <div class="main-content" id="main">
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-
-        <!-- Header -->
-        <div class="header-bar">
-            <div class="header-left">
-                <h1>{{ college }}</h1>
-                <h2>{{ department }}</h2>
-            </div>
-            <div class="header-right">
-                <p><strong>Unit:</strong> Examination</p>
-            </div>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+            <h2>FCTCNS</h2>
+            <a href="{{ url_for('dashboard') }}"><span>🏠 Dashboard</span></a>
+            <a href="{{ url_for('run_script', script_name='utme') }}"><span>📑 PUTME</span></a>
+            <a href="{{ url_for('run_script', script_name='caosce') }}"><span>📘 CAOSCE</span></a>
+            <a href="{{ url_for('run_script', script_name='clean') }}"><span>🗂 Internal Exams</span></a>
+            <a href="{{ url_for('run_script', script_name='split') }}"><span>📄 JAMB Database</span></a>
+            <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="active"><span>🎓 ND Exam Processor</span></a>
+            <a href="{{ url_for('logout') }}"><span>🚪 Logout</span></a>
         </div>
 
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for message in messages %}
-                        {% if 'success' in message.lower() or '✅' in message %}
-                            <p class="flash-success">{{ message }}</p>
-                        {% elif 'error' in message.lower() or '❌' in message or 'failed' in message.lower() %}
-                            <p class="flash-error">{{ message }}</p>
-                        {% elif 'warning' in message.lower() or '⚠️' in message %}
-                            <p class="flash-warning">{{ message }}</p>
-                        {% else %}
-                            <p class="flash-info">{{ message }}</p>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+        <div class="main-content" id="main">
+            <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
 
-        <div class="form-container">
-            <h2>ND Examination Results Processor</h2>
-            <p>Configure the processing parameters for ND examination results. This processor handles all ND semester results with score upgrade capability.</p>
-
-            {% if nd_sets %}
-                <div class="info-box">
-                    <strong>Available ND Sets:</strong> {{ nd_sets|length }} set(s) found
-                    <br>
-                    <small>Sets detected: {{ nd_sets|join(', ') }}</small>
+            <div class="header-bar">
+                <div class="header-left">
+                    <h1>{{ college }}</h1>
+                    <h2>{{ department }}</h2>
                 </div>
-            {% else %}
-                <div class="warning-box">
-                    <strong>No ND Sets Found</strong>
-                    <br>
-                    <small>Please ensure your ND sets (ND-2024, ND-2025, etc.) are properly configured in the input directory with RAW_RESULTS subfolders containing Excel files.</small>
+                <div class="header-right">
+                    <p><strong>Unit:</strong> Examination</p>
                 </div>
-            {% endif %}
+            </div>
 
-            <form method="POST" action="{{ url_for('run_script', script_name='exam_processor') }}" id="examProcessorForm">
-                <!-- Set Selection -->
-                <div class="form-group">
-                    <label for="selected_set">Select ND Set:</label>
-                    <select id="selected_set" name="selected_set" required {% if not nd_sets %}disabled{% endif %}>
-                        <option value="all">Process ALL Sets</option>
-                        {% for set_name in nd_sets %}
-                            <option value="{{ set_name }}">{{ set_name }}</option>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for message in messages %}
+                            {% if 'success' in message.lower() or '✅' in message %}
+                                <p class="flash-success">{{ message }}</p>
+                            {% elif 'error' in message.lower() or '❌' in message or 'failed' in message.lower() %}
+                                <p class="flash-error">{{ message }}</p>
+                            {% elif 'warning' in message.lower() or '⚠️' in message %}
+                                <p class="flash-warning">{{ message }}</p>
+                            {% else %}
+                                <p class="flash-info">{{ message }}</p>
+                            {% endif %}
                         {% endfor %}
-                    </select>
-                    {% if not nd_sets %}
-                        <div class="form-note">No sets available. Please check your file structure.</div>
-                    {% endif %}
-                </div>
-
-                <!-- Processing Mode -->
-                <div class="form-group">
-                    <label for="processing_mode">Processing Mode:</label>
-                    <select id="processing_mode" name="processing_mode" required {% if not nd_sets %}disabled{% endif %}>
-                        <option value="auto">Automatic - Process All Semesters</option>
-                        <option value="manual">Manual - Select Specific Semesters</option>
-                    </select>
-                </div>
-
-                <!-- Semester Selection (shown only when manual mode is selected) -->
-                <div class="form-group" id="semester_selection" style="display: none;">
-                    <label>Select Semesters to Process:</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="first_first" name="semesters" value="first_first">
-                            <label for="first_first">First Year - First Semester</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="first_second" name="semesters" value="first_second">
-                            <label for="first_second">First Year - Second Semester</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="second_first" name="semesters" value="second_first">
-                            <label for="second_first">Second Year - First Semester</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="second_second" name="semesters" value="second_second">
-                            <label for="second_second">Second Year - Second Semester</label>
-                        </div>
-                    </div>
-                    <div class="form-note">Select specific semesters to process. Only selected semesters will be processed.</div>
-                </div>
-
-                <!-- Pass Threshold -->
-                <div class="form-group">
-                    <label for="pass_threshold">Base Pass Threshold Score:</label>
-                    <select id="pass_threshold" name="pass_threshold" {% if not nd_sets %}disabled{% endif %}>
-                        <option value="50.0" selected>50 (Default Pass Mark)</option>
-                        <option value="45.0">45</option>
-                        <option value="46.0">46</option>
-                        <option value="47.0">47</option>
-                        <option value="48.0">48</option>
-                        <option value="49.0">49</option>
-                    </select>
-                    <div class="threshold-info">
-                        <strong>Note:</strong> This sets the base pass threshold. Scores below this value are considered failed.
-                    </div>
-                </div>
-
-                <!-- Score Upgrade Options -->
-                <div class="form-group">
-                    <label>Score Upgrade Rule:</label>
-                    <div class="upgrade-options">
-                        <label>Select minimum score to upgrade to 50:</label>
-                        <div class="radio-group">
-                            <div class="radio-item">
-                                <input type="radio" id="no_upgrade" name="upgrade_threshold" value="0" checked>
-                                <label for="no_upgrade">No Upgrade</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" id="upgrade_45" name="upgrade_threshold" value="45">
-                                <label for="upgrade_45">45-49 → 50</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" id="upgrade_46" name="upgrade_threshold" value="46">
-                                <label for="upgrade_46">46-49 → 50</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" id="upgrade_47" name="upgrade_threshold" value="47">
-                                <label for="upgrade_47">47-49 → 50</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" id="upgrade_48" name="upgrade_threshold" value="48">
-                                <label for="upgrade_48">48-49 → 50</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" id="upgrade_49" name="upgrade_threshold" value="49">
-                                <label for="upgrade_49">49 → 50</label>
-                            </div>
-                        </div>
-                        <div class="form-note">
-                            <strong>Management Decision:</strong> All scores from the selected minimum up to 49 will be upgraded to 50. This applies to all processed semesters.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Additional Options -->
-                <div class="form-group">
-                    <label>Additional Options:</label>
-                    <div class="checkbox-group">
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="generate_pdf" name="generate_pdf" value="true" checked {% if not nd_sets %}disabled{% endif %}>
-                            <label for="generate_pdf">Generate Individual Student PDF Reports</label>
-                        </div>
-                        <div class="checkbox-item">
-                            <input type="checkbox" id="track_withdrawn" name="track_withdrawn" value="true" checked {% if not nd_sets %}disabled{% endif %}>
-                            <label for="track_withdrawn">Track Withdrawn Students</label>
-                        </div>
-                    </div>
-                    <div class="form-note">PDF generation creates individual student reports. Withdrawn student tracking prevents previously withdrawn students from appearing in later semesters.</div>
-                </div>
-
-                <button type="submit" class="submit-btn" id="submitBtn" {% if not nd_sets %}disabled{% endif %}>
-                    Process ND Examination Results
-                </button>
-                
-                {% if not nd_sets %}
-                    <div class="warning-box">
-                        <strong>Cannot Process</strong>
-                        <br>
-                        <small>No ND sets found. Please ensure your file structure is correct and contains ND sets with RAW_RESULTS folders.</small>
                     </div>
                 {% endif %}
-            </form>
+            {% endwith %}
+
+            <div class="form-container">
+                <h2>ND Examination Results Processor</h2>
+                <p>Configure processing parameters for ND examination results.</p>
+
+                {% if nd_sets %}
+                    <div class="info-box">
+                        <strong>Available ND Sets:</strong> {{ nd_sets|length }} set(s)
+                        <br>
+                        <small>{{ nd_sets|join(', ') }}</small>
+                    </div>
+                {% else %}
+                    <div class="warning-box">
+                        <strong>No ND Sets Found</strong>
+                        <br>
+                        <small>Ensure ND sets are in the input directory with RAW_RESULTS subfolders.</small>
+                    </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('run_script', script_name='exam_processor') }}" id="examProcessorForm">
+                    <div class="form-group">
+                        <label for="selected_set">Select ND Set</label>
+                        <select id="selected_set" name="selected_set" required {% if not nd_sets %}disabled{% endif %}>
+                            <option value="all">Process ALL Sets</option>
+                            {% for set_name in nd_sets %}
+                                <option value="{{ set_name }}">{{ set_name }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not nd_sets %}
+                            <div class="form-note">No sets available.</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="processing_mode">Processing Mode</label>
+                        <select id="processing_mode" name="processing_mode" required {% if not nd_sets %}disabled{% endif %}>
+                            <option value="auto">Automatic - All Semesters</option>
+                            <option value="manual">Manual - Select Semesters</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="semester_selection" style="display: none;">
+                        <label>Select Semesters to Process</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="first_first" name="semesters" value="first_first">
+                                <label for="first_first">ND1 - First Semester</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="first_second" name="semesters" value="first_second">
+                                <label for="first_second">ND1 - Second Semester</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="second_first" name="semesters" value="second_first">
+                                <label for="second_first">ND2 - First Semester</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="second_second" name="semesters" value="second_second">
+                                <label for="second_second">ND2 - Second Semester</label>
+                            </div>
+                        </div>
+                        <div class="form-note">Select semesters for manual processing.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pass_threshold">Pass Threshold Score</label>
+                        <select id="pass_threshold" name="pass_threshold" {% if not nd_sets %}disabled{% endif %}>
+                            <option value="50.0" selected>50 (Default)</option>
+                            <option value="45.0">45</option>
+                            <option value="46.0">46</option>
+                            <option value="47.0">47</option>
+                            <option value="48.0">48</option>
+                            <option value="49.0">49</option>
+                        </select>
+                        <div class="threshold-info">Scores below this threshold are considered failed.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Score Upgrade Rule</label>
+                        <div class="upgrade-options">
+                            <label style="font-size: 0.85rem; margin-bottom: 8px;">Minimum score to upgrade to 50</label>
+                            <div class="radio-group">
+                                <div class="radio-item">
+                                    <input type="radio" id="no_upgrade" name="upgrade_threshold" value="0" checked>
+                                    <label for="no_upgrade">No Upgrade</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="upgrade_45" name="upgrade_threshold" value="45">
+                                    <label for="upgrade_45">45-49 → 50</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="upgrade_46" name="upgrade_threshold" value="46">
+                                    <label for="upgrade_46">46-49 → 50</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="upgrade_47" name="upgrade_threshold" value="47">
+                                    <label for="upgrade_47">47-49 → 50</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="upgrade_48" name="upgrade_threshold" value="48">
+                                    <label for="upgrade_48">48-49 → 50</label>
+                                </div>
+                                <div class="radio-item">
+                                    <input type="radio" id="upgrade_49" name="upgrade_threshold" value="49">
+                                    <label for="upgrade_49">49 → 50</label>
+                                </div>
+                            </div>
+                            <div class="form-note">Scores from the selected minimum up to 49 will be upgraded to 50.</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Additional Options</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="generate_pdf" name="generate_pdf" value="true" checked {% if not nd_sets %}disabled{% endif %}>
+                                <label for="generate_pdf">Generate Student PDF Reports</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="track_withdrawn" name="track_withdrawn" value="true" checked {% if not nd_sets %}disabled{% endif %}>
+                                <label for="track_withdrawn">Track Withdrawn Students</label>
+                            </div>
+                        </div>
+                        <div class="form-note">PDF reports generate individual results. Withdrawn tracking excludes students from later semesters.</div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn" {% if not nd_sets %}disabled{% endif %}>
+                        Process ND Examination Results
+                    </button>
+
+                    {% if not nd_sets %}
+                        <div class="warning-box">
+                            <strong>Cannot Process</strong>
+                            <br>
+                            <small>Ensure ND sets with RAW_RESULTS folders are in the input directory.</small>
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        // Toggle sidebar function
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main');
@@ -392,89 +576,60 @@
             mainContent.classList.toggle('expanded');
         }
 
-        // Show/hide semester selection based on processing mode
         document.getElementById('processing_mode').addEventListener('change', function() {
             const semesterSelection = document.getElementById('semester_selection');
-            if (this.value === 'manual') {
-                semesterSelection.style.display = 'block';
-            } else {
-                semesterSelection.style.display = 'none';
-                // Clear any selected semesters when switching to auto mode
+            semesterSelection.style.display = this.value === 'manual' ? 'block' : 'none';
+            if (this.value !== 'manual') {
                 document.querySelectorAll('input[name="semesters"]').forEach(checkbox => {
                     checkbox.checked = false;
                 });
             }
         });
 
-        // Form submission handler
         document.getElementById('examProcessorForm').addEventListener('submit', function(e) {
             const submitBtn = document.getElementById('submitBtn');
             const loadingOverlay = document.getElementById('loadingOverlay');
-            
-            // Show loading overlay
             loadingOverlay.style.display = 'flex';
-            
-            // Disable submit button to prevent double submission
             submitBtn.disabled = true;
-            submitBtn.innerHTML = 'Processing... Please wait';
-            
-            // Optional: Add a timeout to re-enable button if something goes wrong
+            submitBtn.innerHTML = 'Processing...';
             setTimeout(() => {
                 if (loadingOverlay.style.display === 'flex') {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = 'Process ND Examination Results';
                     loadingOverlay.style.display = 'none';
-                    alert('Processing is taking longer than expected. Please check the server logs.');
+                    alert('Processing timeout. Check server logs.');
                 }
-            }, 300000); // 5 minutes timeout
+            }, 300000);
         });
 
-        // Initialize form state
         document.addEventListener('DOMContentLoaded', function() {
             const processingMode = document.getElementById('processing_mode');
             const semesterSelection = document.getElementById('semester_selection');
-            
             if (processingMode.value === 'manual') {
                 semesterSelection.style.display = 'block';
             }
 
-            // Add visual feedback for checkboxes and radio buttons
-            document.querySelectorAll('.checkbox-item input[type="checkbox"], .radio-item input[type="radio"]').forEach(input => {
+            document.querySelectorAll('.checkbox-item input, .radio-item input').forEach(input => {
                 input.addEventListener('change', function() {
                     const label = this.parentElement.querySelector('label');
-                    if (this.checked) {
-                        label.style.fontWeight = 'bold';
-                        label.style.color = '#2c3e50';
-                    } else {
-                        label.style.fontWeight = 'normal';
-                        label.style.color = '';
-                    }
+                    label.style.fontWeight = this.checked ? '600' : '500';
+                    label.style.color = this.checked ? 'var(--text-color)' : '';
                 });
             });
 
-            // Validate at least one semester selected in manual mode
-            const form = document.getElementById('examProcessorForm');
-            form.addEventListener('submit', function(e) {
-                const processingMode = document.getElementById('processing_mode').value;
-                if (processingMode === 'manual') {
-                    const selectedSemesters = document.querySelectorAll('input[name="semesters"]:checked');
-                    if (selectedSemesters.length === 0) {
-                        e.preventDefault();
-                        alert('Please select at least one semester to process in Manual mode, or switch to Automatic mode.');
-                        return false;
-                    }
+            document.getElementById('examProcessorForm').addEventListener('submit', function(e) {
+                if (document.getElementById('processing_mode').value === 'manual' &&
+                    document.querySelectorAll('input[name="semesters"]:checked').length === 0) {
+                    e.preventDefault();
+                    alert('Select at least one semester in Manual mode or switch to Automatic mode.');
                 }
             });
         });
 
-        // Handle page refresh/back button - ensure loading overlay is hidden
-        window.addEventListener('pageshow', function(event) {
+        window.addEventListener('pageshow', function() {
             const loadingOverlay = document.getElementById('loadingOverlay');
             const submitBtn = document.getElementById('submitBtn');
-            
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
-            }
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Process ND Examination Results';
