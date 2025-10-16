@@ -2,11 +2,13 @@ import os
 import subprocess
 import re
 import sys
-from flask import Flask, request, redirect, url_for, render_template, flash, session, send_from_directory
+from flask import Flask, request, redirect, url_for, render_template, flash, session, send_from_directory, send_file
 from functools import wraps
 from dotenv import load_dotenv
 from jinja2 import TemplateNotFound, UndefinedError
 import logging
+import glob
+from werkzeug.utils import secure_filename
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +42,11 @@ load_dotenv()
 PASSWORD = os.getenv("STUDENT_CLEANER_PASSWORD", "admin")
 COLLEGE = os.getenv("COLLEGE_NAME", "FCT College of Nursing Sciences, Gwagwalada")
 DEPARTMENT = os.getenv("DEPARTMENT", "Examinations Office")
+
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv', 'zip'}
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def is_running_on_railway():
     """Check if running on Railway platform"""
@@ -152,6 +159,175 @@ def login():
 def dashboard():
     environment = "Railway Production" if is_running_on_railway() else "Local Development"
     return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT, environment=environment)
+
+# NEW: File Management Routes
+@app.route("/upload/<script_name>", methods=["GET", "POST"])
+@login_required
+def upload_files(script_name):
+    """Handle file uploads for different script types"""
+    if request.method == "POST":
+        # Check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        # If user does not select file, browser also submit an empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            
+            # Determine upload directory based on script type
+            upload_path = get_upload_directory(script_name)
+            
+            # Ensure directory exists
+            os.makedirs(upload_path, exist_ok=True)
+            
+            file_path = os.path.join(upload_path, filename)
+            file.save(file_path)
+            
+            flash(f'File "{filename}" uploaded successfully for {script_name} processing!')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid file type. Allowed types: xlsx, xls, csv, zip')
+    
+    # GET request - show upload form
+    script_descriptions = {
+        "utme": "PUTME Examination Results",
+        "caosce": "CAOSCE Examination Results", 
+        "clean": "Objective Examination Results",
+        "split": "JAMB Candidate Database",
+        "exam_processor": "ND Examination Results"
+    }
+    
+    script_desc = script_descriptions.get(script_name, "Script")
+    return render_template("upload_form.html", 
+                         script_name=script_name, 
+                         script_desc=script_desc,
+                         college=COLLEGE, 
+                         department=DEPARTMENT)
+
+def get_upload_directory(script_name):
+    """Get the appropriate upload directory for each script type"""
+    is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
+    
+    if is_railway:
+        # Railway paths
+        base_dir = '/app/EXAMS_INTERNAL'
+        if script_name == "exam_processor":
+            # For exam processor, we need to determine the ND set
+            nd_sets = [d for d in os.listdir(base_dir) if d.startswith('ND-') and os.path.isdir(os.path.join(base_dir, d))]
+            if nd_sets:
+                # Use the first ND set found, or prompt user to select
+                return os.path.join(base_dir, nd_sets[0], "RAW_RESULTS")
+            else:
+                # Fallback to base upload directory
+                return '/tmp/uploads'
+        elif script_name == "utme":
+            return os.path.join(base_dir, "PUTME_RESULT", "RAW_PUTME_RESULT")
+        elif script_name == "caosce":
+            return os.path.join(base_dir, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
+        elif script_name == "clean":
+            return os.path.join(base_dir, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT")
+        elif script_name == "split":
+            return os.path.join(base_dir, "JAMB_DB", "RAW_JAMB_DB")
+        else:
+            return '/tmp/uploads'
+    else:
+        # Local development paths
+        if script_name == "exam_processor":
+            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL/ND-2024/RAW_RESULTS"
+        elif script_name == "utme":
+            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT"
+        elif script_name == "caosce":
+            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
+        elif script_name == "clean":
+            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT"
+        elif script_name == "split":
+            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
+        else:
+            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/uploads"
+
+@app.route("/downloads")
+@login_required
+def list_downloads():
+    """List all available processed files for download"""
+    download_files = []
+    
+    # Find processed files in various locations
+    search_paths = [
+        os.path.join(BASE_DIR, "**", "*.xlsx"),
+        os.path.join(BASE_DIR, "**", "*.csv"),
+        os.path.join(BASE_DIR, "**", "*.pdf"),
+        os.path.join(PROCESSED_DIR, "*.xlsx"),
+        os.path.join(PROCESSED_DIR, "*.csv"),
+        os.path.join(PROCESSED_DIR, "*.pdf")
+    ]
+    
+    for search_path in search_paths:
+        for file_path in glob.glob(search_path, recursive=True):
+            if os.path.isfile(file_path):
+                file_info = {
+                    'name': os.path.basename(file_path),
+                    'path': file_path,
+                    'size': os.path.getsize(file_path),
+                    'modified': os.path.getmtime(file_path),
+                    'relative_path': os.path.relpath(file_path, BASE_DIR)
+                }
+                download_files.append(file_info)
+    
+    # Sort by modification time (newest first)
+    download_files.sort(key=lambda x: x['modified'], reverse=True)
+    
+    return render_template("downloads.html", 
+                         files=download_files, 
+                         college=COLLEGE, 
+                         department=DEPARTMENT)
+
+@app.route("/download/<path:filename>")
+@login_required
+def download_file(filename):
+    """Download a specific file"""
+    try:
+        # Security check - ensure the file is within allowed directories
+        full_path = os.path.join(BASE_DIR, filename)
+        if not os.path.commonpath([os.path.abspath(full_path), os.path.abspath(BASE_DIR)]) == os.path.abspath(BASE_DIR):
+            flash("Access denied")
+            return redirect(url_for('list_downloads'))
+        
+        return send_file(full_path, as_attachment=True)
+    except Exception as e:
+        flash(f"Error downloading file: {str(e)}")
+        return redirect(url_for('list_downloads'))
+
+@app.route("/file-explorer")
+@login_required
+def file_explorer():
+    """File explorer to browse processed results"""
+    nd_sets = []
+    processed_files = []
+    
+    # Find ND sets
+    if os.path.exists(BASE_DIR):
+        for item in os.listdir(BASE_DIR):
+            item_path = os.path.join(BASE_DIR, item)
+            if os.path.isdir(item_path) and item.startswith('ND-'):
+                clean_results_path = os.path.join(item_path, "CLEAN_RESULTS")
+                if os.path.exists(clean_results_path):
+                    nd_sets.append({
+                        'name': item,
+                        'path': clean_results_path,
+                        'files': [f for f in os.listdir(clean_results_path) 
+                                 if f.endswith(('.xlsx', '.csv', '.pdf'))]
+                    })
+    
+    return render_template("file_explorer.html",
+                         nd_sets=nd_sets,
+                         college=COLLEGE,
+                         department=DEPARTMENT)
 
 def check_exam_processor_files(input_dir):
     """Check for ND examination files - Railway compatible"""
