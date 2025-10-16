@@ -3,7 +3,7 @@
 exam_result_processor.py
 
 Complete script with flexible threshold upgrade rule for ND results.
-Web-compatible version with file upload support, modified for dual local/Railway deployment.
+Web-compatible version with file upload support.
 """
 
 from openpyxl.cell import MergedCell
@@ -23,13 +23,6 @@ import glob
 import tempfile
 import shutil
 
-SEMESTER_MAPPING = {
-    'first_first': 'ND-First-YEAR-First-SEMESTER',
-    'first_second': 'ND-First-YEAR-SECOND-SEMESTER',
-    'second_first': 'ND-SECOND-YEAR-First-SEMESTER',
-    'second_second': 'ND-SECOND-YEAR-SECOND-SEMESTER'
-}
-
 # PDF generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -41,12 +34,38 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 # ----------------------------
 # Configuration
 # ----------------------------
-# Local base directory (for offline mode)
-LOCAL_BASE_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL"
+# ----------------------------
+# Railway-Compatible Configuration
+# ----------------------------
+def get_base_directory():
+    """Get base directory - compatible with both local and Railway environments"""
+    # Check Railway environment first
+    railway_base = os.getenv('BASE_DIR')
+    if railway_base and os.path.exists(railway_base):
+        return railway_base
+    
+    # Check if we're running on Railway but BASE_DIR doesn't exist
+    if is_running_on_railway():
+        # Create the directory structure on Railway
+        railway_base = '/app/EXAMS_INTERNAL'
+        os.makedirs(railway_base, exist_ok=True)
+        os.makedirs(os.path.join(railway_base, 'ND-COURSES'), exist_ok=True)
+        return railway_base
+    
+    # Local development fallback
+    local_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL"
+    if os.path.exists(local_path):
+        return local_path
+    
+    # Final fallback - current directory
+    return os.path.join(os.path.dirname(__file__), 'EXAMS_INTERNAL')
 
-# Use dynamic base directory: env var > local default
-BASE_DIR = os.getenv("BASE_DIR", LOCAL_BASE_DIR)
+BASE_DIR = get_base_directory()
 ND_COURSES_DIR = os.path.join(BASE_DIR, "ND-COURSES")
+
+# Ensure directories exist
+os.makedirs(BASE_DIR, exist_ok=True)
+os.makedirs(ND_COURSES_DIR, exist_ok=True)
 
 # Global variables for threshold upgrade
 THRESHOLD_UPGRADED = False
@@ -55,20 +74,21 @@ UPGRADE_MIN = None
 UPGRADE_MAX = 49
 
 def is_web_mode():
-    """Check if running in web mode (file upload, e.g., Railway)"""
-    return os.getenv('UPLOAD_MODE') == 'true'  # Matches app.py
+    """Check if running in web mode (file upload)"""
+    return os.getenv('WEB_MODE') == 'true'
 
 def get_uploaded_file_path():
-    """Get path of uploaded file or directory in web mode"""
-    return os.getenv('UPLOAD_PATH')  # From app.py
-
-def get_output_path():
-    """Get output directory for processed files"""
-    return os.getenv('OUTPUT_PATH', '/tmp/processed')  # Default for Railway
+    """Get path of uploaded file in web mode"""
+    return os.getenv('UPLOADED_FILE_PATH')
 
 def is_running_on_railway():
     """Check if we're running on Railway"""
-    return 'RAILWAY_ENVIRONMENT' in os.environ or 'RAILWAY_STATIC_URL' in os.environ
+    return any(key in os.environ for key in [
+        'RAILWAY_ENVIRONMENT', 
+        'RAILWAY_STATIC_URL', 
+        'RAILWAY_PROJECT_ID',
+        'RAILWAY_SERVICE_NAME'
+    ])
 
 def should_use_interactive_mode():
     """Check if we should use interactive mode (CLI) or non-interactive mode (web)."""
@@ -81,13 +101,15 @@ def should_use_interactive_mode():
     # Default to interactive for backward compatibility
     return True
 
-def process_uploaded_file(uploaded_path, base_dir_norm):
+def process_uploaded_file(uploaded_file_path, base_dir_norm):
     """
-    Process uploaded file(s) in web mode, handling single files or directories (from ZIPs).
+    Process uploaded file in web mode.
+    This function handles the single uploaded file for web processing.
     """
-    print("🔧 Processing uploaded file(s) in web mode")
+    print("🔧 Processing uploaded file in web mode")
     
     # Extract set name from filename or use default
+    filename = os.path.basename(uploaded_file_path)
     set_name = "ND-UPLOADED"
     
     # Create temporary directory structure
@@ -97,72 +119,53 @@ def process_uploaded_file(uploaded_path, base_dir_norm):
     os.makedirs(raw_dir, exist_ok=True)
     os.makedirs(clean_dir, exist_ok=True)
     
-    # Check if uploaded_path is a file or directory (from ZIP extraction)
-    if os.path.isfile(uploaded_path):
-        # Single file: copy to raw_dir
-        filename = os.path.basename(uploaded_path)
-        dest_path = os.path.join(raw_dir, filename)
-        shutil.copy2(uploaded_path, dest_path)
-        raw_files = [filename]
-    else:
-        # Directory (from ZIP): copy all Excel files to raw_dir
-        raw_files = [f for f in os.listdir(uploaded_path) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
-        for f in raw_files:
-            shutil.copy2(os.path.join(uploaded_path, f), os.path.join(raw_dir, f))
-    
-    if not raw_files:
-        print("❌ No Excel files found in uploaded path")
-        return False
+    # Copy uploaded file to raw directory
+    dest_path = os.path.join(raw_dir, filename)
+    shutil.copy2(uploaded_file_path, dest_path)
     
     # Get parameters from environment
     params = get_form_parameters()
     ts = datetime.now().strftime(TIMESTAMP_FMT)
     
-    # Use OUTPUT_PATH for final output
-    output_path = get_output_path()
-    os.makedirs(output_path, exist_ok=True)
-    
     try:
         # Load course data
         semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
         
-        # Process each file
-        success = True
-        for filename in raw_files:
-            dest_path = os.path.join(raw_dir, filename)
-            print(f"📁 Processing uploaded file: {filename}")
-            
-            # Detect semester from filename
-            semester_key, _, _, _, _, _ = detect_semester_from_filename(filename)
-            print(f"🎯 Detected semester: {semester_key}")
-            
-            # Process the file
-            result = process_single_file(
-                dest_path,
-                output_path,  # Write directly to OUTPUT_PATH
-                ts,
-                params['pass_threshold'],
-                semester_course_maps,
-                semester_credit_units,
-                semester_lookup,
-                semester_course_titles,
-                DEFAULT_LOGO_PATH,
-                semester_key,
-                set_name,
-                previous_gpas=None,
-                upgrade_min_threshold=get_upgrade_threshold_from_env()
-            )
-            
-            if result is None:
-                print(f"❌ Failed to process {filename}")
-                success = False
-            else:
-                print(f"✅ Successfully processed {filename}")
+        # Process the single file
+        raw_files = [filename]
         
-        return success
+        # Detect semester from filename
+        semester_key, _, _, _, _, _ = detect_semester_from_filename(filename)
+        
+        print(f"🎯 Detected semester: {semester_key}")
+        print(f"📁 Processing uploaded file: {filename}")
+        
+        # Process the file
+        result = process_single_file(
+            dest_path,
+            clean_dir,
+            ts,
+            params['pass_threshold'],
+            semester_course_maps,
+            semester_credit_units,
+            semester_lookup,
+            semester_course_titles,
+            DEFAULT_LOGO_PATH,
+            semester_key,
+            set_name,
+            previous_gpas=None,
+            upgrade_min_threshold=get_upgrade_threshold_from_env()
+        )
+        
+        if result is not None:
+            print(f"✅ Successfully processed uploaded file")
+            return True
+        else:
+            print(f"❌ Failed to process uploaded file")
+            return False
             
     except Exception as e:
-        print(f"❌ Error processing uploaded file(s): {e}")
+        print(f"❌ Error processing uploaded file: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -234,10 +237,6 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     
     ts = datetime.now().strftime(TIMESTAMP_FMT)
     
-    # Use OUTPUT_PATH for final output in web mode, else local clean_dir
-    output_path = get_output_path() if is_web_mode() else base_dir_norm
-    os.makedirs(output_path, exist_ok=True)
-    
     # Process each set and semester
     total_processed = 0
     for nd_set in sets_to_process:
@@ -246,7 +245,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
         print(f"{'='*60}")
         
         raw_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "RAW_RESULTS"))
-        clean_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "CLEAN_RESULTS")) if not is_web_mode() else output_path
+        clean_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "CLEAN_RESULTS"))
         
         # Create directories if they don't exist
         os.makedirs(raw_dir, exist_ok=True)
@@ -323,14 +322,10 @@ def get_form_parameters():
     generate_pdf = os.getenv('GENERATE_PDF', 'True').lower() == 'true'
     track_withdrawn = os.getenv('TRACK_WITHDRAWN', 'True').lower() == 'true'
     
-    # Convert semester string to list using SEMESTER_MAPPING
+    # Convert semester string to list
     selected_semesters = []
     if selected_semesters_str:
-        selected_semesters = [
-            SEMESTER_MAPPING.get(s.strip(), s.strip().upper().replace(' ', '-').replace('YEAR', 'YEAR'))
-            for s in selected_semesters_str.split(',')
-            if s.strip()
-        ]
+        selected_semesters = selected_semesters_str.split(',')
     
     print(f"🎯 FORM PARAMETERS:")
     print(f"   Selected Set: {selected_set}")
@@ -1463,7 +1458,7 @@ def generate_individual_student_pdf(
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ]))
 
-        # Passport photo table (separate)
+        # Passport photo table (separate box)
         passport_data = [
             [Paragraph("Affix Recent<br/>Passport<br/>Photograph",
                        styles['Normal'])]
@@ -1777,14 +1772,14 @@ def generate_individual_student_pdf(
                      "____________________"],
                     [Paragraph("<b>EXAMS SECRETARY</b>",
                                ParagraphStyle('SigStyle',
-                                              parent=styles['Normal'],
-                                              fontSize=10,
-                                              alignment=TA_CENTER)),
+                                      parent=styles['Normal'],
+                                      fontSize=10,
+                                      alignment=TA_CENTER)),
                      Paragraph("<b>V.P. ACADEMICS</b>",
-                               ParagraphStyle('SigStyle',
-                                              parent=styles['Normal'],
-                                              fontSize=10,
-                                              alignment=TA_CENTER))] ]
+                       ParagraphStyle('SigStyle',
+                                     parent=styles['Normal'],
+                                     fontSize=10,
+                                     alignment=TA_CENTER))] ]
 
         sig_table = Table(sig_data, colWidths=[3.0 * inch, 3.0 * inch])
         sig_table.setStyle(TableStyle([
@@ -1822,9 +1817,9 @@ def process_semester_files(
     """
     Process all files for a specific semester.
     """
-    logging.info(f"\n{'='*60}")
-    logging.info(f"PROCESSING SEMESTER: {semester_key}")
-    logging.info(f"{'='*60}")
+    print(f"\n{'='*60}")
+    print(f"PROCESSING SEMESTER: {semester_key}")
+    print(f"{'='*60}")
 
     # Filter files for this semester
     semester_files = []
@@ -2395,7 +2390,6 @@ def process_single_file(
             vertical="center",
             wrap_text=True)
 
-    # Apply column widths
     for col_idx, col in enumerate(ws.columns, start=1):
         column_letter = get_column_letter(col_idx)
         if col_idx == 1:  # S/N
@@ -2548,20 +2542,20 @@ def main():
 
     # Check if running in web mode
     if is_web_mode():
-        uploaded_path = get_uploaded_file_path()
-        if uploaded_path and os.path.exists(uploaded_path):
-            print("🔧 Running in WEB MODE with uploaded file/directory")
-            success = process_uploaded_file(uploaded_path, normalize_path(BASE_DIR))
+        uploaded_file_path = get_uploaded_file_path()
+        if uploaded_file_path and os.path.exists(uploaded_file_path):
+            print("🔧 Running in WEB MODE with uploaded file")
+            success = process_uploaded_file(uploaded_file_path, normalize_path(BASE_DIR))
             if success:
                 print("✅ Uploaded file processing completed successfully")
             else:
                 print("❌ Uploaded file processing failed")
             return
         else:
-            print("❌ No uploaded path found in web mode")
+            print("❌ No uploaded file found in web mode")
             return
 
-    # Get parameters from form (for non-interactive offline, if env vars set)
+    # Get parameters from form
     params = get_form_parameters()
     
     # Use the parameters
@@ -2701,7 +2695,7 @@ def main():
 
         print("\n✅ ND Examination Results Processing completed successfully.")
     else:
-        print("🔧 Running in NON-INTERACTIVE mode (Offline with env vars or Web)")
+        print("🔧 Running in NON-INTERACTIVE mode (Web)")
         success = process_in_non_interactive_mode(params, base_dir_norm)
         if success:
             print("✅ ND Examination Results Processing completed successfully")
