@@ -7,7 +7,9 @@ from functools import wraps
 from dotenv import load_dotenv
 from jinja2 import TemplateNotFound, UndefinedError
 import logging
+import zipfile
 import glob
+from datetime import datetime
 from werkzeug.utils import secure_filename
 
 # Configure logging
@@ -160,41 +162,238 @@ def dashboard():
     environment = "Railway Production" if is_running_on_railway() else "Local Development"
     return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT, environment=environment)
 
-# NEW: File Management Routes
+# NEW: Organized File Management Routes
+@app.route("/upload-center")
+@login_required
+def upload_center():
+    """Central upload hub for all file types"""
+    return render_template("upload_center.html", college=COLLEGE, department=DEPARTMENT)
+
+@app.route("/download-center")
+@login_required
+def download_center():
+    """Central download hub with organized files"""
+    files_by_category = get_organized_files()
+    return render_template("download_center.html", 
+                         files_by_category=files_by_category,
+                         college=COLLEGE, 
+                         department=DEPARTMENT)
+
+@app.route("/file-browser")
+@login_required
+def file_browser():
+    """Browse files by category and type"""
+    file_structure = get_file_structure()
+    return render_template("file_browser.html",
+                         file_structure=file_structure,
+                         college=COLLEGE,
+                         department=DEPARTMENT)
+
+@app.route("/download-zip/<category>/<folder_name>")
+@login_required
+def download_zip(category, folder_name):
+    """Download entire folder as ZIP"""
+    try:
+        # Security check
+        if category not in ['nd_sets', 'processed', 'raw']:
+            flash("Invalid category")
+            return redirect(url_for('download_center'))
+        
+        if category == 'nd_sets':
+            zip_path = create_nd_set_zip(folder_name)
+        else:
+            zip_path = create_category_zip(category, folder_name)
+        
+        if zip_path and os.path.exists(zip_path):
+            return send_file(zip_path, as_attachment=True)
+        else:
+            flash("Could not create zip file")
+            return redirect(url_for('download_center'))
+            
+    except Exception as e:
+        flash(f"Error creating zip: {str(e)}")
+        return redirect(url_for('download_center'))
+
+# NEW: File Organization Functions
+def get_organized_files():
+    """Get all files organized by category and timestamp"""
+    files_by_category = {
+        'nd_results': [],
+        'putme_results': [],
+        'caosce_results': [],
+        'internal_results': [],
+        'jamb_results': [],
+        'raw_files': []
+    }
+    
+    # Find ND processed files
+    nd_pattern = os.path.join(BASE_DIR, "**", "*.xlsx")
+    for file_path in glob.glob(nd_pattern, recursive=True):
+        if 'CLEAN_RESULTS' in file_path or 'PROCESSED' in file_path or 'MASTERSHEET' in file_path:
+            rel_path = os.path.relpath(file_path, BASE_DIR)
+            files_by_category['nd_results'].append({
+                'name': os.path.basename(file_path),
+                'path': file_path,
+                'relative_path': rel_path,
+                'size': os.path.getsize(file_path),
+                'modified': os.path.getmtime(file_path),
+                'folder': os.path.dirname(rel_path)
+            })
+    
+    # Find other processed files
+    other_patterns = [
+        (os.path.join(BASE_DIR, "**", "*UTME*.*"), 'putme_results'),
+        (os.path.join(BASE_DIR, "**", "*CAOSCE*.*"), 'caosce_results'),
+        (os.path.join(BASE_DIR, "**", "*CLEAN*.*"), 'internal_results'),
+        (os.path.join(BASE_DIR, "**", "*JAMB*.*"), 'jamb_results'),
+    ]
+    
+    for pattern, category in other_patterns:
+        for file_path in glob.glob(pattern, recursive=True):
+            if not file_path.startswith('~'):  # Skip temporary files
+                rel_path = os.path.relpath(file_path, BASE_DIR)
+                files_by_category[category].append({
+                    'name': os.path.basename(file_path),
+                    'path': file_path,
+                    'relative_path': rel_path,
+                    'size': os.path.getsize(file_path),
+                    'modified': os.path.getmtime(file_path),
+                    'folder': os.path.dirname(rel_path)
+                })
+    
+    # Sort by modification time (newest first)
+    for category in files_by_category:
+        files_by_category[category].sort(key=lambda x: x['modified'], reverse=True)
+    
+    return files_by_category
+
+def get_file_structure():
+    """Get complete file structure"""
+    structure = {
+        'nd_sets': [],
+        'processed_files': [],
+        'raw_files': []
+    }
+    
+    # ND Sets with CLEAN_RESULTS
+    if os.path.exists(BASE_DIR):
+        for item in os.listdir(BASE_DIR):
+            item_path = os.path.join(BASE_DIR, item)
+            if os.path.isdir(item_path) and item.startswith('ND-'):
+                clean_path = os.path.join(item_path, "CLEAN_RESULTS")
+                raw_path = os.path.join(item_path, "RAW_RESULTS")
+                
+                nd_set = {
+                    'name': item,
+                    'clean_results': [],
+                    'raw_files': []
+                }
+                
+                # Get clean results
+                if os.path.exists(clean_path):
+                    for file in os.listdir(clean_path):
+                        if file.endswith(('.xlsx', '.csv', '.pdf')) and not file.startswith('~'):
+                            file_path = os.path.join(clean_path, file)
+                            nd_set['clean_results'].append({
+                                'name': file,
+                                'path': file_path,
+                                'size': os.path.getsize(file_path),
+                                'modified': os.path.getmtime(file_path)
+                            })
+                
+                # Get raw files
+                if os.path.exists(raw_path):
+                    for file in os.listdir(raw_path):
+                        if file.endswith(('.xlsx', '.xls', '.csv')) and not file.startswith('~'):
+                            file_path = os.path.join(raw_path, file)
+                            nd_set['raw_files'].append({
+                                'name': file,
+                                'path': file_path,
+                                'size': os.path.getsize(file_path),
+                                'modified': os.path.getmtime(file_path)
+                            })
+                
+                # Sort files by modification time
+                nd_set['clean_results'].sort(key=lambda x: x['modified'], reverse=True)
+                nd_set['raw_files'].sort(key=lambda x: x['modified'], reverse=True)
+                
+                structure['nd_sets'].append(nd_set)
+    
+    return structure
+
+def create_nd_set_zip(nd_set_name):
+    """Create ZIP for entire ND set"""
+    nd_set_path = os.path.join(BASE_DIR, nd_set_name)
+    if not os.path.exists(nd_set_path):
+        return None
+    
+    zip_filename = f"{nd_set_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+    zip_path = os.path.join(PROCESSED_DIR, zip_filename)
+    
+    with zipfile.ZipFile(zip_path, 'w') as zipf:
+        # Add CLEAN_RESULTS
+        clean_path = os.path.join(nd_set_path, "CLEAN_RESULTS")
+        if os.path.exists(clean_path):
+            for root, dirs, files in os.walk(clean_path):
+                for file in files:
+                    if not file.startswith('~'):  # Skip temp files
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.join(nd_set_name, "PROCESSED_RESULTS", file)
+                        zipf.write(file_path, arcname)
+        
+        # Add RAW_RESULTS
+        raw_path = os.path.join(nd_set_path, "RAW_RESULTS")
+        if os.path.exists(raw_path):
+            for root, dirs, files in os.walk(raw_path):
+                for file in files:
+                    if not file.startswith('~'):  # Skip temp files
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.join(nd_set_name, "RAW_FILES", file)
+                        zipf.write(file_path, arcname)
+    
+    return zip_path
+
+def create_category_zip(category, folder_name):
+    """Create ZIP for specific category"""
+    # This function can be expanded for other categories
+    zip_filename = f"{category}_{folder_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+    zip_path = os.path.join(PROCESSED_DIR, zip_filename)
+    
+    # For now, return None - can be implemented for other categories
+    return None
+
+# Update the existing upload function to create timestamped folders
 @app.route("/upload/<script_name>", methods=["GET", "POST"])
 @login_required
 def upload_files(script_name):
-    """Handle file uploads for different script types"""
+    """Handle file uploads with timestamped organization"""
     if request.method == "POST":
-        # Check if the post request has the file part
         if 'file' not in request.files:
-            flash('No file part')
+            flash('No file selected')
             return redirect(request.url)
         
         file = request.files['file']
-        # If user does not select file, browser also submit an empty part without filename
         if file.filename == '':
-            flash('No selected file')
+            flash('No file selected')
             return redirect(request.url)
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            
-            # Determine upload directory based on script type
             upload_path = get_upload_directory(script_name)
             
-            # Ensure directory exists
-            os.makedirs(upload_path, exist_ok=True)
+            # Create timestamped folder
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+            timestamped_path = os.path.join(upload_path, timestamp)
+            os.makedirs(timestamped_path, exist_ok=True)
             
-            file_path = os.path.join(upload_path, filename)
+            file_path = os.path.join(timestamped_path, filename)
             file.save(file_path)
             
-            flash(f'File "{filename}" uploaded successfully for {script_name} processing!')
-            return redirect(url_for('dashboard'))
+            flash(f'File "{filename}" uploaded successfully to {timestamp} folder!')
+            return redirect(url_for('upload_center'))
         else:
-            flash('Invalid file type. Allowed types: xlsx, xls, csv, zip')
+            flash('Invalid file type. Allowed: xlsx, xls, csv, zip')
     
-    # GET request - show upload form
     script_descriptions = {
         "utme": "PUTME Examination Results",
         "caosce": "CAOSCE Examination Results", 
@@ -218,117 +417,50 @@ def get_upload_directory(script_name):
         # Railway paths
         base_dir = '/app/EXAMS_INTERNAL'
         if script_name == "exam_processor":
-            # For exam processor, we need to determine the ND set
+            # For exam processor, create or use ND set directory
             nd_sets = [d for d in os.listdir(base_dir) if d.startswith('ND-') and os.path.isdir(os.path.join(base_dir, d))]
             if nd_sets:
-                # Use the first ND set found, or prompt user to select
-                return os.path.join(base_dir, nd_sets[0], "RAW_RESULTS")
+                # Use the first ND set found
+                nd_set = nd_sets[0]
+                upload_path = os.path.join(base_dir, nd_set, "RAW_RESULTS")
+                os.makedirs(upload_path, exist_ok=True)
+                return upload_path
             else:
-                # Fallback to base upload directory
-                return '/tmp/uploads'
+                # Create a default ND set
+                default_set = "ND-2024"
+                upload_path = os.path.join(base_dir, default_set, "RAW_RESULTS")
+                os.makedirs(upload_path, exist_ok=True)
+                return upload_path
         elif script_name == "utme":
-            return os.path.join(base_dir, "PUTME_RESULT", "RAW_PUTME_RESULT")
+            upload_path = os.path.join(base_dir, "PUTME_RESULT", "RAW_PUTME_RESULT")
         elif script_name == "caosce":
-            return os.path.join(base_dir, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
+            upload_path = os.path.join(base_dir, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
         elif script_name == "clean":
-            return os.path.join(base_dir, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT")
+            upload_path = os.path.join(base_dir, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT")
         elif script_name == "split":
-            return os.path.join(base_dir, "JAMB_DB", "RAW_JAMB_DB")
+            upload_path = os.path.join(base_dir, "JAMB_DB", "RAW_JAMB_DB")
         else:
-            return '/tmp/uploads'
+            upload_path = '/tmp/uploads'
     else:
         # Local development paths
         if script_name == "exam_processor":
-            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL/ND-2024/RAW_RESULTS"
+            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL/ND-2024/RAW_RESULTS"
         elif script_name == "utme":
-            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT"
+            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT"
         elif script_name == "caosce":
-            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
+            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
         elif script_name == "clean":
-            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT"
+            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT"
         elif script_name == "split":
-            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
+            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
         else:
-            return "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/uploads"
+            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/uploads"
+    
+    # Ensure the directory exists
+    os.makedirs(upload_path, exist_ok=True)
+    return upload_path
 
-@app.route("/downloads")
-@login_required
-def list_downloads():
-    """List all available processed files for download"""
-    download_files = []
-    
-    # Find processed files in various locations
-    search_paths = [
-        os.path.join(BASE_DIR, "**", "*.xlsx"),
-        os.path.join(BASE_DIR, "**", "*.csv"),
-        os.path.join(BASE_DIR, "**", "*.pdf"),
-        os.path.join(PROCESSED_DIR, "*.xlsx"),
-        os.path.join(PROCESSED_DIR, "*.csv"),
-        os.path.join(PROCESSED_DIR, "*.pdf")
-    ]
-    
-    for search_path in search_paths:
-        for file_path in glob.glob(search_path, recursive=True):
-            if os.path.isfile(file_path):
-                file_info = {
-                    'name': os.path.basename(file_path),
-                    'path': file_path,
-                    'size': os.path.getsize(file_path),
-                    'modified': os.path.getmtime(file_path),
-                    'relative_path': os.path.relpath(file_path, BASE_DIR)
-                }
-                download_files.append(file_info)
-    
-    # Sort by modification time (newest first)
-    download_files.sort(key=lambda x: x['modified'], reverse=True)
-    
-    return render_template("downloads.html", 
-                         files=download_files, 
-                         college=COLLEGE, 
-                         department=DEPARTMENT)
-
-@app.route("/download/<path:filename>")
-@login_required
-def download_file(filename):
-    """Download a specific file"""
-    try:
-        # Security check - ensure the file is within allowed directories
-        full_path = os.path.join(BASE_DIR, filename)
-        if not os.path.commonpath([os.path.abspath(full_path), os.path.abspath(BASE_DIR)]) == os.path.abspath(BASE_DIR):
-            flash("Access denied")
-            return redirect(url_for('list_downloads'))
-        
-        return send_file(full_path, as_attachment=True)
-    except Exception as e:
-        flash(f"Error downloading file: {str(e)}")
-        return redirect(url_for('list_downloads'))
-
-@app.route("/file-explorer")
-@login_required
-def file_explorer():
-    """File explorer to browse processed results"""
-    nd_sets = []
-    processed_files = []
-    
-    # Find ND sets
-    if os.path.exists(BASE_DIR):
-        for item in os.listdir(BASE_DIR):
-            item_path = os.path.join(BASE_DIR, item)
-            if os.path.isdir(item_path) and item.startswith('ND-'):
-                clean_results_path = os.path.join(item_path, "CLEAN_RESULTS")
-                if os.path.exists(clean_results_path):
-                    nd_sets.append({
-                        'name': item,
-                        'path': clean_results_path,
-                        'files': [f for f in os.listdir(clean_results_path) 
-                                 if f.endswith(('.xlsx', '.csv', '.pdf'))]
-                    })
-    
-    return render_template("file_explorer.html",
-                         nd_sets=nd_sets,
-                         college=COLLEGE,
-                         department=DEPARTMENT)
-
+# Keep existing file checking functions
 def check_exam_processor_files(input_dir):
     """Check for ND examination files - Railway compatible"""
     logger.info(f"Checking for exam files in: {input_dir}")
@@ -667,7 +799,7 @@ def run_script(script_name):
         
         if not check_input_files(input_dir, script_name):
             flash(f"No input files found for {script_desc}. Please upload files to the appropriate directory.")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("upload_center"))
 
         # Handle exam processor with form parameters
         if script_name == "exam_processor" and request.method == "POST":
@@ -803,6 +935,35 @@ def handle_exam_processor(script_path, script_name, input_dir):
         flash(f"Error running exam processor: {str(e)}")
     
     return redirect(url_for("dashboard"))
+
+# Keep existing routes for backward compatibility
+@app.route("/downloads")
+@login_required
+def list_downloads():
+    """Legacy download route - redirect to new download center"""
+    return redirect(url_for('download_center'))
+
+@app.route("/file-explorer")
+@login_required
+def file_explorer():
+    """Legacy file explorer route - redirect to new file browser"""
+    return redirect(url_for('file_browser'))
+
+@app.route("/download/<path:filename>")
+@login_required
+def download_file(filename):
+    """Download a specific file"""
+    try:
+        # Security check - ensure the file is within allowed directories
+        full_path = os.path.join(BASE_DIR, filename)
+        if not os.path.commonpath([os.path.abspath(full_path), os.path.abspath(BASE_DIR)]) == os.path.abspath(BASE_DIR):
+            flash("Access denied")
+            return redirect(url_for('download_center'))
+        
+        return send_file(full_path, as_attachment=True)
+    except Exception as e:
+        flash(f"Error downloading file: {str(e)}")
+        return redirect(url_for('download_center'))
 
 @app.route("/logout")
 @login_required

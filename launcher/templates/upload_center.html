@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Center - {{ college }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        .upload-center {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .upload-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #28a745;
+        }
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .upload-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+        .upload-card:hover {
+            border-color: #28a745;
+            background: #e9ecef;
+        }
+        .upload-card h4 {
+            margin: 15px 0 10px 0;
+            color: #333;
+        }
+        .upload-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .upload-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            width: 100%;
+        }
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+        <h2>FCTCNS</h2>
+        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+        <a href="{{ url_for('upload_center') }}" class="active">📤 Upload Center</a>
+        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
+        <a href="{{ url_for('file_browser') }}">📁 File Browser</a>
+        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content" id="main">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+        <!-- Header -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college }}</h1>
+                <h2>{{ department }}</h2>
+            </div>
+            <div class="header-right">
+                <p><strong>Unit:</strong> Examination</p>
+            </div>
+        </div>
+
+        <div class="upload-center">
+            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+            
+            <div class="upload-section">
+                <h2>📤 Upload Center</h2>
+                <p>Upload raw examination files for processing. Files are automatically organized in timestamped folders.</p>
+                
+                <div class="upload-grid">
+                    <div class="upload-card" id="nd-upload">
+                        <h4>🎓 ND Examination Files</h4>
+                        <p>Upload ND semester results for processing with GPA calculation</p>
+                        <a href="{{ url_for('upload_files', script_name='exam_processor') }}" class="upload-btn">
+                            Upload ND Files
+                        </a>
+                    </div>
+                    
+                    <div class="upload-card">
+                        <h4>📘 PUTME Files</h4>
+                        <p>Upload Post-UTME examination results</p>
+                        <a href="{{ url_for('upload_files', script_name='utme') }}" class="upload-btn">
+                            Upload PUTME
+                        </a>
+                    </div>
+                    
+                    <div class="upload-card">
+                        <h4>📊 CAOSCE Files</h4>
+                        <p>Upload CAOSCE examination results</p>
+                        <a href="{{ url_for('upload_files', script_name='caosce') }}" class="upload-btn">
+                            Upload CAOSCE
+                        </a>
+                    </div>
+                    
+                    <div class="upload-card">
+                        <h4>📝 Internal Exams</h4>
+                        <p>Upload internal objective examination files</p>
+                        <a href="{{ url_for('upload_files', script_name='clean') }}" class="upload-btn">
+                            Upload Internal
+                        </a>
+                    </div>
+                    
+                    <div class="upload-card">
+                        <h4>👥 JAMB Database</h4>
+                        <p>Upload JAMB candidate database files</p>
+                        <a href="{{ url_for('upload_files', script_name='split') }}" class="upload-btn">
+                            Upload JAMB
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <h3>📋 Upload Instructions</h3>
+                <ol style="text-align: left; line-height: 1.6;">
+                    <li><strong>Select the exam type</strong> you want to upload files for</li>
+                    <li><strong>Choose your files</strong> - Excel (.xlsx, .xls) or CSV format</li>
+                    <li>Files are <strong>automatically organized</strong> in timestamped folders</li>
+                    <li>After uploading, go to <strong>Dashboard → Process Examination Results</strong></li>
+                    <li>Once processed, download results from <strong>Download Center</strong></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>
