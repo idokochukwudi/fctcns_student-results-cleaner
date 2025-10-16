@@ -16,11 +16,27 @@
         .upload-form {
             margin: 20px 0;
         }
-        .file-input {
+        .form-group {
             margin: 15px 0;
         }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input[type="file"] {
+            padding: 8px;
+        }
         .submit-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             border: none;
             padding: 12px 30px;
@@ -44,6 +60,11 @@
             display: inline-block;
             margin-bottom: 20px;
         }
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -51,13 +72,11 @@
     <div class="sidebar" id="sidebar">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
         <h2>FCTCNS</h2>
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('run_script', script_name='utme') }}">PUTME</a>
-        <a href="{{ url_for('run_script', script_name='caosce') }}">CAOSCE</a>
-        <a href="{{ url_for('run_script', script_name='clean') }}">Internal Exams</a>
-        <a href="{{ url_for('run_script', script_name='split') }}">JAMB Database</a>
-        <a href="{{ url_for('run_script', script_name='exam_processor') }}">ND Exam Processor</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
+        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
+        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
+        <a href="{{ url_for('file_browser') }}">📁 File Browser</a>
+        <a href="{{ url_for('logout') }}">🚪 Logout</a>
     </div>
 
     <!-- Main content -->
@@ -76,20 +95,44 @@
         </div>
 
         <div class="upload-container">
-            <a href="{{ url_for('dashboard') }}" class="back-btn">← Back to Dashboard</a>
+            <a href="{{ url_for('upload_center') }}" class="back-btn">← Back to Upload Center</a>
             
             <h2>{{ script_desc }}</h2>
-            <p>Upload file for processing:</p>
+            <p>Upload files for processing:</p>
             
             <form method="POST" enctype="multipart/form-data" class="upload-form">
-                <div class="file-input">
-                    <label for="file"><strong>Select File:</strong></label>
-                    <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv,.zip" required>
-                    <small>Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)</small>
+                {% if script_name == "exam_processor" and nd_sets %}
+                <div class="form-group">
+                    <label for="nd_set"><strong>Select ND Set:</strong></label>
+                    <select name="nd_set" id="nd_set" required>
+                        <option value="">-- Select ND Set --</option>
+                        {% for nd_set in nd_sets %}
+                        <option value="{{ nd_set }}">{{ nd_set }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text">Select the ND set where you want to upload files</div>
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="files"><strong>Select Files:</strong></label>
+                    <input type="file" name="files" id="files" accept=".xlsx,.xls,.csv,.zip" multiple required>
+                    <div class="help-text">You can select multiple files. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)</div>
                 </div>
                 
-                <button type="submit" class="submit-btn">Upload and Process</button>
+                <button type="submit" class="submit-btn">Upload Files</button>
             </form>
+
+            <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                <h4>📋 Upload Instructions</h4>
+                <ul style="text-align: left; line-height: 1.6;">
+                    <li>Select the appropriate ND set (for ND examinations)</li>
+                    <li>Choose one or multiple files to upload</li>
+                    <li>Files will be saved directly to the RAW_RESULTS directory</li>
+                    <li>After uploading, go to <strong>Dashboard</strong> to process the files</li>
+                    <li>Processed files will be available in the <strong>Download Center</strong></li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -100,6 +143,15 @@
             sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
         }
+
+        // Show file count when files are selected
+        document.getElementById('files').addEventListener('change', function(e) {
+            const fileCount = e.target.files.length;
+            if (fileCount > 0) {
+                const helpText = document.querySelector('.help-text');
+                helpText.textContent = `${fileCount} file(s) selected. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)`;
+            }
+        });
     </script>
 </body>
 </html>

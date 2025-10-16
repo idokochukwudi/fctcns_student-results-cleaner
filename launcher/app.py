@@ -167,42 +167,52 @@ def dashboard():
 @login_required
 def upload_center():
     """Central upload hub for all file types"""
-    return render_template("upload_center.html", college=COLLEGE, department=DEPARTMENT)
+    # Get available ND sets for the dropdown
+    nd_sets = []
+    if os.path.exists(BASE_DIR):
+        for item in os.listdir(BASE_DIR):
+            item_path = os.path.join(BASE_DIR, item)
+            if os.path.isdir(item_path) and item.startswith('ND-'):
+                nd_sets.append(item)
+    
+    return render_template("upload_center.html", college=COLLEGE, department=DEPARTMENT, nd_sets=nd_sets)
 
 @app.route("/download-center")
 @login_required
 def download_center():
     """Central download hub with organized files"""
-    files_by_category = get_organized_files()
-    return render_template("download_center.html", 
-                         files_by_category=files_by_category,
-                         college=COLLEGE, 
-                         department=DEPARTMENT)
+    try:
+        files_by_category = get_organized_files()
+        return render_template("download_center.html", 
+                             files_by_category=files_by_category,
+                             college=COLLEGE, 
+                             department=DEPARTMENT)
+    except Exception as e:
+        logger.error(f"Error in download_center: {e}")
+        flash("Error loading download center. Please try again.")
+        return redirect(url_for('dashboard'))
 
 @app.route("/file-browser")
 @login_required
 def file_browser():
     """Browse files by category and type"""
-    file_structure = get_file_structure()
-    return render_template("file_browser.html",
-                         file_structure=file_structure,
-                         college=COLLEGE,
-                         department=DEPARTMENT)
-
-@app.route("/download-zip/<category>/<folder_name>")
-@login_required
-def download_zip(category, folder_name):
-    """Download entire folder as ZIP"""
     try:
-        # Security check
-        if category not in ['nd_sets', 'processed', 'raw']:
-            flash("Invalid category")
-            return redirect(url_for('download_center'))
-        
-        if category == 'nd_sets':
-            zip_path = create_nd_set_zip(folder_name)
-        else:
-            zip_path = create_category_zip(category, folder_name)
+        file_structure = get_file_structure()
+        return render_template("file_browser.html",
+                             file_structure=file_structure,
+                             college=COLLEGE,
+                             department=DEPARTMENT)
+    except Exception as e:
+        logger.error(f"Error in file_browser: {e}")
+        flash("Error loading file browser. Please try again.")
+        return redirect(url_for('dashboard'))
+
+@app.route("/download-zip/<nd_set_name>")
+@login_required
+def download_zip(nd_set_name):
+    """Download entire ND set as ZIP"""
+    try:
+        zip_path = create_nd_set_zip(nd_set_name)
         
         if zip_path and os.path.exists(zip_path):
             return send_file(zip_path, as_attachment=True)
@@ -226,44 +236,70 @@ def get_organized_files():
         'raw_files': []
     }
     
-    # Find ND processed files
-    nd_pattern = os.path.join(BASE_DIR, "**", "*.xlsx")
-    for file_path in glob.glob(nd_pattern, recursive=True):
-        if 'CLEAN_RESULTS' in file_path or 'PROCESSED' in file_path or 'MASTERSHEET' in file_path:
-            rel_path = os.path.relpath(file_path, BASE_DIR)
-            files_by_category['nd_results'].append({
-                'name': os.path.basename(file_path),
-                'path': file_path,
-                'relative_path': rel_path,
-                'size': os.path.getsize(file_path),
-                'modified': os.path.getmtime(file_path),
-                'folder': os.path.dirname(rel_path)
-            })
-    
-    # Find other processed files
-    other_patterns = [
-        (os.path.join(BASE_DIR, "**", "*UTME*.*"), 'putme_results'),
-        (os.path.join(BASE_DIR, "**", "*CAOSCE*.*"), 'caosce_results'),
-        (os.path.join(BASE_DIR, "**", "*CLEAN*.*"), 'internal_results'),
-        (os.path.join(BASE_DIR, "**", "*JAMB*.*"), 'jamb_results'),
-    ]
-    
-    for pattern, category in other_patterns:
-        for file_path in glob.glob(pattern, recursive=True):
-            if not file_path.startswith('~'):  # Skip temporary files
-                rel_path = os.path.relpath(file_path, BASE_DIR)
-                files_by_category[category].append({
-                    'name': os.path.basename(file_path),
-                    'path': file_path,
-                    'relative_path': rel_path,
-                    'size': os.path.getsize(file_path),
-                    'modified': os.path.getmtime(file_path),
-                    'folder': os.path.dirname(rel_path)
-                })
-    
-    # Sort by modification time (newest first)
-    for category in files_by_category:
-        files_by_category[category].sort(key=lambda x: x['modified'], reverse=True)
+    try:
+        # Find ND processed files
+        if os.path.exists(BASE_DIR):
+            for root, dirs, files in os.walk(BASE_DIR):
+                for file in files:
+                    if file.startswith('~'):  # Skip temporary files
+                        continue
+                    
+                    file_path = os.path.join(root, file)
+                    rel_path = os.path.relpath(file_path, BASE_DIR)
+                    
+                    # Categorize files
+                    if 'CLEAN_RESULTS' in file_path or 'PROCESSED' in file_path or 'MASTERSHEET' in file_path:
+                        files_by_category['nd_results'].append({
+                            'name': file,
+                            'path': file_path,
+                            'relative_path': rel_path,
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path),
+                            'folder': os.path.dirname(rel_path)
+                        })
+                    elif 'UTME' in file.upper():
+                        files_by_category['putme_results'].append({
+                            'name': file,
+                            'path': file_path,
+                            'relative_path': rel_path,
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path),
+                            'folder': os.path.dirname(rel_path)
+                        })
+                    elif 'CAOSCE' in file.upper():
+                        files_by_category['caosce_results'].append({
+                            'name': file,
+                            'path': file_path,
+                            'relative_path': rel_path,
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path),
+                            'folder': os.path.dirname(rel_path)
+                        })
+                    elif 'CLEAN' in file.upper() or 'MASTER' in file.upper():
+                        files_by_category['internal_results'].append({
+                            'name': file,
+                            'path': file_path,
+                            'relative_path': rel_path,
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path),
+                            'folder': os.path.dirname(rel_path)
+                        })
+                    elif 'JAMB' in file.upper():
+                        files_by_category['jamb_results'].append({
+                            'name': file,
+                            'path': file_path,
+                            'relative_path': rel_path,
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path),
+                            'folder': os.path.dirname(rel_path)
+                        })
+        
+        # Sort by modification time (newest first)
+        for category in files_by_category:
+            files_by_category[category].sort(key=lambda x: x['modified'], reverse=True)
+            
+    except Exception as e:
+        logger.error(f"Error in get_organized_files: {e}")
     
     return files_by_category
 
@@ -275,125 +311,144 @@ def get_file_structure():
         'raw_files': []
     }
     
-    # ND Sets with CLEAN_RESULTS
-    if os.path.exists(BASE_DIR):
-        for item in os.listdir(BASE_DIR):
-            item_path = os.path.join(BASE_DIR, item)
-            if os.path.isdir(item_path) and item.startswith('ND-'):
-                clean_path = os.path.join(item_path, "CLEAN_RESULTS")
-                raw_path = os.path.join(item_path, "RAW_RESULTS")
-                
-                nd_set = {
-                    'name': item,
-                    'clean_results': [],
-                    'raw_files': []
-                }
-                
-                # Get clean results
-                if os.path.exists(clean_path):
-                    for file in os.listdir(clean_path):
-                        if file.endswith(('.xlsx', '.csv', '.pdf')) and not file.startswith('~'):
-                            file_path = os.path.join(clean_path, file)
-                            nd_set['clean_results'].append({
-                                'name': file,
-                                'path': file_path,
-                                'size': os.path.getsize(file_path),
-                                'modified': os.path.getmtime(file_path)
-                            })
-                
-                # Get raw files
-                if os.path.exists(raw_path):
-                    for file in os.listdir(raw_path):
-                        if file.endswith(('.xlsx', '.xls', '.csv')) and not file.startswith('~'):
-                            file_path = os.path.join(raw_path, file)
-                            nd_set['raw_files'].append({
-                                'name': file,
-                                'path': file_path,
-                                'size': os.path.getsize(file_path),
-                                'modified': os.path.getmtime(file_path)
-                            })
-                
-                # Sort files by modification time
-                nd_set['clean_results'].sort(key=lambda x: x['modified'], reverse=True)
-                nd_set['raw_files'].sort(key=lambda x: x['modified'], reverse=True)
-                
-                structure['nd_sets'].append(nd_set)
+    try:
+        # ND Sets with CLEAN_RESULTS
+        if os.path.exists(BASE_DIR):
+            for item in os.listdir(BASE_DIR):
+                item_path = os.path.join(BASE_DIR, item)
+                if os.path.isdir(item_path) and item.startswith('ND-'):
+                    clean_path = os.path.join(item_path, "CLEAN_RESULTS")
+                    raw_path = os.path.join(item_path, "RAW_RESULTS")
+                    
+                    nd_set = {
+                        'name': item,
+                        'clean_results': [],
+                        'raw_files': []
+                    }
+                    
+                    # Get clean results
+                    if os.path.exists(clean_path):
+                        for file in os.listdir(clean_path):
+                            if file.endswith(('.xlsx', '.csv', '.pdf')) and not file.startswith('~'):
+                                file_path = os.path.join(clean_path, file)
+                                nd_set['clean_results'].append({
+                                    'name': file,
+                                    'path': file_path,
+                                    'size': os.path.getsize(file_path),
+                                    'modified': os.path.getmtime(file_path)
+                                })
+                    
+                    # Get raw files
+                    if os.path.exists(raw_path):
+                        for file in os.listdir(raw_path):
+                            if file.endswith(('.xlsx', '.xls', '.csv')) and not file.startswith('~'):
+                                file_path = os.path.join(raw_path, file)
+                                nd_set['raw_files'].append({
+                                    'name': file,
+                                    'path': file_path,
+                                    'size': os.path.getsize(file_path),
+                                    'modified': os.path.getmtime(file_path)
+                                })
+                    
+                    # Sort files by modification time
+                    nd_set['clean_results'].sort(key=lambda x: x['modified'], reverse=True)
+                    nd_set['raw_files'].sort(key=lambda x: x['modified'], reverse=True)
+                    
+                    structure['nd_sets'].append(nd_set)
+                    
+    except Exception as e:
+        logger.error(f"Error in get_file_structure: {e}")
     
     return structure
 
 def create_nd_set_zip(nd_set_name):
     """Create ZIP for entire ND set"""
-    nd_set_path = os.path.join(BASE_DIR, nd_set_name)
-    if not os.path.exists(nd_set_path):
-        return None
-    
-    zip_filename = f"{nd_set_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
-    zip_path = os.path.join(PROCESSED_DIR, zip_filename)
-    
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
-        # Add CLEAN_RESULTS
-        clean_path = os.path.join(nd_set_path, "CLEAN_RESULTS")
-        if os.path.exists(clean_path):
-            for root, dirs, files in os.walk(clean_path):
-                for file in files:
-                    if not file.startswith('~'):  # Skip temp files
-                        file_path = os.path.join(root, file)
-                        arcname = os.path.join(nd_set_name, "PROCESSED_RESULTS", file)
-                        zipf.write(file_path, arcname)
+    try:
+        nd_set_path = os.path.join(BASE_DIR, nd_set_name)
+        if not os.path.exists(nd_set_path):
+            return None
         
-        # Add RAW_RESULTS
-        raw_path = os.path.join(nd_set_path, "RAW_RESULTS")
-        if os.path.exists(raw_path):
-            for root, dirs, files in os.walk(raw_path):
-                for file in files:
-                    if not file.startswith('~'):  # Skip temp files
-                        file_path = os.path.join(root, file)
-                        arcname = os.path.join(nd_set_name, "RAW_FILES", file)
-                        zipf.write(file_path, arcname)
-    
-    return zip_path
+        zip_filename = f"{nd_set_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+        zip_path = os.path.join(PROCESSED_DIR, zip_filename)
+        
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            # Add CLEAN_RESULTS
+            clean_path = os.path.join(nd_set_path, "CLEAN_RESULTS")
+            if os.path.exists(clean_path):
+                for root, dirs, files in os.walk(clean_path):
+                    for file in files:
+                        if not file.startswith('~'):  # Skip temp files
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.join(nd_set_name, "PROCESSED_RESULTS", file)
+                            zipf.write(file_path, arcname)
+            
+            # Add RAW_RESULTS
+            raw_path = os.path.join(nd_set_path, "RAW_RESULTS")
+            if os.path.exists(raw_path):
+                for root, dirs, files in os.walk(raw_path):
+                    for file in files:
+                        if not file.startswith('~'):  # Skip temp files
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.join(nd_set_name, "RAW_FILES", file)
+                            zipf.write(file_path, arcname)
+        
+        return zip_path
+    except Exception as e:
+        logger.error(f"Error creating zip: {e}")
+        return None
 
-def create_category_zip(category, folder_name):
-    """Create ZIP for specific category"""
-    # This function can be expanded for other categories
-    zip_filename = f"{category}_{folder_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
-    zip_path = os.path.join(PROCESSED_DIR, zip_filename)
-    
-    # For now, return None - can be implemented for other categories
-    return None
-
-# Update the existing upload function to create timestamped folders
+# UPDATED: Upload function with ND set selection and multiple files
 @app.route("/upload/<script_name>", methods=["GET", "POST"])
 @login_required
 def upload_files(script_name):
-    """Handle file uploads with timestamped organization"""
+    """Handle file uploads with ND set selection and multiple files"""
     if request.method == "POST":
-        if 'file' not in request.files:
-            flash('No file selected')
+        # Get selected ND set for exam_processor
+        selected_set = request.form.get("nd_set", "ND-2024")
+        
+        # Check if files were uploaded
+        if 'files' not in request.files:
+            flash('No files selected')
             return redirect(request.url)
         
-        file = request.files['file']
-        if file.filename == '':
-            flash('No file selected')
-            return redirect(request.url)
+        files = request.files.getlist('files')
+        uploaded_count = 0
         
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            upload_path = get_upload_directory(script_name)
+        for file in files:
+            if file.filename == '':
+                continue
             
-            # Create timestamped folder
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M")
-            timestamped_path = os.path.join(upload_path, timestamp)
-            os.makedirs(timestamped_path, exist_ok=True)
-            
-            file_path = os.path.join(timestamped_path, filename)
-            file.save(file_path)
-            
-            flash(f'File "{filename}" uploaded successfully to {timestamp} folder!')
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                
+                # Get upload directory based on script type
+                if script_name == "exam_processor":
+                    # For ND exams, use the selected set's RAW_RESULTS directory
+                    upload_path = os.path.join(BASE_DIR, selected_set, "RAW_RESULTS")
+                else:
+                    upload_path = get_upload_directory(script_name)
+                
+                # Ensure the directory exists
+                os.makedirs(upload_path, exist_ok=True)
+                
+                # Save file directly to the raw directory (no timestamped folders)
+                file_path = os.path.join(upload_path, filename)
+                file.save(file_path)
+                uploaded_count += 1
+            else:
+                flash(f'Invalid file type for {file.filename}. Allowed: xlsx, xls, csv, zip')
+        
+        if uploaded_count > 0:
+            if script_name == "exam_processor":
+                flash(f'Successfully uploaded {uploaded_count} file(s) to {selected_set} RAW_RESULTS!')
+            else:
+                flash(f'Successfully uploaded {uploaded_count} file(s)!')
             return redirect(url_for('upload_center'))
         else:
-            flash('Invalid file type. Allowed: xlsx, xls, csv, zip')
+            flash('No valid files were uploaded.')
+            return redirect(request.url)
     
+    # GET request - show upload form
     script_descriptions = {
         "utme": "PUTME Examination Results",
         "caosce": "CAOSCE Examination Results", 
@@ -403,11 +458,21 @@ def upload_files(script_name):
     }
     
     script_desc = script_descriptions.get(script_name, "Script")
+    
+    # Get available ND sets for the dropdown (only for exam_processor)
+    nd_sets = []
+    if script_name == "exam_processor" and os.path.exists(BASE_DIR):
+        for item in os.listdir(BASE_DIR):
+            item_path = os.path.join(BASE_DIR, item)
+            if os.path.isdir(item_path) and item.startswith('ND-'):
+                nd_sets.append(item)
+    
     return render_template("upload_form.html", 
                          script_name=script_name, 
                          script_desc=script_desc,
                          college=COLLEGE, 
-                         department=DEPARTMENT)
+                         department=DEPARTMENT,
+                         nd_sets=nd_sets)
 
 def get_upload_directory(script_name):
     """Get the appropriate upload directory for each script type"""
@@ -416,22 +481,7 @@ def get_upload_directory(script_name):
     if is_railway:
         # Railway paths
         base_dir = '/app/EXAMS_INTERNAL'
-        if script_name == "exam_processor":
-            # For exam processor, create or use ND set directory
-            nd_sets = [d for d in os.listdir(base_dir) if d.startswith('ND-') and os.path.isdir(os.path.join(base_dir, d))]
-            if nd_sets:
-                # Use the first ND set found
-                nd_set = nd_sets[0]
-                upload_path = os.path.join(base_dir, nd_set, "RAW_RESULTS")
-                os.makedirs(upload_path, exist_ok=True)
-                return upload_path
-            else:
-                # Create a default ND set
-                default_set = "ND-2024"
-                upload_path = os.path.join(base_dir, default_set, "RAW_RESULTS")
-                os.makedirs(upload_path, exist_ok=True)
-                return upload_path
-        elif script_name == "utme":
+        if script_name == "utme":
             upload_path = os.path.join(base_dir, "PUTME_RESULT", "RAW_PUTME_RESULT")
         elif script_name == "caosce":
             upload_path = os.path.join(base_dir, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
@@ -443,9 +493,7 @@ def get_upload_directory(script_name):
             upload_path = '/tmp/uploads'
     else:
         # Local development paths
-        if script_name == "exam_processor":
-            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL/ND-2024/RAW_RESULTS"
-        elif script_name == "utme":
+        if script_name == "utme":
             upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT"
         elif script_name == "caosce":
             upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
