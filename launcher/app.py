@@ -457,11 +457,38 @@ def run_script(script_name):
 
         script_path = script_paths[script_name]
         
+        # ===== ADD THIS DEBUGGING CODE RIGHT HERE =====
+        logger.info(f"=== RUN_SCRIPT DEBUG ===")
+        logger.info(f"Script name: {script_name}")
+        logger.info(f"Request method: {request.method}")
+        logger.info(f"Available scripts: {list(script_paths.keys())}")
+        logger.info(f"Exam processor path: {script_paths.get('exam_processor')}")
+        logger.info(f"Script exists: {os.path.exists(script_path)}")
+        # ===== END DEBUGGING =====
+        
         # Check if the path is valid
         if script_path.startswith('MISSING:') or not os.path.exists(script_path):
             logger.error(f"Script path invalid: {script_path}")
             flash(f"Script file not found at: {script_path}")
             return redirect(url_for("dashboard"))
+        except Exception as e:
+            # ===== ADD THIS COMPREHENSIVE ERROR HANDLING =====
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"CRITICAL ERROR in run_script: {error_details}")
+            
+            # Return detailed error for debugging
+            return f"""
+            <h1>Internal Server Error - Debug Info</h1>
+            <h3>Error Details:</h3>
+            <pre>{error_details}</pre>
+            <h3>Script Info:</h3>
+            <p>Script: {script_name}</p>
+            <p>Path: {script_path if 'script_path' in locals() else 'NOT FOUND'}</p>
+            <p>Method: {request.method}</p>
+            <br>
+            <a href="{url_for('dashboard')}">Back to Dashboard</a>
+            """, 500
 
         script_desc = {
             "utme": "PUTME Examination Results",
