@@ -12,10 +12,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def is_running_on_railway():
-    """Check if running on Railway platform"""
-    return 'RAILWAY_ENVIRONMENT' in os.environ
-    
+is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
+
 # Railway-specific logging
 if os.getenv('RAILWAY_ENVIRONMENT'):
     # Enable more verbose logging on Railway
@@ -43,51 +41,32 @@ PASSWORD = os.getenv("STUDENT_CLEANER_PASSWORD", "admin")
 COLLEGE = os.getenv("COLLEGE_NAME", "FCT College of Nursing Sciences, Gwagwalada")
 DEPARTMENT = os.getenv("DEPARTMENT", "Examinations Office")
 
+def is_running_on_railway():
+    """Check if running on Railway platform"""
+    return 'RAILWAY_ENVIRONMENT' in os.environ
+
 # Railway-compatible directory setup
 def setup_railway_directories():
     """Create necessary directories - works for both local and Railway"""
-    # Use environment variables with local fallbacks
-    base_dir = os.getenv('BASE_DIR')
-    upload_dir = os.getenv('UPLOAD_DIR')
-    processed_dir = os.getenv('PROCESSED_DIR')
+    # Simple approach - use environment variables or fallbacks
+    is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
     
-    # Local development paths
-    if not base_dir or not is_running_on_railway():
-        # Use local paths when not on Railway
-        base_dir = os.path.join(os.path.dirname(__file__), '..', 'EXAMS_INTERNAL')
-        upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
-        processed_dir = os.path.join(os.path.dirname(__file__), '..', 'processed')
+    if is_railway:
+        base_dir = os.getenv('BASE_DIR', '/app/EXAMS_INTERNAL')
+        upload_dir = os.getenv('UPLOAD_DIR', '/tmp/uploads')
+        processed_dir = os.getenv('PROCESSED_DIR', '/tmp/processed')
+    else:
+        base_dir = os.getenv('BASE_DIR', "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL")
+        upload_dir = os.getenv('UPLOAD_DIR', "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/uploads")
+        processed_dir = os.getenv('PROCESSED_DIR', "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/processed")
     
     # Create directories
-    directories = [base_dir, upload_dir, processed_dir]
-    
-    for directory in directories:
-        try:
-            os.makedirs(directory, exist_ok=True)
-            logger.info(f"Ensured directory exists: {directory}")
-        except PermissionError as e:
-            logger.warning(f"Could not create directory {directory}: {e}")
-            # Fallback to current directory if permission denied
-            if directory == base_dir:
-                base_dir = os.path.join(os.path.dirname(__file__), 'EXAMS_INTERNAL')
-                os.makedirs(base_dir, exist_ok=True)
-    
-    # Create ND sets structure
-    nd_sets = ['ND-2024', 'ND-2025']
-    for nd_set in nd_sets:
-        set_path = os.path.join(base_dir, nd_set)
-        raw_results_path = os.path.join(set_path, 'RAW_RESULTS')
-        clean_results_path = os.path.join(set_path, 'CLEAN_RESULTS')
-        
-        try:
-            os.makedirs(raw_results_path, exist_ok=True)
-            os.makedirs(clean_results_path, exist_ok=True)
-        except PermissionError:
-            logger.warning(f"Could not create ND set directories for {nd_set}")
+    for directory in [base_dir, upload_dir, processed_dir]:
+        os.makedirs(directory, exist_ok=True)
+        logger.info(f"Ensured directory exists: {directory}")
     
     return base_dir, upload_dir, processed_dir
 
-# Setup directories on startup
 # Setup directories on startup - with error handling
 try:
     BASE_DIR, UPLOAD_DIR, PROCESSED_DIR = setup_railway_directories()
@@ -173,10 +152,6 @@ def login():
 def dashboard():
     environment = "Railway Production" if is_running_on_railway() else "Local Development"
     return render_template("dashboard.html", college=COLLEGE, DEPARTMENT=DEPARTMENT, environment=environment)
-
-def is_running_on_railway():
-    """Check if running on Railway platform"""
-    return 'RAILWAY_ENVIRONMENT' in os.environ
 
 def check_exam_processor_files(input_dir):
     """Check for ND examination files - Railway compatible"""
@@ -299,39 +274,39 @@ def count_processed_files(output_lines, script_name, selected_semesters=None):
     
     # Log all output lines for debugging
     print(f"Raw output lines for {script_name}:")
-    for output_line in output_lines:  # Changed 'line' to 'output_line' to avoid conflict
+    for output_line in output_lines:
         if output_line.strip():
             print(f"  OUTPUT: {output_line}")
     
-    for output_line in output_lines:  # Changed 'line' to 'output_line'
+    for output_line in output_lines:
         for indicator in success_indicators:
-            match = re.search(indicator, output_line, re.IGNORECASE)  # Changed 'line' to 'output_line'
+            match = re.search(indicator, output_line, re.IGNORECASE)
             if match:
                 if script_name == "utme":
-                    if "Processing:" in output_line:  # Changed 'line' to 'output_line'
+                    if "Processing:" in output_line:
                         file_name = match.group(1)
                         processed_files_set.add(f"Processed: {file_name}")
-                    elif "Saved processed file:" in output_line:  # Changed 'line' to 'output_line'
+                    elif "Saved processed file:" in output_line:
                         file_name = match.group(1)
                         processed_files_set.add(f"Saved: {file_name}")
                 elif script_name == "clean":
-                    if "Processing:" in output_line:  # Changed 'line' to 'output_line'
+                    if "Processing:" in output_line:
                         file_name = match.group(1)
                         processed_files_set.add(f"Processed: {file_name}")
-                    elif "✅ Cleaned CSV saved" in output_line:  # Changed 'line' to 'output_line'
+                    elif "✅ Cleaned CSV saved" in output_line:
                         file_name = match.group(1) if match.groups() else "cleaned_file"
                         processed_files_set.add(f"Cleaned: {file_name}")
-                    elif "🎉 Master CSV saved" in output_line:  # Changed 'line' to 'output_line'
+                    elif "🎉 Master CSV saved" in output_line:
                         processed_files_set.add("Master file created")
-                    elif "✅ All processing completed successfully!" in output_line:  # Changed 'line' to 'output_line'
+                    elif "✅ All processing completed successfully!" in output_line:
                         processed_files_set.add("Processing completed")
                 elif script_name == "exam_processor":
                     # Only count semesters explicitly processed
-                    if "PROCESSING SEMESTER:" in output_line:  # Changed 'line' to 'output_line'
+                    if "PROCESSING SEMESTER:" in output_line:
                         semester = match.group(1)
                         processed_files_set.add(f"Semester: {semester}")
                 else:
-                    file_name = match.group(1) if match.groups() else output_line  # Changed 'line' to 'output_line'
+                    file_name = match.group(1) if match.groups() else output_line
                     processed_files_set.add(file_name)
     
     # For exam_processor in manual mode, strictly validate against selected semesters
@@ -415,18 +390,25 @@ def get_success_message(script_name, processed_files, output_lines, selected_sem
 
 def get_script_paths():
     """Get script paths that work in both local and Railway environments"""
+    is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     script_paths = {}
     
     for script_name, relative_path in SCRIPT_MAP.items():
-        # Try multiple possible locations
-        possible_paths = [
-            os.path.join(project_root, relative_path),  # Local development
-            os.path.join(project_root, 'student_result_cleaner', relative_path),  # Subdirectory
-            os.path.join('/app', relative_path),  # Railway root
-            os.path.join('/app', 'launcher', relative_path),  # Railway launcher
-            os.path.join('/app', 'student_result_cleaner', relative_path),  # Railway subdirectory
-        ]
+        if is_railway:
+            # Railway paths
+            possible_paths = [
+                os.path.join('/app', relative_path),  # Railway root
+                os.path.join('/app', 'scripts', os.path.basename(relative_path)),  # Direct scripts folder
+                os.path.join('/app', 'student_result_cleaner', relative_path),  # Railway subdirectory
+            ]
+        else:
+            # Local development paths
+            possible_paths = [
+                os.path.join(project_root, relative_path),  # Local development
+                os.path.join(project_root, 'scripts', os.path.basename(relative_path)),  # Local scripts folder
+                os.path.join('/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT', 'scripts', os.path.basename(relative_path)),  # Absolute local path
+            ]
         
         found_path = None
         for path in possible_paths:
@@ -439,7 +421,6 @@ def get_script_paths():
             script_paths[script_name] = found_path
         else:
             logger.error(f"Script not found: {script_name} at any of {possible_paths}")
-            # Return a helpful error path for debugging
             script_paths[script_name] = f"MISSING: {relative_path}"
     
     return script_paths
@@ -481,14 +462,27 @@ def run_script(script_name):
 
         logger.info(f"Running script: {script_name} from {script_path}")
 
-        # Railway-compatible input directories
-        input_dirs = {
-            "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
-            "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT"),
-            "clean": os.path.join(BASE_DIR, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT"),
-            "split": os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB"),
-            "exam_processor": BASE_DIR
-        }
+        # Dynamic input directories that work for both local and Railway
+        is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
+
+        if is_railway:
+            # Railway paths
+            input_dirs = {
+                "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
+                "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT"),
+                "clean": os.path.join(BASE_DIR, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT"),
+                "split": os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB"),
+                "exam_processor": BASE_DIR
+            }
+        else:
+            # Local development paths - your existing local paths
+            input_dirs = {
+                "utme": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/PUTME_RESULT/RAW_PUTME_RESULT",
+                "caosce": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT",
+                "clean": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/INTERNAL_RESULT/RAW_INTERNAL_RESULT",
+                "split": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB",
+                "exam_processor": "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL"
+            }
         
         input_dir = input_dirs.get(script_name, BASE_DIR)
         
@@ -562,84 +556,6 @@ def run_script(script_name):
         <br>
         <a href="{url_for('dashboard')}">Back to Dashboard</a>
         """, 500
-        script_desc = {
-            "utme": "PUTME Examination Results",
-            "caosce": "CAOSCE Examination Results", 
-            "clean": "Objective Examination Results",
-            "split": "JAMB Candidate Database",
-            "exam_processor": "ND Examination Results Processor"
-        }.get(script_name, "Script")
-
-        logger.info(f"Running script: {script_name} from {script_path}")
-
-        # Railway-compatible input directories
-        input_dirs = {
-            "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
-            "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT"),
-            "clean": os.path.join(BASE_DIR, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT"),
-            "split": os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB"),
-            "exam_processor": BASE_DIR
-        }
-        
-        input_dir = input_dirs.get(script_name, BASE_DIR)
-        
-        # Create input directory if it doesn't exist
-        os.makedirs(input_dir, exist_ok=True)
-        
-        if not check_input_files(input_dir, script_name):
-            flash(f"No input files found for {script_desc}. Please upload files to the appropriate directory.")
-            return redirect(url_for("dashboard"))
-
-        # Handle exam processor with form parameters
-        if script_name == "exam_processor" and request.method == "POST":
-            return handle_exam_processor(script_path, script_name, input_dir)
-        
-        # For GET requests on exam_processor, show the form
-        if script_name == "exam_processor" and request.method == "GET":
-            nd_sets = []
-            if os.path.isdir(input_dir):
-                for item in os.listdir(input_dir):
-                    item_path = os.path.join(input_dir, item)
-                    if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
-                        nd_sets.append(item)
-            
-            return render_template(
-                "exam_processor_form.html", 
-                college=COLLEGE,
-                department=DEPARTMENT,
-                nd_sets=nd_sets
-            )
-        
-        # Run other scripts
-        try:
-            result = subprocess.run(
-                [sys.executable, script_path],
-                env=os.environ.copy(),
-                text=True,
-                capture_output=True,
-                timeout=600,
-                cwd=os.path.dirname(script_path)
-            )
-            
-            output_lines = result.stdout.splitlines() if result.stdout else []
-            processed_files = count_processed_files(output_lines, script_name)
-            success_msg = get_success_message(script_name, processed_files, output_lines)
-            
-            if success_msg:
-                flash(success_msg)
-            else:
-                flash(f"Script completed but no files processed for {script_desc}.")
-                
-        except subprocess.TimeoutExpired:
-            flash(f"Script timed out but may still be running in background.")
-        except subprocess.CalledProcessError as e:
-            flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
-            
-    except Exception as e:
-        logger.error(f"Server error: {e}")
-        flash(f"Server error processing {script_desc}: {str(e)}")
-    
-    return redirect(url_for("dashboard"))
 
 def handle_exam_processor(script_path, script_name, input_dir):
     """Handle exam processor execution with form parameters"""
@@ -710,7 +626,7 @@ def handle_exam_processor(script_path, script_name, input_dir):
     except Exception as e:
         flash(f"Error running exam processor: {str(e)}")
     
-    return None
+    return redirect(url_for("dashboard"))
 
 @app.route("/logout")
 @login_required
