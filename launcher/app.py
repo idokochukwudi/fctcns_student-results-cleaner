@@ -12,6 +12,25 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Railway-specific logging
+if os.getenv('RAILWAY_ENVIRONMENT'):
+    # Enable more verbose logging on Railway
+    logging.basicConfig(level=logging.DEBUG)
+    logger.setLevel(logging.DEBUG)
+    
+    # Log important startup information
+    logger.info("=== Railway Startup Debug ===")
+    logger.info(f"Current directory: {os.getcwd()}")
+    logger.info(f"Directory contents: {os.listdir('.')}")
+    
+    # Check for launcher directory
+    if os.path.exists('launcher'):
+        logger.info(f"Launcher contents: {os.listdir('launcher')}")
+    
+    # Check for scripts directory
+    if os.path.exists('scripts'):
+        logger.info(f"Scripts contents: {os.listdir('scripts')}")
+        
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET", "default_secret_key_1234567890")
 load_dotenv()
@@ -392,23 +411,32 @@ def get_success_message(script_name, processed_files, output_lines, selected_sem
 
 def get_script_paths():
     """Get script paths that work in both local and Railway environments"""
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     script_paths = {}
     
     for script_name, relative_path in SCRIPT_MAP.items():
         # Try multiple possible locations
         possible_paths = [
-            os.path.join(project_root, relative_path),
-            os.path.join(project_root, 'student_result_cleaner', relative_path),
-            os.path.join('/app', relative_path)
+            os.path.join(project_root, relative_path),  # Local development
+            os.path.join(project_root, 'student_result_cleaner', relative_path),  # Subdirectory
+            os.path.join('/app', relative_path),  # Railway root
+            os.path.join('/app', 'launcher', relative_path),  # Railway launcher
+            os.path.join('/app', 'student_result_cleaner', relative_path),  # Railway subdirectory
         ]
         
+        found_path = None
         for path in possible_paths:
             if os.path.exists(path):
-                script_paths[script_name] = path
+                found_path = path
+                logger.info(f"Found script {script_name} at: {path}")
                 break
+        
+        if found_path:
+            script_paths[script_name] = found_path
         else:
-            logger.warning(f"Script not found: {script_name} at any of {possible_paths}")
+            logger.error(f"Script not found: {script_name} at any of {possible_paths}")
+            # Return a helpful error path for debugging
+            script_paths[script_name] = f"MISSING: {relative_path}"
     
     return script_paths
 
@@ -419,10 +447,18 @@ def run_script(script_name):
         script_paths = get_script_paths()
         
         if script_name not in script_paths:
-            flash(f"Script '{script_name}' not found.")
+            logger.error(f"Script '{script_name}' not found in paths: {list(script_paths.keys())}")
+            flash(f"Script '{script_name}' not found. Available scripts: {', '.join(script_paths.keys())}")
             return redirect(url_for("dashboard"))
 
         script_path = script_paths[script_name]
+        
+        # Check if the path is valid
+        if script_path.startswith('MISSING:') or not os.path.exists(script_path):
+            logger.error(f"Script path invalid: {script_path}")
+            flash(f"Script file not found at: {script_path}")
+            return redirect(url_for("dashboard"))
+
         script_desc = {
             "utme": "PUTME Examination Results",
             "caosce": "CAOSCE Examination Results", 
@@ -584,6 +620,37 @@ def logout():
 def health_check():
     """Health check endpoint for Railway"""
     return {'status': 'healthy', 'environment': os.getenv('RAILWAY_ENVIRONMENT', 'unknown')}
+
+@app.route('/debug/paths')
+@login_required
+def debug_paths():
+    """Debug endpoint to check script paths"""
+    script_paths = get_script_paths()
+    path_info = []
+    
+    for name, path in script_paths.items():
+        exists = os.path.exists(path)
+        path_info.append({
+            'script': name,
+            'path': path,
+            'exists': exists,
+            'is_file': os.path.isfile(path) if exists else False
+        })
+    
+    return render_template('debug_paths.html', paths=path_info)
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint for Railway"""
+    script_paths = get_script_paths()
+    exam_processor_exists = os.path.exists(script_paths.get('exam_processor', ''))
+    
+    return {
+        'status': 'healthy' if exam_processor_exists else 'degraded',
+        'exam_processor_found': exam_processor_exists,
+        'environment': os.getenv('RAILWAY_ENVIRONMENT', 'unknown'),
+        'timestamp': datetime.now().isoformat()
+    }
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

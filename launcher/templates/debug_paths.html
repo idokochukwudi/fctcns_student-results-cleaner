@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug - Script Paths</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .path { margin: 10px 0; padding: 10px; border-left: 4px solid #ccc; }
+        .exists { border-left-color: green; }
+        .missing { border-left-color: red; }
+    </style>
+</head>
+<body>
+    <h1>Script Paths Debug</h1>
+    
+    {% for path in paths %}
+    <div class="path {% if path.exists %}exists{% else %}missing{% endif %}">
+        <strong>{{ path.script }}</strong><br>
+        Path: {{ path.path }}<br>
+        Exists: {{ path.exists }}<br>
+        Is File: {{ path.is_file }}
+    </div>
+    {% endfor %}
+    
+    <br>
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+</body>
+</html>
