@@ -22,17 +22,32 @@ DEPARTMENT = os.getenv("DEPARTMENT", "Examinations Office")
 
 # Railway-compatible directory setup
 def setup_railway_directories():
-    """Create necessary directories on Railway"""
-    base_dir = os.getenv('BASE_DIR', '/app/EXAMS_INTERNAL')
-    upload_dir = os.getenv('UPLOAD_DIR', '/tmp/uploads')
-    processed_dir = os.getenv('PROCESSED_DIR', '/tmp/processed')
+    """Create necessary directories - works for both local and Railway"""
+    # Use environment variables with local fallbacks
+    base_dir = os.getenv('BASE_DIR')
+    upload_dir = os.getenv('UPLOAD_DIR')
+    processed_dir = os.getenv('PROCESSED_DIR')
+    
+    # Local development paths
+    if not base_dir or not is_running_on_railway():
+        # Use local paths when not on Railway
+        base_dir = os.path.join(os.path.dirname(__file__), '..', 'EXAMS_INTERNAL')
+        upload_dir = os.path.join(os.path.dirname(__file__), '..', 'uploads')
+        processed_dir = os.path.join(os.path.dirname(__file__), '..', 'processed')
     
     # Create directories
     directories = [base_dir, upload_dir, processed_dir]
     
     for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-        logger.info(f"Ensured directory exists: {directory}")
+        try:
+            os.makedirs(directory, exist_ok=True)
+            logger.info(f"Ensured directory exists: {directory}")
+        except PermissionError as e:
+            logger.warning(f"Could not create directory {directory}: {e}")
+            # Fallback to current directory if permission denied
+            if directory == base_dir:
+                base_dir = os.path.join(os.path.dirname(__file__), 'EXAMS_INTERNAL')
+                os.makedirs(base_dir, exist_ok=True)
     
     # Create ND sets structure
     nd_sets = ['ND-2024', 'ND-2025']
@@ -41,13 +56,28 @@ def setup_railway_directories():
         raw_results_path = os.path.join(set_path, 'RAW_RESULTS')
         clean_results_path = os.path.join(set_path, 'CLEAN_RESULTS')
         
-        os.makedirs(raw_results_path, exist_ok=True)
-        os.makedirs(clean_results_path, exist_ok=True)
+        try:
+            os.makedirs(raw_results_path, exist_ok=True)
+            os.makedirs(clean_results_path, exist_ok=True)
+        except PermissionError:
+            logger.warning(f"Could not create ND set directories for {nd_set}")
     
     return base_dir, upload_dir, processed_dir
 
 # Setup directories on startup
-BASE_DIR, UPLOAD_DIR, PROCESSED_DIR = setup_railway_directories()
+# Setup directories on startup - with error handling
+try:
+    BASE_DIR, UPLOAD_DIR, PROCESSED_DIR = setup_railway_directories()
+    logger.info(f"Directories initialized: BASE_DIR={BASE_DIR}")
+except Exception as e:
+    logger.error(f"Failed to setup directories: {e}")
+    # Fallback to local directories
+    BASE_DIR = os.path.join(os.path.dirname(__file__), '..', 'EXAMS_INTERNAL')
+    UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'uploads') 
+    PROCESSED_DIR = os.path.join(os.path.dirname(__file__), '..', 'processed')
+    os.makedirs(BASE_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 SCRIPT_MAP = {
     "utme": "scripts/utme_result.py",
