@@ -1,0 +1,8 @@
+[phases.setup]
+cmds = [
+    "apt-get update",
+    "apt-get install -y python3-full"
+]
+
+[start]
+cmd = "cd launcher && python app.py"
