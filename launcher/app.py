@@ -457,39 +457,111 @@ def run_script(script_name):
 
         script_path = script_paths[script_name]
         
-        # ===== ADD THIS DEBUGGING CODE RIGHT HERE =====
+        # ===== DEBUGGING =====
         logger.info(f"=== RUN_SCRIPT DEBUG ===")
         logger.info(f"Script name: {script_name}")
         logger.info(f"Request method: {request.method}")
         logger.info(f"Available scripts: {list(script_paths.keys())}")
         logger.info(f"Exam processor path: {script_paths.get('exam_processor')}")
         logger.info(f"Script exists: {os.path.exists(script_path)}")
-        # ===== END DEBUGGING =====
         
         # Check if the path is valid
         if script_path.startswith('MISSING:') or not os.path.exists(script_path):
             logger.error(f"Script path invalid: {script_path}")
             flash(f"Script file not found at: {script_path}")
             return redirect(url_for("dashboard"))
-        except Exception as e:
-            # ===== ADD THIS COMPREHENSIVE ERROR HANDLING =====
-            import traceback
-            error_details = traceback.format_exc()
-            logger.error(f"CRITICAL ERROR in run_script: {error_details}")
-            
-            # Return detailed error for debugging
-            return f"""
-            <h1>Internal Server Error - Debug Info</h1>
-            <h3>Error Details:</h3>
-            <pre>{error_details}</pre>
-            <h3>Script Info:</h3>
-            <p>Script: {script_name}</p>
-            <p>Path: {script_path if 'script_path' in locals() else 'NOT FOUND'}</p>
-            <p>Method: {request.method}</p>
-            <br>
-            <a href="{url_for('dashboard')}">Back to Dashboard</a>
-            """, 500
 
+        script_desc = {
+            "utme": "PUTME Examination Results",
+            "caosce": "CAOSCE Examination Results", 
+            "clean": "Objective Examination Results",
+            "split": "JAMB Candidate Database",
+            "exam_processor": "ND Examination Results Processor"
+        }.get(script_name, "Script")
+
+        logger.info(f"Running script: {script_name} from {script_path}")
+
+        # Railway-compatible input directories
+        input_dirs = {
+            "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
+            "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT"),
+            "clean": os.path.join(BASE_DIR, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT"),
+            "split": os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB"),
+            "exam_processor": BASE_DIR
+        }
+        
+        input_dir = input_dirs.get(script_name, BASE_DIR)
+        
+        # Create input directory if it doesn't exist
+        os.makedirs(input_dir, exist_ok=True)
+        
+        if not check_input_files(input_dir, script_name):
+            flash(f"No input files found for {script_desc}. Please upload files to the appropriate directory.")
+            return redirect(url_for("dashboard"))
+
+        # Handle exam processor with form parameters
+        if script_name == "exam_processor" and request.method == "POST":
+            return handle_exam_processor(script_path, script_name, input_dir)
+        
+        # For GET requests on exam_processor, show the form
+        if script_name == "exam_processor" and request.method == "GET":
+            nd_sets = []
+            if os.path.isdir(input_dir):
+                for item in os.listdir(input_dir):
+                    item_path = os.path.join(input_dir, item)
+                    if os.path.isdir(item_path) and item.startswith('ND-') and item != 'ND-COURSES':
+                        nd_sets.append(item)
+            
+            return render_template(
+                "exam_processor_form.html", 
+                college=COLLEGE,
+                department=DEPARTMENT,
+                nd_sets=nd_sets
+            )
+        
+        # Run other scripts
+        try:
+            result = subprocess.run(
+                [sys.executable, script_path],
+                env=os.environ.copy(),
+                text=True,
+                capture_output=True,
+                timeout=600,
+                cwd=os.path.dirname(script_path)
+            )
+            
+            output_lines = result.stdout.splitlines() if result.stdout else []
+            processed_files = count_processed_files(output_lines, script_name)
+            success_msg = get_success_message(script_name, processed_files, output_lines)
+            
+            if success_msg:
+                flash(success_msg)
+            else:
+                flash(f"Script completed but no files processed for {script_desc}.")
+                
+        except subprocess.TimeoutExpired:
+            flash(f"Script timed out but may still be running in background.")
+        except subprocess.CalledProcessError as e:
+            flash(f"Error processing {script_desc}: {e.stderr or str(e)}")
+            
+        return redirect(url_for("dashboard"))
+        
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"CRITICAL ERROR in run_script: {error_details}")
+        
+        return f"""
+        <h1>Internal Server Error - Debug Info</h1>
+        <h3>Error Details:</h3>
+        <pre>{error_details}</pre>
+        <h3>Script Info:</h3>
+        <p>Script: {script_name}</p>
+        <p>Path: {script_path if 'script_path' in locals() else 'NOT FOUND'}</p>
+        <p>Method: {request.method}</p>
+        <br>
+        <a href="{url_for('dashboard')}">Back to Dashboard</a>
+        """, 500
         script_desc = {
             "utme": "PUTME Examination Results",
             "caosce": "CAOSCE Examination Results", 
