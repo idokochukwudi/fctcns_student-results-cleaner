@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Browser - {{ college }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        .browser-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .section-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        .nd-set {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .nd-set-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .nd-set-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+        }
+        .file-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            transition: all 0.3s ease;
+        }
+        .file-item:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+        }
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .file-meta {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 11px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        .empty-state i {
+            font-size: 36px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+        .accordion {
+            cursor: pointer;
+        }
+        .accordion-content {
+            display: none;
+            margin-top: 15px;
+        }
+        .accordion.active + .accordion-content {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+        <h2>FCTCNS</h2>
+        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
+        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
+        <a href="{{ url_for('file_browser') }}" class="active">📁 File Browser</a>
+        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content" id="main">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+        <!-- Header -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college }}</h1>
+                <h2>File Browser - Organized by ND Sets</h2>
+            </div>
+        </div>
+
+        <div class="browser-container">
+            <!-- ND Sets Section -->
+            <div class="section-card">
+                <h3>🎓 ND Examination Sets</h3>
+                <p>Browse processed results organized by ND examination sets</p>
+                
+                {% if file_structure.nd_sets %}
+                    {% for nd_set in file_structure.nd_sets %}
+                    <div class="nd-set">
+                        <div class="nd-set-header accordion">
+                            <div class="nd-set-name">📂 {{ nd_set.name }}</div>
+                            <div style="font-size: 0.9em; color: #666;">
+                                {{ nd_set.clean_results|length }} file(s) available
+                            </div>
+                        </div>
+                        <div class="accordion-content">
+                            {% if nd_set.clean_results %}
+                            <div class="file-list">
+                                {% for file in nd_set.clean_results %}
+                                <div class="file-item">
+                                    <div class="file-name">{{ file.name }}</div>
+                                    <div class="file-meta">
+                                        📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                        📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
+                                    </div>
+                                    <div class="file-actions">
+                                        <a href="{{ url_for('download_file', filename=file.path.replace(BASE_DIR + '/', '')) }}" class="btn btn-primary">Download</a>
+                                        {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                        <a href="{{ url_for('download_file', filename=file.path.replace(BASE_DIR + '/', '')) }}" class="btn btn-success" download>Excel</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div style="margin-top: 15px; text-align: center;">
+                                <a href="{{ url_for('download_zip', nd_set_name=nd_set.name) }}" class="btn btn-primary" style="padding: 8px 16px;">
+                                    📦 Download Entire Set as ZIP
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="empty-state">
+                                <div>📭</div>
+                                <p>No processed files available for {{ nd_set.name }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <div>📭</div>
+                        <p>No ND examination sets available</p>
+                        <p>Process some ND examination results to see them here</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section-card">
+                <h3>⚡ Quick Actions</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <a href="{{ url_for('upload_center') }}" class="btn btn-primary" style="padding: 12px; text-align: center;">
+                        📤 Upload New Files
+                    </a>
+                    <a href="{{ url_for('download_center') }}" class="btn btn-success" style="padding: 12px; text-align: center;">
+                        📥 Go to Download Center
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="padding: 12px; text-align: center;">
+                        🏠 Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+
+        // Accordion functionality
+        document.querySelectorAll('.accordion').forEach(accordion => {
+            accordion.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // Open first accordion by default
+        const firstAccordion = document.querySelector('.accordion');
+        if (firstAccordion) {
+            firstAccordion.classList.add('active');
+        }
+    </script>
+</body>
+</html>

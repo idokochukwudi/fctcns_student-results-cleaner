@@ -65,6 +65,25 @@
             color: #666;
             margin-top: 5px;
         }
+        .flash-messages {
+            margin: 20px 0;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+        }
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .alert-error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -99,6 +118,19 @@
             
             <h2>{{ script_desc }}</h2>
             <p>Upload files for processing:</p>
+
+            <!-- Flash Messages -->
+            <div class="flash-messages">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                                {% if category == 'success' %}✅{% else %}❌{% endif %} {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
             
             <form method="POST" enctype="multipart/form-data" class="upload-form">
                 {% if script_name == "exam_processor" and nd_sets %}
@@ -152,6 +184,18 @@
                 helpText.textContent = `${fileCount} file(s) selected. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)`;
             }
         });
+
+        // Auto-hide flash messages after 15 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 1s ease';
+                setTimeout(function() {
+                    alert.remove();
+                }, 1000);
+            });
+        }, 15000);
     </script>
 </body>
 </html>

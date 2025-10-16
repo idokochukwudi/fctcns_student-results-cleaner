@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Download Center - {{ college }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        .download-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .section-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            border-left: 5px solid;
+        }
+        .nd-card { border-left-color: #667eea; }
+        .putme-card { border-left-color: #28a745; }
+        .caosce-card { border-left-color: #ffc107; }
+        .internal-card { border-left-color: #dc3545; }
+        .jamb-card { border-left-color: #6f42c1; }
+        
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .file-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        .file-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .file-meta {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 5px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+        <h2>FCTCNS</h2>
+        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
+        <a href="{{ url_for('download_center') }}" class="active">📥 Download Center</a>
+        <a href="{{ url_for('file_browser') }}">📁 File Browser</a>
+        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content" id="main">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+        <!-- Header -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college }}</h1>
+                <h2>Download Center - Processed Results</h2>
+            </div>
+        </div>
+
+        <div class="download-container">
+            <!-- ND Results -->
+            <div class="section-card nd-card">
+                <h3>🎓 ND Examination Results</h3>
+                <p>Processed National Diploma examination results and mastersheets</p>
+                
+                <div class="file-grid">
+                    {% if files_by_category.nd_results %}
+                        {% for file in files_by_category.nd_results %}
+                        <div class="file-item">
+                            <div class="file-name">{{ file.name }}</div>
+                            <div class="file-meta">
+                                📁 {{ file.folder }}<br>
+                                📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                            <div class="file-actions">
+                                <a href="{{ url_for('download_file', filename=file.relative_path) }}" class="btn btn-primary">Download</a>
+                                {% if file.name.startswith('ND-') and file.name.endswith('.zip') %}
+                                <a href="{{ url_for('download_zip', nd_set_name=file.name.replace('.zip', '')) }}" class="btn btn-success">Extract All</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div>📭</div>
+                            <p>No ND results available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- PUTME Results -->
+            <div class="section-card putme-card">
+                <h3>📘 PUTME Results</h3>
+                <p>Post-UTME examination results with batch analysis</p>
+                
+                <div class="file-grid">
+                    {% if files_by_category.putme_results %}
+                        {% for file in files_by_category.putme_results %}
+                        <div class="file-item">
+                            <div class="file-name">{{ file.name }}</div>
+                            <div class="file-meta">
+                                📁 {{ file.folder }}<br>
+                                📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                            <div class="file-actions">
+                                <a href="{{ url_for('download_file', filename=file.relative_path) }}" class="btn btn-primary">Download</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div>📭</div>
+                            <p>No PUTME results available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- CAOSCE Results -->
+            <div class="section-card caosce-card">
+                <h3>📊 CAOSCE Results</h3>
+                <p>CAOSCE examination results and reports</p>
+                
+                <div class="file-grid">
+                    {% if files_by_category.caosce_results %}
+                        {% for file in files_by_category.caosce_results %}
+                        <div class="file-item">
+                            <div class="file-name">{{ file.name }}</div>
+                            <div class="file-meta">
+                                📁 {{ file.folder }}<br>
+                                📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                            <div class="file-actions">
+                                <a href="{{ url_for('download_file', filename=file.relative_path) }}" class="btn btn-primary">Download</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div>📭</div>
+                            <p>No CAOSCE results available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Internal Results -->
+            <div class="section-card internal-card">
+                <h3>📝 Internal Examination Results</h3>
+                <p>Cleaned objective exam results and master files</p>
+                
+                <div class="file-grid">
+                    {% if files_by_category.internal_results %}
+                        {% for file in files_by_category.internal_results %}
+                        <div class="file-item">
+                            <div class="file-name">{{ file.name }}</div>
+                            <div class="file-meta">
+                                📁 {{ file.folder }}<br>
+                                📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                            <div class="file-actions">
+                                <a href="{{ url_for('download_file', filename=file.relative_path) }}" class="btn btn-primary">Download</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div>📭</div>
+                            <p>No internal results available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- JAMB Results -->
+            <div class="section-card jamb-card">
+                <h3>👥 JAMB Database</h3>
+                <p>Cleaned JAMB candidate databases</p>
+                
+                <div class="file-grid">
+                    {% if files_by_category.jamb_results %}
+                        {% for file in files_by_category.jamb_results %}
+                        <div class="file-item">
+                            <div class="file-name">{{ file.name }}</div>
+                            <div class="file-meta">
+                                📁 {{ file.folder }}<br>
+                                📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                            <div class="file-actions">
+                                <a href="{{ url_for('download_file', filename=file.relative_path) }}" class="btn btn-primary">Download</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <div>📭</div>
+                            <p>No JAMB results available</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>

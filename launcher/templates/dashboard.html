@@ -110,28 +110,94 @@
             border-color: #28a745;
             color: #155724;
         }
-        .quick-stats {
+        
+        /* New styles for the Quick Access section */
+        .file-management-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #ffc107;
+            margin-top: 25px;
+        }
+        .file-management-section h2 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .file-management-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .file-management-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
             margin-top: 20px;
         }
-        .stat-card {
-            background: white;
-            padding: 15px;
+        .file-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
             border-radius: 8px;
+            padding: 20px;
             text-align: center;
-            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
         }
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
+        .file-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
         }
-        .stat-label {
-            font-size: 12px;
+        .file-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .file-card p {
             color: #666;
-            margin-top: 5px;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
         }
     </style>
 </head>
@@ -259,29 +325,31 @@
                 </div>
             </div>
 
-            <!-- Quick Stats -->
-            <div class="section-card">
-                <h3>📈 Quick Access</h3>
-                <div class="quick-stats">
-                    <a href="{{ url_for('upload_center') }}#nd-upload" class="stat-card">
-                        <div class="stat-number">📤</div>
-                        <div class="stat-label">Upload ND Files</div>
-                    </a>
-                    
-                    <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="stat-card">
-                        <div class="stat-number">⚡</div>
-                        <div class="stat-label">Quick Process</div>
-                    </a>
-                    
-                    <a href="{{ url_for('download_center') }}#recent" class="stat-card">
-                        <div class="stat-number">📥</div>
-                        <div class="stat-label">Recent Downloads</div>
-                    </a>
-                    
-                    <a href="{{ url_for('file_browser') }}#clean-files" class="stat-card">
-                        <div class="stat-number">📁</div>
-                        <div class="stat-label">Browse Results</div>
-                    </a>
+            <!-- Quick Access Section -->
+            <div class="file-management-section">
+                <h2>📈 Quick Access</h2>
+                <p>Most commonly used actions and recent processed files</p>
+                
+                <div class="file-management-grid">
+                    <div class="file-card">
+                        <h4>🚀 Quick Process ND</h4>
+                        <p>Process ND exams with default settings</p>
+                        <form action="{{ url_for('run_script', script_name='exam_processor') }}" method="POST" style="margin: 0;">
+                            <input type="hidden" name="processing_mode" value="auto">
+                            <input type="hidden" name="selected_set" value="all">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Quick Process</button>
+                        </form>
+                    </div>
+                    <div class="file-card">
+                        <h4>📄 Recent Downloads</h4>
+                        <p>View latest processed files</p>
+                        <a href="{{ url_for('download_center') }}" class="btn btn-success" style="display: block; width: 100%; box-sizing: border-box;">View Recent</a>
+                    </div>
+                    <div class="file-card">
+                        <h4>🔧 Advanced Options</h4>
+                        <p>Custom processing with advanced settings</p>
+                        <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="btn btn-secondary" style="display: block; width: 100%; box-sizing: border-box;">Advanced Mode</a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -57,7 +57,6 @@ def is_running_on_railway():
 # Railway-compatible directory setup
 def setup_railway_directories():
     """Create necessary directories - works for both local and Railway"""
-    # Simple approach - use environment variables or fallbacks
     is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
     
     if is_railway:
@@ -190,7 +189,17 @@ def download_center():
     except Exception as e:
         logger.error(f"Error in download_center: {e}")
         flash("Error loading download center. Please try again.")
-        return redirect(url_for('dashboard'))
+        # Return empty structure instead of crashing
+        return render_template("download_center.html",
+                             files_by_category={
+                                 'nd_results': [],
+                                 'putme_results': [],
+                                 'caosce_results': [],
+                                 'internal_results': [],
+                                 'jamb_results': []
+                             },
+                             college=COLLEGE,
+                             department=DEPARTMENT)
 
 @app.route("/file-browser")
 @login_required
@@ -205,7 +214,11 @@ def file_browser():
     except Exception as e:
         logger.error(f"Error in file_browser: {e}")
         flash("Error loading file browser. Please try again.")
-        return redirect(url_for('dashboard'))
+        # Return empty structure instead of crashing
+        return render_template("file_browser.html",
+                             file_structure={'nd_sets': []},
+                             college=COLLEGE,
+                             department=DEPARTMENT)
 
 @app.route("/download-zip/<nd_set_name>")
 @login_required
@@ -224,75 +237,66 @@ def download_zip(nd_set_name):
         flash(f"Error creating zip: {str(e)}")
         return redirect(url_for('download_center'))
 
-# NEW: File Organization Functions
+# NEW: File Organization Functions - FIXED VERSION
 def get_organized_files():
-    """Get all files organized by category and timestamp"""
+    """Get all files organized by category and timestamp - FIXED VERSION"""
     files_by_category = {
         'nd_results': [],
         'putme_results': [],
         'caosce_results': [],
         'internal_results': [],
-        'jamb_results': [],
-        'raw_files': []
+        'jamb_results': []
     }
     
     try:
-        # Find ND processed files
-        if os.path.exists(BASE_DIR):
-            for root, dirs, files in os.walk(BASE_DIR):
-                for file in files:
-                    if file.startswith('~'):  # Skip temporary files
+        # Ensure BASE_DIR exists
+        if not os.path.exists(BASE_DIR):
+            logger.warning(f"BASE_DIR does not exist: {BASE_DIR}")
+            return files_by_category
+        
+        # Find all processed files
+        for root, dirs, files in os.walk(BASE_DIR):
+            for file in files:
+                if file.startswith('~') or file.startswith('.'):  # Skip temporary and hidden files
+                    continue
+                
+                file_path = os.path.join(root, file)
+                
+                # Skip if it's not a file
+                if not os.path.isfile(file_path):
+                    continue
+                
+                # Only include processed files (not raw files)
+                if any(keyword in root.upper() for keyword in ['CLEAN_RESULTS', 'PROCESSED', 'MASTERSHEET', 'UTME_RESULT', 'CAOSCE_RESULT']):
+                    try:
+                        file_info = {
+                            'name': file,
+                            'path': file_path,
+                            'relative_path': os.path.relpath(file_path, BASE_DIR),
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path),
+                            'folder': os.path.dirname(os.path.relpath(file_path, BASE_DIR))
+                        }
+                        
+                        # Categorize files
+                        file_upper = file.upper()
+                        root_upper = root.upper()
+                        
+                        if 'UTME' in file_upper or 'PUTME' in file_upper or 'UTME' in root_upper:
+                            files_by_category['putme_results'].append(file_info)
+                        elif 'CAOSCE' in file_upper or 'CAOSCE' in root_upper:
+                            files_by_category['caosce_results'].append(file_info)
+                        elif 'JAMB' in file_upper or 'JAMB' in root_upper:
+                            files_by_category['jamb_results'].append(file_info)
+                        elif 'CLEAN' in file_upper or 'MASTER' in file_upper or 'INTERNAL' in file_upper:
+                            files_by_category['internal_results'].append(file_info)
+                        else:
+                            # Default to ND results for files in CLEAN_RESULTS
+                            if 'CLEAN_RESULTS' in root_upper:
+                                files_by_category['nd_results'].append(file_info)
+                    except Exception as e:
+                        logger.warning(f"Could not process file {file_path}: {e}")
                         continue
-                    
-                    file_path = os.path.join(root, file)
-                    rel_path = os.path.relpath(file_path, BASE_DIR)
-                    
-                    # Categorize files
-                    if 'CLEAN_RESULTS' in file_path or 'PROCESSED' in file_path or 'MASTERSHEET' in file_path:
-                        files_by_category['nd_results'].append({
-                            'name': file,
-                            'path': file_path,
-                            'relative_path': rel_path,
-                            'size': os.path.getsize(file_path),
-                            'modified': os.path.getmtime(file_path),
-                            'folder': os.path.dirname(rel_path)
-                        })
-                    elif 'UTME' in file.upper():
-                        files_by_category['putme_results'].append({
-                            'name': file,
-                            'path': file_path,
-                            'relative_path': rel_path,
-                            'size': os.path.getsize(file_path),
-                            'modified': os.path.getmtime(file_path),
-                            'folder': os.path.dirname(rel_path)
-                        })
-                    elif 'CAOSCE' in file.upper():
-                        files_by_category['caosce_results'].append({
-                            'name': file,
-                            'path': file_path,
-                            'relative_path': rel_path,
-                            'size': os.path.getsize(file_path),
-                            'modified': os.path.getmtime(file_path),
-                            'folder': os.path.dirname(rel_path)
-                        })
-                    elif 'CLEAN' in file.upper() or 'MASTER' in file.upper():
-                        files_by_category['internal_results'].append({
-                            'name': file,
-                            'path': file_path,
-                            'relative_path': rel_path,
-                            'size': os.path.getsize(file_path),
-                            'modified': os.path.getmtime(file_path),
-                            'folder': os.path.dirname(rel_path)
-                        })
-                    elif 'JAMB' in file.upper():
-                        files_by_category['jamb_results'].append({
-                            'name': file,
-                            'path': file_path,
-                            'relative_path': rel_path,
-                            'size': os.path.getsize(file_path),
-                            'modified': os.path.getmtime(file_path),
-                            'folder': os.path.dirname(rel_path)
-                        })
         
         # Sort by modification time (newest first)
         for category in files_by_category:
@@ -304,32 +308,33 @@ def get_organized_files():
     return files_by_category
 
 def get_file_structure():
-    """Get complete file structure"""
+    """Get complete file structure - FIXED VERSION"""
     structure = {
-        'nd_sets': [],
-        'processed_files': [],
-        'raw_files': []
+        'nd_sets': []
     }
     
     try:
+        # Ensure BASE_DIR exists
+        if not os.path.exists(BASE_DIR):
+            logger.warning(f"BASE_DIR does not exist: {BASE_DIR}")
+            return structure
+        
         # ND Sets with CLEAN_RESULTS
-        if os.path.exists(BASE_DIR):
-            for item in os.listdir(BASE_DIR):
-                item_path = os.path.join(BASE_DIR, item)
-                if os.path.isdir(item_path) and item.startswith('ND-'):
-                    clean_path = os.path.join(item_path, "CLEAN_RESULTS")
-                    raw_path = os.path.join(item_path, "RAW_RESULTS")
-                    
-                    nd_set = {
-                        'name': item,
-                        'clean_results': [],
-                        'raw_files': []
-                    }
-                    
-                    # Get clean results
-                    if os.path.exists(clean_path):
-                        for file in os.listdir(clean_path):
-                            if file.endswith(('.xlsx', '.csv', '.pdf')) and not file.startswith('~'):
+        for item in os.listdir(BASE_DIR):
+            item_path = os.path.join(BASE_DIR, item)
+            if os.path.isdir(item_path) and item.startswith('ND-'):
+                clean_path = os.path.join(item_path, "CLEAN_RESULTS")
+                
+                nd_set = {
+                    'name': item,
+                    'clean_results': []
+                }
+                
+                # Get clean results
+                if os.path.exists(clean_path):
+                    for file in os.listdir(clean_path):
+                        if file.endswith(('.xlsx', '.csv', '.pdf')) and not file.startswith(('~', '.')):
+                            try:
                                 file_path = os.path.join(clean_path, file)
                                 nd_set['clean_results'].append({
                                     'name': file,
@@ -337,36 +342,30 @@ def get_file_structure():
                                     'size': os.path.getsize(file_path),
                                     'modified': os.path.getmtime(file_path)
                                 })
-                    
-                    # Get raw files
-                    if os.path.exists(raw_path):
-                        for file in os.listdir(raw_path):
-                            if file.endswith(('.xlsx', '.xls', '.csv')) and not file.startswith('~'):
-                                file_path = os.path.join(raw_path, file)
-                                nd_set['raw_files'].append({
-                                    'name': file,
-                                    'path': file_path,
-                                    'size': os.path.getsize(file_path),
-                                    'modified': os.path.getmtime(file_path)
-                                })
-                    
-                    # Sort files by modification time
-                    nd_set['clean_results'].sort(key=lambda x: x['modified'], reverse=True)
-                    nd_set['raw_files'].sort(key=lambda x: x['modified'], reverse=True)
-                    
-                    structure['nd_sets'].append(nd_set)
-                    
+                            except Exception as e:
+                                logger.warning(f"Could not process file {file}: {e}")
+                                continue
+                
+                # Sort files by modification time
+                nd_set['clean_results'].sort(key=lambda x: x['modified'], reverse=True)
+                
+                structure['nd_sets'].append(nd_set)
+                
     except Exception as e:
         logger.error(f"Error in get_file_structure: {e}")
     
     return structure
 
 def create_nd_set_zip(nd_set_name):
-    """Create ZIP for entire ND set"""
+    """Create ZIP for entire ND set - FIXED VERSION"""
     try:
         nd_set_path = os.path.join(BASE_DIR, nd_set_name)
         if not os.path.exists(nd_set_path):
+            logger.error(f"ND set path does not exist: {nd_set_path}")
             return None
+        
+        # Ensure PROCESSED_DIR exists
+        os.makedirs(PROCESSED_DIR, exist_ok=True)
         
         zip_filename = f"{nd_set_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
         zip_path = os.path.join(PROCESSED_DIR, zip_filename)
@@ -377,19 +376,9 @@ def create_nd_set_zip(nd_set_name):
             if os.path.exists(clean_path):
                 for root, dirs, files in os.walk(clean_path):
                     for file in files:
-                        if not file.startswith('~'):  # Skip temp files
+                        if not file.startswith(('~', '.')):  # Skip temp and hidden files
                             file_path = os.path.join(root, file)
                             arcname = os.path.join(nd_set_name, "PROCESSED_RESULTS", file)
-                            zipf.write(file_path, arcname)
-            
-            # Add RAW_RESULTS
-            raw_path = os.path.join(nd_set_path, "RAW_RESULTS")
-            if os.path.exists(raw_path):
-                for root, dirs, files in os.walk(raw_path):
-                    for file in files:
-                        if not file.startswith('~'):  # Skip temp files
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.join(nd_set_name, "RAW_FILES", file)
                             zipf.write(file_path, arcname)
         
         return zip_path
@@ -397,7 +386,7 @@ def create_nd_set_zip(nd_set_name):
         logger.error(f"Error creating zip: {e}")
         return None
 
-# UPDATED: Upload function with ND set selection and multiple files
+# UPDATED: Upload function with immediate success message
 @app.route("/upload/<script_name>", methods=["GET", "POST"])
 @login_required
 def upload_files(script_name):
@@ -408,8 +397,13 @@ def upload_files(script_name):
         
         # Check if files were uploaded
         if 'files' not in request.files:
-            flash('No files selected')
-            return redirect(request.url)
+            flash('No files selected', 'error')
+            return render_template("upload_form.html", 
+                                 script_name=script_name,
+                                 script_desc=get_script_description(script_name),
+                                 college=COLLEGE, 
+                                 department=DEPARTMENT,
+                                 nd_sets=get_nd_sets() if script_name == "exam_processor" else [])
         
         files = request.files.getlist('files')
         uploaded_count = 0
@@ -436,19 +430,41 @@ def upload_files(script_name):
                 file.save(file_path)
                 uploaded_count += 1
             else:
-                flash(f'Invalid file type for {file.filename}. Allowed: xlsx, xls, csv, zip')
+                flash(f'Invalid file type for {file.filename}. Allowed: xlsx, xls, csv, zip', 'error')
         
         if uploaded_count > 0:
             if script_name == "exam_processor":
-                flash(f'Successfully uploaded {uploaded_count} file(s) to {selected_set} RAW_RESULTS!')
+                success_msg = f'Successfully uploaded {uploaded_count} file(s) to {selected_set} RAW_RESULTS!'
             else:
-                flash(f'Successfully uploaded {uploaded_count} file(s)!')
-            return redirect(url_for('upload_center'))
+                success_msg = f'Successfully uploaded {uploaded_count} file(s)!'
+            
+            flash(success_msg, 'success')
+            # Return the same page with success message
+            return render_template("upload_form.html", 
+                                 script_name=script_name,
+                                 script_desc=get_script_description(script_name),
+                                 college=COLLEGE, 
+                                 department=DEPARTMENT,
+                                 nd_sets=get_nd_sets() if script_name == "exam_processor" else [])
         else:
-            flash('No valid files were uploaded.')
-            return redirect(request.url)
+            flash('No valid files were uploaded.', 'error')
+            return render_template("upload_form.html", 
+                                 script_name=script_name,
+                                 script_desc=get_script_description(script_name),
+                                 college=COLLEGE, 
+                                 department=DEPARTMENT,
+                                 nd_sets=get_nd_sets() if script_name == "exam_processor" else [])
     
     # GET request - show upload form
+    return render_template("upload_form.html", 
+                         script_name=script_name, 
+                         script_desc=get_script_description(script_name),
+                         college=COLLEGE, 
+                         department=DEPARTMENT,
+                         nd_sets=get_nd_sets() if script_name == "exam_processor" else [])
+
+def get_script_description(script_name):
+    """Get script description"""
     script_descriptions = {
         "utme": "PUTME Examination Results",
         "caosce": "CAOSCE Examination Results", 
@@ -456,41 +472,34 @@ def upload_files(script_name):
         "split": "JAMB Candidate Database",
         "exam_processor": "ND Examination Results"
     }
-    
-    script_desc = script_descriptions.get(script_name, "Script")
-    
-    # Get available ND sets for the dropdown (only for exam_processor)
+    return script_descriptions.get(script_name, "Script")
+
+def get_nd_sets():
+    """Get available ND sets"""
     nd_sets = []
-    if script_name == "exam_processor" and os.path.exists(BASE_DIR):
+    if os.path.exists(BASE_DIR):
         for item in os.listdir(BASE_DIR):
             item_path = os.path.join(BASE_DIR, item)
             if os.path.isdir(item_path) and item.startswith('ND-'):
                 nd_sets.append(item)
-    
-    return render_template("upload_form.html", 
-                         script_name=script_name, 
-                         script_desc=script_desc,
-                         college=COLLEGE, 
-                         department=DEPARTMENT,
-                         nd_sets=nd_sets)
+    return nd_sets
 
 def get_upload_directory(script_name):
-    """Get the appropriate upload directory for each script type"""
+    """Get the appropriate upload directory for each script type - FIXED VERSION"""
     is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
     
     if is_railway:
-        # Railway paths
-        base_dir = '/app/EXAMS_INTERNAL'
+        # Railway paths - ensure they exist within BASE_DIR
         if script_name == "utme":
-            upload_path = os.path.join(base_dir, "PUTME_RESULT", "RAW_PUTME_RESULT")
+            upload_path = os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT")
         elif script_name == "caosce":
-            upload_path = os.path.join(base_dir, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
+            upload_path = os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
         elif script_name == "clean":
-            upload_path = os.path.join(base_dir, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT")
+            upload_path = os.path.join(BASE_DIR, "INTERNAL_RESULT", "RAW_INTERNAL_RESULT")
         elif script_name == "split":
-            upload_path = os.path.join(base_dir, "JAMB_DB", "RAW_JAMB_DB")
+            upload_path = os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB")
         else:
-            upload_path = '/tmp/uploads'
+            upload_path = UPLOAD_DIR
     else:
         # Local development paths
         if script_name == "utme":
@@ -502,13 +511,13 @@ def get_upload_directory(script_name):
         elif script_name == "split":
             upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/JAMB_DB/RAW_JAMB_DB"
         else:
-            upload_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/uploads"
+            upload_path = UPLOAD_DIR
     
     # Ensure the directory exists
     os.makedirs(upload_path, exist_ok=True)
     return upload_path
 
-# Keep existing file checking functions
+# Keep existing file checking functions (unchanged)
 def check_exam_processor_files(input_dir):
     """Check for ND examination files - Railway compatible"""
     logger.info(f"Checking for exam files in: {input_dir}")
@@ -554,20 +563,28 @@ def check_exam_processor_files(input_dir):
         return False
 
 def check_putme_files(input_dir):
-    """Check for PUTME examination files"""
+    """Check for PUTME examination files - RESTORED CANDIDATE BATCH REQUIREMENT"""
     if not os.path.isdir(input_dir):
+        logger.warning(f"PUTME input directory not found: {input_dir}")
         return False
     
-    excel_files = [f for f in os.listdir(input_dir) 
-                  if f.lower().endswith(('.xlsx', '.xls')) and 'PUTME' in f.upper()]
-    
-    candidate_batches_dir = os.path.join(os.path.dirname(input_dir), "RAW_CANDIDATE_BATCHES")
-    batch_files = []
-    if os.path.isdir(candidate_batches_dir):
-        batch_files = [f for f in os.listdir(candidate_batches_dir) 
-                      if f.lower().endswith('.csv') and 'BATCH' in f.upper()]
-    
-    return len(excel_files) > 0 and len(batch_files) > 0
+    try:
+        excel_files = [f for f in os.listdir(input_dir) 
+                      if f.lower().endswith(('.xlsx', '.xls')) and 'PUTME' in f.upper()]
+        
+        # RESTORED: Candidate batches requirement
+        candidate_batches_dir = os.path.join(os.path.dirname(input_dir), "RAW_CANDIDATE_BATCHES")
+        batch_files = []
+        if os.path.isdir(candidate_batches_dir):
+            batch_files = [f for f in os.listdir(candidate_batches_dir) 
+                          if f.lower().endswith('.csv') and 'BATCH' in f.upper()]
+        
+        logger.info(f"Found {len(excel_files)} PUTME files and {len(batch_files)} batch files")
+        return len(excel_files) > 0 and len(batch_files) > 0
+        
+    except Exception as e:
+        logger.error(f"Error checking PUTME files: {e}")
+        return False
 
 def check_internal_exam_files(input_dir):
     """Check for internal exam files"""
@@ -600,28 +617,33 @@ def check_split_files(input_dir):
     return len(valid_files) > 0
 
 def check_input_files(input_dir, script_name):
-    """Check for input files based on script type"""
+    """Check for input files based on script type - FIXED VERSION"""
     if not os.path.isdir(input_dir):
+        logger.warning(f"Input directory not found: {input_dir} for script {script_name}")
         return False
     
-    if script_name == "exam_processor":
-        return check_exam_processor_files(input_dir)
-    elif script_name == "utme":
-        return check_putme_files(input_dir)
-    elif script_name == "clean":
-        return check_internal_exam_files(input_dir)
-    elif script_name == "caosce":
-        return check_caosce_files(input_dir)
-    elif script_name == "split":
-        return check_split_files(input_dir)
-    
     try:
+        if script_name == "exam_processor":
+            return check_exam_processor_files(input_dir)
+        elif script_name == "utme":
+            return check_putme_files(input_dir)
+        elif script_name == "clean":
+            return check_internal_exam_files(input_dir)
+        elif script_name == "caosce":
+            return check_caosce_files(input_dir)
+        elif script_name == "split":
+            return check_split_files(input_dir)
+        
+        # Default check for other scripts
         dir_contents = os.listdir(input_dir)
         valid_extensions = ('.csv', '.xlsx', '.xls')
         input_files = [f for f in dir_contents if f.lower().endswith(valid_extensions) and not f.startswith('~')]
         return len(input_files) > 0
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error checking input files for {script_name}: {e}")
         return False
+
+# Keep the rest of the functions unchanged (count_processed_files, get_success_message, get_script_paths, run_script, handle_exam_processor)
 
 def count_processed_files(output_lines, script_name, selected_semesters=None):
     """Count processed semesters based on script output"""
@@ -822,7 +844,7 @@ def run_script(script_name):
         is_railway = 'RAILWAY_ENVIRONMENT' in os.environ
 
         if is_railway:
-            # Railway paths
+            # Railway paths - FIXED to use consistent BASE_DIR
             input_dirs = {
                 "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
                 "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT"),
@@ -849,6 +871,10 @@ def run_script(script_name):
             flash(f"No input files found for {script_desc}. Please upload files to the appropriate directory.")
             return redirect(url_for("upload_center"))
 
+        # Handle PUTME script with form parameters
+        if script_name == "utme" and request.method == "POST":
+            return handle_putme_script(script_path, script_name, input_dir)
+        
         # Handle exam processor with form parameters
         if script_name == "exam_processor" and request.method == "POST":
             return handle_exam_processor(script_path, script_name, input_dir)
@@ -867,6 +893,14 @@ def run_script(script_name):
                 college=COLLEGE,
                 department=DEPARTMENT,
                 nd_sets=nd_sets
+            )
+        
+        # For GET requests on utme, show the form
+        if script_name == "utme" and request.method == "GET":
+            return render_template(
+                "utme_form.html",
+                college=COLLEGE,
+                department=DEPARTMENT
             )
         
         # Run other scripts
@@ -912,6 +946,57 @@ def run_script(script_name):
         <br>
         <a href="{url_for('dashboard')}">Back to Dashboard</a>
         """, 500
+
+def handle_putme_script(script_path, script_name, input_dir):
+    """Handle PUTME script execution with form parameters"""
+    convert_column = request.form.get("convert_column", "n")
+    convert_value = request.form.get("convert_value", "")
+    
+    env = os.environ.copy()
+    env.update({
+        'NON_INTERACTIVE': 'true'
+    })
+    
+    # Build command line arguments for PUTME script
+    cmd = [sys.executable, script_path, '--non-interactive']
+    
+    if convert_column == "y" and convert_value:
+        cmd.extend(['--converted-score-max', convert_value])
+    
+    try:
+        result = subprocess.run(
+            cmd,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=600,
+            cwd=os.path.dirname(script_path)
+        )
+        
+        output_lines = result.stdout.splitlines() if result.stdout else []
+        error_lines = result.stderr.splitlines() if result.stderr else []
+        
+        logger.info(f"PUTME script output: {len(output_lines)} lines")
+        logger.info(f"PUTME script errors: {len(error_lines)} lines")
+        
+        if result.returncode == 0:
+            processed_files = count_processed_files(output_lines, script_name)
+            success_msg = get_success_message(script_name, processed_files, output_lines)
+            
+            if success_msg:
+                flash(success_msg)
+            else:
+                flash("PUTME processing completed but no specific success message detected.")
+        else:
+            error_msg = result.stderr or "Unknown error occurred"
+            flash(f"PUTME script failed: {error_msg[:200]}")
+            
+    except subprocess.TimeoutExpired:
+        flash("PUTME processing timed out. The operation took too long to complete.")
+    except Exception as e:
+        flash(f"Error running PUTME processor: {str(e)}")
+    
+    return redirect(url_for("dashboard"))
 
 def handle_exam_processor(script_path, script_name, input_dir):
     """Handle exam processor execution with form parameters"""
