@@ -37,6 +37,19 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 # ----------------------------
 # Railway-Compatible Configuration
 # ----------------------------
+# ----------------------------
+# Railway-Compatible Configuration
+# ----------------------------
+
+def is_running_on_railway():
+    """Check if we're running on Railway"""
+    return any(key in os.environ for key in [
+        'RAILWAY_ENVIRONMENT', 
+        'RAILWAY_STATIC_URL', 
+        'RAILWAY_PROJECT_ID',
+        'RAILWAY_SERVICE_NAME'
+    ])
+
 def get_base_directory():
     """Get base directory - compatible with both local and Railway environments"""
     # Check Railway environment first
@@ -80,15 +93,6 @@ def is_web_mode():
 def get_uploaded_file_path():
     """Get path of uploaded file in web mode"""
     return os.getenv('UPLOADED_FILE_PATH')
-
-def is_running_on_railway():
-    """Check if we're running on Railway"""
-    return any(key in os.environ for key in [
-        'RAILWAY_ENVIRONMENT', 
-        'RAILWAY_STATIC_URL', 
-        'RAILWAY_PROJECT_ID',
-        'RAILWAY_SERVICE_NAME'
-    ])
 
 def should_use_interactive_mode():
     """Check if we should use interactive mode (CLI) or non-interactive mode (web)."""

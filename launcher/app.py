@@ -246,39 +246,39 @@ def count_processed_files(output_lines, script_name, selected_semesters=None):
     
     # Log all output lines for debugging
     print(f"Raw output lines for {script_name}:")
-    for line in output_lines:
-        if line.strip():
-            print(f"  OUTPUT: {line}")
+    for output_line in output_lines:  # Changed 'line' to 'output_line' to avoid conflict
+        if output_line.strip():
+            print(f"  OUTPUT: {output_line}")
     
-    for line in output_lines:
+    for output_line in output_lines:  # Changed 'line' to 'output_line'
         for indicator in success_indicators:
-            match = re.search(indicator, line, re.IGNORECASE)
+            match = re.search(indicator, output_line, re.IGNORECASE)  # Changed 'line' to 'output_line'
             if match:
                 if script_name == "utme":
-                    if "Processing:" in line:
+                    if "Processing:" in output_line:  # Changed 'line' to 'output_line'
                         file_name = match.group(1)
                         processed_files_set.add(f"Processed: {file_name}")
-                    elif "Saved processed file:" in line:
+                    elif "Saved processed file:" in output_line:  # Changed 'line' to 'output_line'
                         file_name = match.group(1)
                         processed_files_set.add(f"Saved: {file_name}")
                 elif script_name == "clean":
-                    if "Processing:" in line:
+                    if "Processing:" in output_line:  # Changed 'line' to 'output_line'
                         file_name = match.group(1)
                         processed_files_set.add(f"Processed: {file_name}")
-                    elif "✅ Cleaned CSV saved" in line:
+                    elif "✅ Cleaned CSV saved" in output_line:  # Changed 'line' to 'output_line'
                         file_name = match.group(1) if match.groups() else "cleaned_file"
                         processed_files_set.add(f"Cleaned: {file_name}")
-                    elif "🎉 Master CSV saved" in line:
+                    elif "🎉 Master CSV saved" in output_line:  # Changed 'line' to 'output_line'
                         processed_files_set.add("Master file created")
-                    elif "✅ All processing completed successfully!" in line:
+                    elif "✅ All processing completed successfully!" in output_line:  # Changed 'line' to 'output_line'
                         processed_files_set.add("Processing completed")
                 elif script_name == "exam_processor":
                     # Only count semesters explicitly processed
-                    if "PROCESSING SEMESTER:" in line:
+                    if "PROCESSING SEMESTER:" in output_line:  # Changed 'line' to 'output_line'
                         semester = match.group(1)
                         processed_files_set.add(f"Semester: {semester}")
                 else:
-                    file_name = match.group(1) if match.groups() else line
+                    file_name = match.group(1) if match.groups() else output_line  # Changed 'line' to 'output_line'
                     processed_files_set.add(file_name)
     
     # For exam_processor in manual mode, strictly validate against selected semesters
