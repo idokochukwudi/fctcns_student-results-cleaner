@@ -12,6 +12,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def is_running_on_railway():
+    """Check if running on Railway platform"""
+    return 'RAILWAY_ENVIRONMENT' in os.environ
+    
 # Railway-specific logging
 if os.getenv('RAILWAY_ENVIRONMENT'):
     # Enable more verbose logging on Railway
@@ -638,19 +642,6 @@ def debug_paths():
         })
     
     return render_template('debug_paths.html', paths=path_info)
-
-@app.route('/api/health')
-def health_check():
-    """Health check endpoint for Railway"""
-    script_paths = get_script_paths()
-    exam_processor_exists = os.path.exists(script_paths.get('exam_processor', ''))
-    
-    return {
-        'status': 'healthy' if exam_processor_exists else 'degraded',
-        'exam_processor_found': exam_processor_exists,
-        'environment': os.getenv('RAILWAY_ENVIRONMENT', 'unknown'),
-        'timestamp': datetime.now().isoformat()
-    }
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
