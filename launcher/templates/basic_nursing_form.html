@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Nursing Examination Processor - {{ college | default('FCT College of Nursing Sciences') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        :root {
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --border-color: #e9ecef;
+            --primary-color: #667eea;
+            --text-color: #333;
+        }
+        .form-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .form-section h3 {
+            margin: 0 0 16px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+        .form-group select,
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .form-check {
+            margin-bottom: 10px;
+        }
+        .form-check input {
+            margin-right: 8px;
+        }
+        .form-check label {
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 5px;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        .semester-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .program-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 8px;
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        .info-text {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+            <h2>FCTCNS</h2>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">🏠</span><span class="label">Dashboard</span></a>
+            <a href="{{ url_for('upload_center') }}"><span class="icon">📤</span><span class="label">Upload Center</span></a>
+            <a href="{{ url_for('download_center') }}"><span class="icon">📥</span><span class="label">Download Center</span></a>
+            <a href="{{ url_for('file_browser') }}"><span class="icon">📁</span><span class="label">File Browser</span></a>
+            <a href="{{ url_for('debug_paths') }}"><span class="icon">⚙️</span><span class="label">System Tools</span></a>
+            <a href="{{ url_for('logout') }}"><span class="icon">🚪</span><span class="label">Logout</span></a>
+        </div>
+
+        <div class="main-content" id="main">
+            <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+            <div class="header-bar">
+                <div class="header-left">
+                    <h1>{{ college | default('FCT College of Nursing Sciences') }}</h1>
+                    <h2>{{ department | default('Examinations Office') }}</h2>
+                </div>
+                <div class="header-right">
+                    <p><strong>Environment:</strong> 
+                        <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
+                            {{ environment | default('Local Development') }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flash-messages">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert {% if category == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                    <span class="alert-icon">{% if category == 'success' %}✅{% else %}❌{% endif %}</span>
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="form-section">
+                <h3>
+                    <span class="icon">💉</span> 
+                    Basic Nursing Examination Processor
+                    <span class="program-badge">BN</span>
+                </h3>
+                <p>Configure academic settings for processing Basic Nursing examination results</p>
+                
+                <form method="POST" action="{{ url_for('run_script', script_name='exam_processor_bn') }}">
+                    <div class="form-group">
+                        <label for="nursing_set">Academic Set / Cohort</label>
+                        <select class="form-select" id="nursing_set" name="nursing_set">
+                            <option value="all">All Available Sets</option>
+                            {% for set in bn_sets %}
+                            <option value="{{ set }}">{{ set }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="info-text">Select specific academic set or process all available sets</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="processing_mode">Processing Mode</label>
+                        <select class="form-select" id="processing_mode" name="processing_mode" onchange="toggleSemesterSelection()">
+                            <option value="auto">Auto Mode (Process All Available Semesters)</option>
+                            <option value="manual">Manual Mode (Select Specific Semesters)</option>
+                        </select>
+                        <div class="info-text">Auto mode processes all semesters with available data</div>
+                    </div>
+                    
+                    <div class="form-group" id="semesters_section" style="display: none;">
+                        <label>Semester Selection</label>
+                        <div class="semester-checkboxes" id="semester_checkboxes">
+                            <!-- Semester checkboxes populated by JavaScript -->
+                        </div>
+                        <div class="info-text">Select specific semesters to process (Manual Mode only)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pass_threshold">Passing Threshold (%)</label>
+                        <input type="number" id="pass_threshold" name="pass_threshold" value="50.0" step="0.1" min="0" max="100">
+                        <div class="info-text">Minimum score required to pass a course (typically 50%)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="upgrade_threshold">Grade Upgrade Threshold (45-49 or 0 to disable)</label>
+                        <input type="number" id="upgrade_threshold" name="upgrade_threshold" value="45" min="0" max="49">
+                        <div class="info-text">Scores from this value up to 49 will be upgraded to 50. Set to 0 to disable.</div>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" name="generate_pdf" id="generate_pdf" checked>
+                        <label for="generate_pdf">Generate Individual Student PDF Reports</label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" name="track_withdrawn" id="track_withdrawn" checked>
+                        <label for="track_withdrawn">Track Withdrawn Student Status</label>
+                    </div>
+                    
+                    <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">
+                        🚀 Process Basic Nursing Examinations
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const semesterConfigs = {
+            'BN': [
+                { value: 'first_first', label: 'First Year - First Semester' },
+                { value: 'first_second', label: 'First Year - Second Semester' },
+                { value: 'second_first', label: 'Second Year - First Semester' },
+                { value: 'second_second', label: 'Second Year - Second Semester' },
+                { value: 'third_first', label: 'Third Year - First Semester' },
+                { value: 'third_second', label: 'Third Year - Second Semester' }
+            ]
+        };
+
+        const setConfigs = {
+            'BN': {{ bn_sets | tojson }}
+        };
+
+        function updateSetsAndSemesters() {
+            const setSelect = document.getElementById('nursing_set');
+            const semesterCheckboxes = document.getElementById('semester_checkboxes');
+
+            // Update sets
+            setSelect.innerHTML = '<option value="all">All Available Sets</option>';
+            const sets = setConfigs['BN'] || [];
+            sets.forEach(set => {
+                const option = document.createElement('option');
+                option.value = set;
+                option.textContent = set;
+                setSelect.appendChild(option);
+            });
+
+            // Update semesters
+            semesterCheckboxes.innerHTML = '';
+            const semesters = semesterConfigs['BN'] || [];
+            semesters.forEach(sem => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input type="checkbox" name="semesters" value="${sem.value}" id="${sem.value}" checked>
+                    <label for="${sem.value}">${sem.label}</label>
+                `;
+                semesterCheckboxes.appendChild(div);
+            });
+        }
+
+        function toggleSemesterSelection() {
+            const processingMode = document.getElementById('processing_mode').value;
+            const semestersSection = document.getElementById('semesters_section');
+            
+            if (processingMode === 'manual') {
+                semestersSection.style.display = 'block';
+            } else {
+                semestersSection.style.display = 'none';
+            }
+        }
+
+        window.onload = function() {
+            updateSetsAndSemesters();
+            toggleSemesterSelection();
+        };
+    </script>
+</body>
+</html>

@@ -34,13 +34,6 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 # ----------------------------
 # Configuration
 # ----------------------------
-# ----------------------------
-# Railway-Compatible Configuration
-# ----------------------------
-# ----------------------------
-# Railway-Compatible Configuration
-# ----------------------------
-
 def is_running_on_railway():
     """Check if we're running on Railway"""
     return any(key in os.environ for key in [
@@ -62,11 +55,11 @@ def get_base_directory():
         # Create the directory structure on Railway
         railway_base = '/app/EXAMS_INTERNAL'
         os.makedirs(railway_base, exist_ok=True)
-        os.makedirs(os.path.join(railway_base, 'ND-COURSES'), exist_ok=True)
+        os.makedirs(os.path.join(railway_base, 'ND', 'ND-COURSES'), exist_ok=True)
         return railway_base
     
-    # Local development fallback
-    local_path = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/EXAMS_INTERNAL"
+    # Local development fallback - updated to match your structure
+    local_path = os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL')
     if os.path.exists(local_path):
         return local_path
     
@@ -74,10 +67,13 @@ def get_base_directory():
     return os.path.join(os.path.dirname(__file__), 'EXAMS_INTERNAL')
 
 BASE_DIR = get_base_directory()
-ND_COURSES_DIR = os.path.join(BASE_DIR, "ND-COURSES")
+# UPDATED: ND directories now under ND folder
+ND_BASE_DIR = os.path.join(BASE_DIR, "ND")
+ND_COURSES_DIR = os.path.join(ND_BASE_DIR, "ND-COURSES")
 
 # Ensure directories exist
 os.makedirs(BASE_DIR, exist_ok=True)
+os.makedirs(ND_BASE_DIR, exist_ok=True)
 os.makedirs(ND_COURSES_DIR, exist_ok=True)
 
 # Global variables for threshold upgrade
@@ -105,217 +101,14 @@ def should_use_interactive_mode():
     # Default to interactive for backward compatibility
     return True
 
-def process_uploaded_file(uploaded_file_path, base_dir_norm):
-    """
-    Process uploaded file in web mode.
-    This function handles the single uploaded file for web processing.
-    """
-    print("🔧 Processing uploaded file in web mode")
-    
-    # Extract set name from filename or use default
-    filename = os.path.basename(uploaded_file_path)
-    set_name = "ND-UPLOADED"
-    
-    # Create temporary directory structure
-    temp_dir = tempfile.mkdtemp()
-    raw_dir = os.path.join(temp_dir, set_name, "RAW_RESULTS")
-    clean_dir = os.path.join(temp_dir, set_name, "CLEAN_RESULTS")
-    os.makedirs(raw_dir, exist_ok=True)
-    os.makedirs(clean_dir, exist_ok=True)
-    
-    # Copy uploaded file to raw directory
-    dest_path = os.path.join(raw_dir, filename)
-    shutil.copy2(uploaded_file_path, dest_path)
-    
-    # Get parameters from environment
-    params = get_form_parameters()
-    ts = datetime.now().strftime(TIMESTAMP_FMT)
-    
-    try:
-        # Load course data
-        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-        
-        # Process the single file
-        raw_files = [filename]
-        
-        # Detect semester from filename
-        semester_key, _, _, _, _, _ = detect_semester_from_filename(filename)
-        
-        print(f"🎯 Detected semester: {semester_key}")
-        print(f"📁 Processing uploaded file: {filename}")
-        
-        # Process the file
-        result = process_single_file(
-            dest_path,
-            clean_dir,
-            ts,
-            params['pass_threshold'],
-            semester_course_maps,
-            semester_credit_units,
-            semester_lookup,
-            semester_course_titles,
-            DEFAULT_LOGO_PATH,
-            semester_key,
-            set_name,
-            previous_gpas=None,
-            upgrade_min_threshold=get_upgrade_threshold_from_env()
-        )
-        
-        if result is not None:
-            print(f"✅ Successfully processed uploaded file")
-            return True
-        else:
-            print(f"❌ Failed to process uploaded file")
-            return False
-            
-    except Exception as e:
-        print(f"❌ Error processing uploaded file: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-    finally:
-        # Clean up temporary directory
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
 def get_upgrade_threshold_from_env():
     """Get upgrade threshold from environment variables"""
     upgrade_threshold_str = os.getenv('UPGRADE_THRESHOLD', '0').strip()
     if upgrade_threshold_str and upgrade_threshold_str.isdigit():
         upgrade_value = int(upgrade_threshold_str)
-        if 45 <= upgrade_value <= 49:
-            return upgrade_value
+        if 0 <= upgrade_value <= 49:
+            return upgrade_value if upgrade_value > 0 else None
     return None
-
-def process_in_non_interactive_mode(params, base_dir_norm):
-    """Process exams in non-interactive mode for web interface."""
-    print("🔧 Running in NON-INTERACTIVE mode (web interface)")
-    
-    # Use parameters from environment variables
-    selected_set = params['selected_set']
-    processing_mode = params['processing_mode']
-    selected_semesters = params['selected_semesters']
-    
-    # Get upgrade threshold from environment variable if provided
-    upgrade_min_threshold = get_upgrade_threshold_from_env()
-    
-    # Get available sets
-    available_sets = get_available_sets(base_dir_norm)
-    
-    if not available_sets:
-        print("❌ No ND sets found")
-        return False
-    
-    # Remove ND-COURSES from available sets if present
-    available_sets = [s for s in available_sets if s != 'ND-COURSES']
-    
-    if not available_sets:
-        print("❌ No valid ND sets found (only ND-COURSES present)")
-        return False
-    
-    # Determine which sets to process
-    if selected_set == "all":
-        sets_to_process = available_sets
-        print(f"🎯 Processing ALL sets: {sets_to_process}")
-    else:
-        if selected_set in available_sets:
-            sets_to_process = [selected_set]
-            print(f"🎯 Processing selected set: {selected_set}")
-        else:
-            print(f"⚠️ Selected set '{selected_set}' not found, processing all sets")
-            sets_to_process = available_sets
-    
-    # Determine which semesters to process
-    if processing_mode == "auto" or not selected_semesters or 'all' in selected_semesters:
-        semesters_to_process = SEMESTER_ORDER.copy()
-        print(f"🎯 Processing ALL semesters: {semesters_to_process}")
-    else:
-        semesters_to_process = selected_semesters
-        print(f"🎯 Processing selected semesters: {semesters_to_process}")
-    
-    # Load course data once
-    try:
-        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-    except Exception as e:
-        print(f"❌ Could not load course data: {e}")
-        return False
-    
-    ts = datetime.now().strftime(TIMESTAMP_FMT)
-    
-    # Process each set and semester
-    total_processed = 0
-    for nd_set in sets_to_process:
-        print(f"\n{'='*60}")
-        print(f"PROCESSING SET: {nd_set}")
-        print(f"{'='*60}")
-        
-        raw_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "RAW_RESULTS"))
-        clean_dir = normalize_path(os.path.join(base_dir_norm, nd_set, "CLEAN_RESULTS"))
-        
-        # Create directories if they don't exist
-        os.makedirs(raw_dir, exist_ok=True)
-        os.makedirs(clean_dir, exist_ok=True)
-        
-        if not os.path.exists(raw_dir):
-            print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
-            continue
-        
-        raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
-        if not raw_files:
-            print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
-            continue
-        
-        print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
-        
-        # Process selected semesters
-        for semester_key in semesters_to_process:
-            if semester_key not in SEMESTER_ORDER:
-                print(f"⚠️ Skipping unknown semester: {semester_key}")
-                continue
-            
-            # Check if there are files for this semester
-            semester_files_exist = False
-            for rf in raw_files:
-                detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-                if detected_sem == semester_key:
-                    semester_files_exist = True
-                    break
-            
-            if semester_files_exist:
-                print(f"\n🎯 Processing {semester_key} in {nd_set}...")
-                try:
-                    # Process the semester with the upgrade threshold
-                    result = process_semester_files(
-                        semester_key,
-                        raw_files,
-                        raw_dir,
-                        clean_dir,
-                        ts,
-                        params['pass_threshold'],
-                        semester_course_maps,
-                        semester_credit_units,
-                        semester_lookup,
-                        semester_course_titles,
-                        DEFAULT_LOGO_PATH,
-                        nd_set,
-                        previous_gpas=None,
-                        upgrade_min_threshold=upgrade_min_threshold
-                    )
-                    
-                    if result is not None:
-                        print(f"✅ Successfully processed {semester_key}")
-                        total_processed += 1
-                    else:
-                        print(f"❌ Failed to process {semester_key}")
-                        
-                except Exception as e:
-                    print(f"❌ Error processing {semester_key}: {e}")
-                    import traceback
-                    traceback.print_exc()
-            else:
-                print(f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
-    
-    print(f"\n📊 PROCESSING SUMMARY: {total_processed} semester(s) processed")
-    return total_processed > 0
 
 def get_form_parameters():
     """Get parameters from environment variables set by the web form."""
@@ -326,10 +119,17 @@ def get_form_parameters():
     generate_pdf = os.getenv('GENERATE_PDF', 'True').lower() == 'true'
     track_withdrawn = os.getenv('TRACK_WITHDRAWN', 'True').lower() == 'true'
     
-    # Convert semester string to list
+    # Convert semester string to list - handle both comma-separated and single values
     selected_semesters = []
     if selected_semesters_str:
-        selected_semesters = selected_semesters_str.split(',')
+        if ',' in selected_semesters_str:
+            selected_semesters = [sem.strip() for sem in selected_semesters_str.split(',') if sem.strip()]
+        else:
+            selected_semesters = [selected_semesters_str.strip()]
+    
+    # If no semesters selected or 'all' in selected, use all semesters
+    if not selected_semesters or 'all' in selected_semesters:
+        selected_semesters = SEMESTER_ORDER.copy()
     
     print(f"🎯 FORM PARAMETERS:")
     print(f"   Selected Set: {selected_set}")
@@ -614,10 +414,16 @@ def filter_out_withdrawn_students(mastersheet, semester_key):
 # ----------------------------
 
 def get_available_sets(base_dir):
-    """Get all available ND sets (ND-2024, ND-2025, etc.)"""
+    """Get all available ND sets (ND-2024, ND-2025, etc.) from the ND folder"""
+    # UPDATED: Look in the ND subdirectory
+    nd_dir = os.path.join(base_dir, "ND")
+    if not os.path.exists(nd_dir):
+        print(f"❌ ND directory not found: {nd_dir}")
+        return []
+        
     sets = []
-    for item in os.listdir(base_dir):
-        item_path = os.path.join(base_dir, item)
+    for item in os.listdir(nd_dir):
+        item_path = os.path.join(nd_dir, item)
         if os.path.isdir(item_path) and item.upper().startswith("ND-"):
             sets.append(item)
     return sorted(sets)
@@ -903,7 +709,6 @@ def load_previous_gpas_from_processed_files(
     # timestamp directory
     mastersheet_pattern = os.path.join(
         output_dir,
-        f"ND_RESULT-{timestamp}",
         f"mastersheet_{timestamp}.xlsx")
     print(f"🔍 Checking for mastersheet: {mastersheet_pattern}")
 
@@ -1023,7 +828,6 @@ def load_all_previous_gpas_for_cgpa(
     all_student_data = {}
     mastersheet_path = os.path.join(
         output_dir,
-        f"ND_RESULT-{timestamp}",
         f"mastersheet_{timestamp}.xlsx")
 
     if not os.path.exists(mastersheet_path):
@@ -1807,7 +1611,7 @@ def process_semester_files(
     semester_key,
     raw_files,
     raw_dir,
-    clean_dir,
+    output_dir,  # Now this is the set-specific output directory
     ts,
     pass_threshold,
     semester_course_maps,
@@ -1825,7 +1629,7 @@ def process_semester_files(
     print(f"PROCESSING SEMESTER: {semester_key}")
     print(f"{'='*60}")
 
-    # Filter files for this semester
+    # Filter files for this semester - FIXED: Only process files for the selected semester
     semester_files = []
     for rf in raw_files:
         detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
@@ -1847,16 +1651,16 @@ def process_semester_files(
         try:
             # Load previous GPAs for this specific semester
             current_previous_gpas = load_previous_gpas_from_processed_files(
-                clean_dir, semester_key, ts) if previous_gpas is None else previous_gpas
+                output_dir, semester_key, ts) if previous_gpas is None else previous_gpas
 
             # Load CGPA data (all previous semesters)
             cgpa_data = load_all_previous_gpas_for_cgpa(
-                clean_dir, semester_key, ts)
+                output_dir, semester_key, ts)
 
             # Process the file
             result = process_single_file(
                 raw_path,
-                clean_dir,
+                output_dir,  # Use the set output directory
                 ts,
                 pass_threshold,
                 semester_course_maps,
@@ -1882,7 +1686,7 @@ def process_semester_files(
 
 def process_single_file(
         path,
-        output_dir,
+        output_dir,  # This is now the set-specific timestamped folder
         ts,
         pass_threshold,
         semester_course_maps,
@@ -1899,20 +1703,48 @@ def process_single_file(
     Process a single raw file and produce mastersheet Excel and PDFs.
     """
     fname = os.path.basename(path)
+    print(f"🔍 Processing file: {fname} for semester: {semester_key}")
 
     try:
         xl = pd.ExcelFile(path)
+        print(f"✅ Successfully opened Excel file: {fname}")
+        print(f"📋 Sheets found: {xl.sheet_names}")
     except Exception as e:
-        print(f"Error opening excel {path}: {e}")
+        print(f"❌ Error opening excel {path}: {e}")
         return None
 
     expected_sheets = ['CA', 'OBJ', 'EXAM']
     dfs = {}
     for s in expected_sheets:
         if s in xl.sheet_names:
-            dfs[s] = pd.read_excel(path, sheet_name=s, dtype=str)
+            try:
+                # Try reading with different parameters to handle various Excel formats
+                dfs[s] = pd.read_excel(path, sheet_name=s, dtype=str, header=0)
+                print(f"✅ Loaded sheet {s} with shape: {dfs[s].shape}")
+                print(f"📊 Sheet {s} columns: {dfs[s].columns.tolist()}")
+                
+                # Debug: Show first few rows of data
+                if not dfs[s].empty:
+                    print(f"🔍 First 3 rows of {s} sheet:")
+                    for i in range(min(3, len(dfs[s]))):
+                        row_data = {}
+                        for col in dfs[s].columns[:5]:  # Show first 5 columns
+                            row_data[col] = dfs[s].iloc[i][col]
+                        print(f"   Row {i}: {row_data}")
+                else:
+                    print(f"⚠️ Sheet {s} is empty!")
+                    
+            except Exception as e:
+                print(f"❌ Error reading sheet {s}: {e}")
+                # Try alternative reading method
+                try:
+                    dfs[s] = pd.read_excel(path, sheet_name=s, header=0)
+                    print(f"✅ Alternative load successful for sheet {s}")
+                except Exception as e2:
+                    print(f"❌ Alternative load also failed for sheet {s}: {e2}")
+                    dfs[s] = pd.DataFrame()
     if not dfs:
-        print("No CA/OBJ/EXAM sheets detected — skipping file.")
+        print("❌ No CA/OBJ/EXAM sheets detected — skipping file.")
         return None
 
     # Use the provided semester key
@@ -1944,6 +1776,9 @@ def process_single_file(
     filtered_credit_units = {c: credit_units[c] for c in ordered_codes}
     total_cu = sum(filtered_credit_units.values())
 
+    print(f"📚 Course codes to process: {ordered_codes}")
+    print(f"📊 Total credit units: {total_cu}")
+
     reg_no_cols = {s: find_column_by_names(df,
                                            ["REG. No",
                                             "Reg No",
@@ -1957,8 +1792,15 @@ def process_single_file(
             df, [
                 "NAME", "Full Name", "Candidate Name"]) for s, df in dfs.items()}
 
+    print(f"🔍 Registration columns found: {reg_no_cols}")
+    print(f"🔍 Name columns found: {name_cols}")
+
     merged = None
     for s, df in dfs.items():
+        if df.empty:
+            print(f"⚠️ Skipping empty sheet: {s}")
+            continue
+            
         df = df.copy()
         regcol = reg_no_cols.get(s)
         namecol = name_cols.get(s)
@@ -1968,8 +1810,10 @@ def process_single_file(
             namecol = df.columns[1]
 
         if regcol is None:
-            print(f"Skipping sheet {s}: no reg column found")
+            print(f"❌ Skipping sheet {s}: no reg column found")
             continue
+
+        print(f"📝 Processing sheet {s} with reg column: {regcol}, name column: {namecol}")
 
         df["REG. No"] = df[regcol].astype(str).str.strip()
         if namecol:
@@ -1985,6 +1829,9 @@ def process_single_file(
                 "NAME"]]
         df.drop(columns=to_drop, errors="ignore", inplace=True)
 
+        # Debug: Show available columns for matching
+        print(f"🔍 Available columns in {s} sheet: {df.columns.tolist()}")
+
         for col in [c for c in df.columns if c not in ["REG. No", "NAME"]]:
             norm = normalize_course_name(col)
             matched_code = None
@@ -1997,13 +1844,25 @@ def process_single_file(
             if matched_code:
                 newcol = f"{matched_code}_{s.upper()}"
                 df.rename(columns={col: newcol}, inplace=True)
+                print(f"✅ Matched column '{col}' to course code '{matched_code}'")
 
         cur_cols = ["REG. No", "NAME"] + \
             [c for c in df.columns if c.endswith(f"_{s.upper()}")]
         cur = df[cur_cols].copy()
+        
+        # Debug: Show data before merging
+        print(f"📊 Data in {s} sheet - Shape: {cur.shape}")
+        if not cur.empty:
+            print(f"🔍 First 2 rows of {s} data:")
+            for i in range(min(2, len(cur))):
+                print(f"   Row {i}: REG. No='{cur.iloc[i]['REG. No']}', NAME='{cur.iloc[i]['NAME']}'")
+        
         if merged is None:
             merged = cur
+            print(f"✅ Initialized merged dataframe with {s} sheet")
         else:
+            print(f"🔗 Merging {s} sheet with existing data")
+            before_merge = len(merged)
             merged = merged.merge(
                 cur,
                 on="REG. No",
@@ -2011,22 +1870,62 @@ def process_single_file(
                 suffixes=(
                     '',
                     '_dup'))
+            after_merge = len(merged)
+            print(f"📊 Merge result: {before_merge} -> {after_merge} rows")
+            
             if "NAME_dup" in merged.columns:
                 merged["NAME"] = merged["NAME"].combine_first(
                     merged["NAME_dup"])
                 merged.drop(columns=["NAME_dup"], inplace=True)
 
     if merged is None or merged.empty:
-        print("No data merged from sheets — skipping file.")
+        print("❌ No data merged from sheets — skipping file.")
+        return None
+
+    print(f"✅ Final merged dataframe shape: {merged.shape}")
+    print(f"📋 Final merged columns: {merged.columns.tolist()}")
+
+    # CRITICAL FIX: Check if we have actual score data before proceeding
+    has_score_data = False
+    score_columns = [col for col in merged.columns if any(code in col for code in ordered_codes)]
+    print(f"🔍 Checking score columns: {score_columns}")
+    
+    for col in score_columns:
+        if col in merged.columns:
+            # Check if column has any non-null, non-zero values
+            non_null_count = merged[col].notna().sum()
+            if non_null_count > 0:
+                # Try to convert to numeric and check for non-zero values
+                try:
+                    numeric_values = pd.to_numeric(merged[col], errors='coerce')
+                    non_zero_count = (numeric_values > 0).sum()
+                    if non_zero_count > 0:
+                        has_score_data = True
+                        print(f"✅ Found score data in column {col}: {non_zero_count} non-zero values")
+                        break
+                except Exception as e:
+                    print(f"⚠️ Error checking column {col}: {e}")
+    
+    if not has_score_data:
+        print(f"❌ CRITICAL: No valid score data found in file {fname}!")
+        print(f"🔍 Sample of merged data:")
+        print(merged.head(3))
         return None
 
     mastersheet = merged[["REG. No", "NAME"]].copy()
     mastersheet.rename(columns={"REG. No": "EXAMS NUMBER"}, inplace=True)
 
+    print("🎯 Calculating scores for each course...")
+    
     for code in ordered_codes:
         ca_col = f"{code}_CA"
         obj_col = f"{code}_OBJ"
         exam_col = f"{code}_EXAM"
+
+        print(f"📊 Processing course {code}:")
+        print(f"   CA column: {ca_col} - exists: {ca_col in merged.columns}")
+        print(f"   OBJ column: {obj_col} - exists: {obj_col in merged.columns}")
+        print(f"   EXAM column: {exam_col} - exists: {exam_col in merged.columns}")
 
         ca_series = pd.to_numeric(
             merged[ca_col],
@@ -2044,6 +1943,11 @@ def process_single_file(
             [0] * len(merged),
             index=merged.index)
 
+        # Debug: Show score statistics
+        print(f"   CA stats: non-null={ca_series.notna().sum()}, non-zero={(ca_series > 0).sum()}")
+        print(f"   OBJ stats: non-null={obj_series.notna().sum()}, non-zero={(obj_series > 0).sum()}")
+        print(f"   EXAM stats: non-null={exam_series.notna().sum()}, non-zero={(exam_series > 0).sum()}")
+
         ca_norm = (ca_series / 20) * 100
         obj_norm = (obj_series / 20) * 100
         exam_norm = (exam_series / 80) * 100
@@ -2052,6 +1956,10 @@ def process_single_file(
         exam_norm = exam_norm.fillna(0).clip(upper=100)
         total = (ca_norm * 0.2) + (((obj_norm + exam_norm) / 2) * 0.8)
         mastersheet[code] = total.round(0).clip(upper=100).values
+
+        # Debug: Show final score statistics
+        final_scores = mastersheet[code]
+        print(f"   Final scores: non-zero={(final_scores > 0).sum()}, mean={final_scores.mean():.2f}")
 
     # NEW: APPLY FLEXIBLE UPGRADE RULE - Ask user for threshold per semester
     # Only ask in interactive mode
@@ -2172,10 +2080,8 @@ def process_single_file(
             mastersheet[c] = pd.NA
     mastersheet = mastersheet[out_cols]
 
-    # FIXED: Create proper output directory structure
-    output_subdir = os.path.join(output_dir, f"ND_RESULT-{ts}")
-    os.makedirs(output_subdir, exist_ok=True)
-    out_xlsx = os.path.join(output_subdir, f"mastersheet_{ts}.xlsx")
+    # FIXED: Create proper output directory structure - all files go directly to the set output directory
+    out_xlsx = os.path.join(output_dir, f"mastersheet_{ts}.xlsx")
 
     if not os.path.exists(out_xlsx):
         wb = Workbook()
@@ -2499,7 +2405,7 @@ def process_single_file(
     # Generate individual student PDF with previous GPAs and CGPA
     safe_sem = re.sub(r'[^\w\-]', '_', sem)
     student_pdf_path = os.path.join(
-        output_subdir,
+        output_dir,
         f"mastersheet_students_{ts}_{safe_sem}.pdf")
 
     print(f"📊 FINAL CHECK before PDF generation:")
@@ -2532,6 +2438,158 @@ def process_single_file(
         traceback.print_exc()
 
     return mastersheet
+
+# ----------------------------
+# Non-interactive mode processing
+# ----------------------------
+
+def process_in_non_interactive_mode(params, base_dir_norm):
+    """Process exams in non-interactive mode for web interface."""
+    print("🔧 Running in NON-INTERACTIVE mode (web interface)")
+    
+    # Use parameters from environment variables
+    selected_set = params['selected_set']
+    selected_semesters = params['selected_semesters']
+    
+    # Get upgrade threshold from environment variable if provided
+    upgrade_min_threshold = get_upgrade_threshold_from_env()
+    
+    # Get available sets
+    available_sets = get_available_sets(base_dir_norm)
+    
+    if not available_sets:
+        print("❌ No ND sets found")
+        return False
+    
+    # Remove ND-COURSES from available sets if present
+    available_sets = [s for s in available_sets if s != 'ND-COURSES']
+    
+    if not available_sets:
+        print("❌ No valid ND sets found (only ND-COURSES present)")
+        return False
+    
+    # Determine which sets to process
+    if selected_set == "all":
+        sets_to_process = available_sets
+        print(f"🎯 Processing ALL sets: {sets_to_process}")
+    else:
+        if selected_set in available_sets:
+            sets_to_process = [selected_set]
+            print(f"🎯 Processing selected set: {selected_set}")
+        else:
+            print(f"⚠️ Selected set '{selected_set}' not found, processing all sets")
+            sets_to_process = available_sets
+    
+    # Load course data once
+    try:
+        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+    except Exception as e:
+        print(f"❌ Could not load course data: {e}")
+        return False
+    
+    # Process each set and semester
+    total_processed = 0
+    for nd_set in sets_to_process:
+        print(f"\n{'='*60}")
+        print(f"PROCESSING SET: {nd_set}")
+        print(f"{'='*60}")
+        
+        # Generate a single timestamp for this set processing
+        ts = datetime.now().strftime(TIMESTAMP_FMT)
+        
+        # UPDATED: Raw and clean directories now under ND folder
+        raw_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "RAW_RESULTS"))
+        clean_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "CLEAN_RESULTS"))
+        
+        # Create directories if they don't exist
+        os.makedirs(raw_dir, exist_ok=True)
+        os.makedirs(clean_dir, exist_ok=True)
+        
+        if not os.path.exists(raw_dir):
+            print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
+            continue
+        
+        raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
+        if not raw_files:
+            print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
+            continue
+        
+        print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
+        
+        # Create a single timestamped folder for this set
+        set_output_dir = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}")
+        os.makedirs(set_output_dir, exist_ok=True)
+        print(f"📁 Created set output directory: {set_output_dir}")
+        
+        # Process selected semesters
+        for semester_key in selected_semesters:
+            if semester_key not in SEMESTER_ORDER:
+                print(f"⚠️ Skipping unknown semester: {semester_key}")
+                continue
+            
+            # Check if there are files for this semester
+            semester_files_exist = False
+            for rf in raw_files:
+                detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
+                if detected_sem == semester_key:
+                    semester_files_exist = True
+                    break
+            
+            if semester_files_exist:
+                print(f"\n🎯 Processing {semester_key} in {nd_set}...")
+                try:
+                    # Process the semester with the upgrade threshold
+                    result = process_semester_files(
+                        semester_key,
+                        raw_files,
+                        raw_dir,
+                        set_output_dir,  # Use the set output directory instead of clean_dir
+                        ts,
+                        params['pass_threshold'],
+                        semester_course_maps,
+                        semester_credit_units,
+                        semester_lookup,
+                        semester_course_titles,
+                        DEFAULT_LOGO_PATH,
+                        nd_set,
+                        previous_gpas=None,
+                        upgrade_min_threshold=upgrade_min_threshold
+                    )
+                    
+                    if result is not None:
+                        print(f"✅ Successfully processed {semester_key}")
+                        total_processed += 1
+                    else:
+                        print(f"❌ Failed to process {semester_key}")
+                        
+                except Exception as e:
+                    print(f"❌ Error processing {semester_key}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
+        
+        # Create ZIP of the entire set results
+        try:
+            zip_path = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}.zip")
+            create_zip_folder(set_output_dir, zip_path)
+            print(f"📦 Created ZIP file: {zip_path}")
+        except Exception as e:
+            print(f"⚠️ Failed to create ZIP for {nd_set}: {e}")
+    
+    print(f"\n📊 PROCESSING SUMMARY: {total_processed} semester(s) processed")
+    return total_processed > 0
+
+def create_zip_folder(source_dir, zip_path):
+    """Create a ZIP file from a directory"""
+    import zipfile
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(source_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, source_dir)
+                zipf.write(file_path, arcname)
+    return zip_path
 
 # ----------------------------
 # Main runner
@@ -2600,16 +2658,12 @@ def main():
             print(f"PROCESSING SET: {nd_set}")
             print(f"{'='*60}")
 
-            raw_dir = normalize_path(
-                os.path.join(
-                    base_dir_norm,
-                    nd_set,
-                    "RAW_RESULTS"))
-            clean_dir = normalize_path(
-                os.path.join(
-                    base_dir_norm,
-                    nd_set,
-                    "CLEAN_RESULTS"))
+            # Generate a single timestamp for this set processing
+            ts = datetime.now().strftime(TIMESTAMP_FMT)
+            
+            # UPDATED: Raw and clean directories now under ND folder
+            raw_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "RAW_RESULTS"))
+            clean_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "CLEAN_RESULTS"))
 
             # Create directories if they don't exist
             os.makedirs(raw_dir, exist_ok=True)
@@ -2629,6 +2683,11 @@ def main():
                 continue
 
             print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
+
+            # Create a single timestamped folder for this set
+            set_output_dir = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}")
+            os.makedirs(set_output_dir, exist_ok=True)
+            print(f"📁 Created set output directory: {set_output_dir}")
 
             # Get user choice for which semesters to process
             semesters_to_process = get_user_semester_choice()
@@ -2656,7 +2715,7 @@ def main():
                         semester_key,
                         raw_files,
                         raw_dir,
-                        clean_dir,
+                        set_output_dir,  # Use the set output directory instead of clean_dir
                         ts,
                         DEFAULT_PASS_THRESHOLD,
                         semester_course_maps,
@@ -2668,6 +2727,14 @@ def main():
                 else:
                     print(
                         f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
+            
+            # Create ZIP of the entire set results
+            try:
+                zip_path = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}.zip")
+                create_zip_folder(set_output_dir, zip_path)
+                print(f"📦 Created ZIP file: {zip_path}")
+            except Exception as e:
+                print(f"⚠️ Failed to create ZIP for {nd_set}: {e}")
 
         # Print student tracking summary
         print(f"\n📊 STUDENT TRACKING SUMMARY:")
@@ -2711,8 +2778,6 @@ if __name__ == "__main__":
     try:
         main()
         print("✅ ND Examination Results Processing completed successfully")
-        print(
-            f"✅ Mastersheet saved: mastersheet_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.xlsx")
     except Exception as e:
         print(f"❌ Error during processing: {e}")
         import traceback

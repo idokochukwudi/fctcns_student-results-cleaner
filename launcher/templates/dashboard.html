@@ -2,288 +2,768 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Results Processing System - {{ college }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Processing - FCT College</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <style>
-        .dashboard-container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
         }
-        .welcome-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            display: flex;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 200px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
             color: white;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 30px;
+            padding: 0;
+            transition: width 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 50px;
+        }
+
+        .sidebar-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            padding: 15px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo-section {
             text-align: center;
         }
-        .main-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 25px;
-            margin: 25px 0;
+
+        .logo-section img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
         }
-        .section-card {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-left: 5px solid;
+
+        .sidebar.collapsed .logo-section img {
+            width: 60px;
+            height: 60px;
         }
-        .processing-card {
-            border-left-color: #667eea;
+
+        .logo-section h2 {
+            font-size: 1.1em;
+            margin-bottom: 4px;
         }
-        .files-card {
-            border-left-color: #28a745;
+
+        .logo-section p {
+            font-size: 0.7em;
+            opacity: 0.7;
         }
-        .section-card h3 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 1.4em;
+
+        .sidebar.collapsed .logo-section h2,
+        .sidebar.collapsed .logo-section p,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .sidebar-nav a span:not(.nav-icon) {
+            display: none;
+        }
+
+        .sidebar-nav {
+            padding: 10px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 15px;
+        }
+
+        .nav-section-title {
+            padding: 6px 15px;
+            font-size: 0.6em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.5;
+        }
+
+        .sidebar-nav a {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.9em;
         }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--secondary);
+        }
+
+        .nav-icon {
+            font-size: 1em;
+            width: 16px;
+            text-align: center;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper.expanded {
+            margin-left: 50px;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 15px;
+            left: 180px;
+            z-index: 1100;
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            color: var(--dark);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-btn.shifted {
+            left: 30px;
+        }
+
+        .toggle-btn:hover {
+            background: var(--secondary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .header-bar {
+            background: white;
+            padding: 15px 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1000px;
+            margin: 0 auto;
+            min-height: 50px;
+        }
+
+        .header-left h1 {
+            font-size: 1.2em;
+            color: var(--dark);
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .header-left h2 {
+            font-size: 0.75em;
+            color: #666;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1em;
+        }
+
+        .environment-badge {
+            padding: 5px 12px;
+            border-radius: 18px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .environment-production {
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
+            color: white;
+        }
+
+        .environment-development {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+        }
+
+        .env-indicator {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .dashboard-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 15px 25px;
+        }
+
+        .welcome-section {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .welcome-section h1 {
+            font-size: 1.6em;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .welcome-section p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        }
+
+        .processing-card {
+            border-left-color: var(--secondary);
+        }
+
+        .section-card h3 {
+            color: var(--dark);
+            margin-bottom: 10px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-card > p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
         .action-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
             margin-top: 15px;
         }
+
         .action-btn {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px 15px;
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
+            padding: 15px 12px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid transparent;
+            border-radius: 10px;
             text-decoration: none;
-            color: #333;
+            color: var(--dark);
             transition: all 0.3s ease;
-            text-align: center;
         }
+
         .action-btn:hover {
-            background: #e9ecef;
-            border-color: #667eea;
-            transform: translateY(-2px);
+            background: white;
+            border-color: var(--secondary);
+            transform: translateY(-3px);
         }
+
         .action-icon {
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 25px;
+            margin-bottom: 12px;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--secondary) 0%, #2980b9 100%);
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
         .action-btn strong {
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            font-size: 0.95em;
         }
+
         .action-btn span {
-            font-size: 12px;
+            font-size: 0.8em;
             color: #666;
         }
-        .environment-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .environment-production {
-            background: #28a745;
-            color: white;
-        }
-        .environment-development {
-            background: #6c757d;
-            color: white;
-        }
-        .flash-messages {
-            margin: 20px 0;
-        }
-        .alert {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            border-left: 5px solid;
-        }
-        .alert-success {
-            background: #d4edda;
-            border-color: #28a745;
-            color: #155724;
-        }
-        
-        /* New styles for the Quick Access section */
+
         .file-management-section {
             background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-left: 5px solid #ffc107;
-            margin-top: 25px;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--warning);
+            margin-top: 15px;
         }
+
         .file-management-section h2 {
-            color: #333;
-            margin-bottom: 10px;
+            color: var(--dark);
+            margin-bottom: 6px;
             font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-management-section > p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .file-management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .file-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-card:hover {
+            border-color: var(--secondary);
+            transform: translateY(-3px);
+            background: white;
+        }
+
+        .file-card h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .file-card p {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary) 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+        }
+
+        .flash-messages {
+            max-width: 1000px;
+            margin: 12px auto;
+            padding: 0 25px;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             display: flex;
             align-items: center;
             gap: 10px;
         }
-        .file-management-section p {
-            color: #666;
-            margin-bottom: 20px;
+
+        .alert-success {
+            border-color: var(--success);
+            color: #155724;
         }
-        .file-management-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+
+        .alert-success::before {
+            content: '✅';
+            font-size: 1.1em;
         }
-        .file-card {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
+
+        .alert-error {
+            border-color: var(--danger);
+            color: #721c24;
+            background: #f8d7da;
+        }
+
+        .alert-error::before {
+            content: '❌';
+            font-size: 1.1em;
+        }
+
+        .footer {
+            background: linear-gradient(135deg, var(--dark) 0%, #1a252f 100%);
+            color: white;
+            padding: 15px 25px;
+            margin-top: auto;
             text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .footer-section h3 {
+            font-size: 1em;
+            margin-bottom: 8px;
+            color: var(--secondary);
+        }
+
+        .footer-section p,
+        .footer-section a {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.85em;
+            text-decoration: none;
             transition: all 0.3s ease;
         }
-        .file-card:hover {
-            border-color: #667eea;
-            transform: translateY(-2px);
+
+        .footer-section a:hover {
+            color: white;
         }
-        .file-card h4 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 1.1em;
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .contact-icon {
+            width: 25px;
+            height: 25px;
+            background: rgba(52, 152, 219, 0.2);
+            border-radius: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-        }
-        .file-card p {
-            color: #666;
             font-size: 0.9em;
-            margin-bottom: 15px;
         }
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 12px;
+            margin-top: 12px;
         }
-        .btn-primary {
-            background: #667eea;
-            color: white;
+
+        .footer-bottom p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8em;
         }
-        .btn-primary:hover {
-            background: #5a6fd8;
-            transform: translateY(-1px);
+
+        .powered-by {
+            font-size: 0.85em;
+            color: rgba(255,255,255,0.9);
         }
-        .btn-success {
-            background: #28a745;
-            color: white;
+
+        .powered-by strong {
+            color: var(--secondary);
         }
-        .btn-success:hover {
-            background: #218838;
-            transform: translateY(-1px);
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
         }
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-1px);
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                transform: translateX(-200px);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .content-wrapper {
+                margin-left: 0;
+            }
+
+            .toggle-btn {
+                left: 10px;
+                top: 10px;
+            }
+
+            .toggle-btn.shifted {
+                left: 10px;
+            }
+
+            .header-bar {
+                padding: 10px 15px;
+                margin: 40px auto 0;
+                max-width: 100%;
+            }
+
+            .header-left h1 {
+                font-size: 1em;
+            }
+
+            .header-left h2 {
+                font-size: 0.7em;
+            }
+
+            .dashboard-container {
+                padding: 10px 15px;
+            }
+
+            .action-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .file-management-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
-        <h2>FCTCNS</h2>
-        <a href="{{ url_for('dashboard') }}" class="active">🏠 Dashboard</a>
-        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
-        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
-        <a href="{{ url_for('file_browser') }}">📁 File Browser</a>
-        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+        <div class="sidebar-header">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="FCT College of Nursing Sciences" onerror="this.style.display='none'">
+                <h2>FCTCNS</h2>
+                <p>Results Processing</p>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main Menu</div>
+                <a href="{{ url_for('dashboard') }}" class="active">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">File Management</div>
+                <a href="{{ url_for('upload_center') }}">
+                    <span class="nav-icon">📤</span>
+                    <span>Upload Center</span>
+                </a>
+                <a href="{{ url_for('download_center') }}">
+                    <span class="nav-icon">📥</span>
+                    <span>Download Center</span>
+                </a>
+                <a href="{{ url_for('file_browser') }}">
+                    <span class="nav-icon">📁</span>
+                    <span>File Browser</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="{{ url_for('debug_paths') }}">
+                    <span class="nav-icon">⚙️</span>
+                    <span>System Tools</span>
+                </a>
+                <a href="{{ url_for('logout') }}">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </nav>
     </div>
 
-    <!-- Main content -->
-    <div class="main-content" id="main">
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <div class="content-wrapper" id="main">
+        <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
-        <!-- Header -->
         <div class="header-bar">
             <div class="header-left">
-                <h1>{{ college }}</h1>
+                <h1>FCT College of Nursing Sciences, Gwagwalada</h1>
                 <h2>Examination Results Processing System</h2>
             </div>
             <div class="header-right">
-                <p><strong>Environment:</strong> 
-                    <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
-                        {{ environment }}
-                    </span>
-                </p>
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9em;">Admin</div>
+                        <div style="font-size: 0.75em; color: #666;">Administrator</div>
+                    </div>
+                </div>
+                <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
+                    <span class="env-indicator"></span>
+                    {{ environment }}
+                </span>
             </div>
         </div>
 
-        <!-- Flash Messages -->
         <div class="flash-messages">
-            {% with messages = get_flashed_messages() %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-success">
-                            ✅ {{ message }}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category in ['success', 'error'] else 'success' }}">
+                            {{ message }}
                         </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
         </div>
 
-        <!-- Welcome Section -->
-        <div class="welcome-section">
-            <h1>Welcome to Examination Results Processing</h1>
-            <p>Streamlined system for processing and managing all examination results</p>
-        </div>
-
         <div class="dashboard-container">
-            <!-- Main Action Grid -->
+            <div class="welcome-section">
+                <h1>Welcome to Examination Results Processing</h1>
+                <p>Streamlined system for processing and managing all examination results</p>
+            </div>
+
             <div class="main-grid">
-                <!-- Processing Section -->
                 <div class="section-card processing-card">
-                    <h3>🎯 Process Examination Results</h3>
-                    <p>Select the type of examination to process:</p>
-                    
+                    <h3>🎯 Process Results</h3>
+                    <p>Process various examination types with full support for all semesters.</p>
                     <div class="action-grid">
-                        <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="action-btn">
+                        <a href="{{ url_for('run_script', script_name='exam_processor_nd') }}" class="action-btn">
                             <div class="action-icon">🎓</div>
-                            <strong>ND Examinations</strong>
-                            <span>Process ND results with GPA calculation</span>
+                            <strong>ND Exams</strong>
+                            <span>Process ND results</span>
                         </a>
-                        
+                        <a href="{{ url_for('run_script', script_name='exam_processor_bn') }}" class="action-btn">
+                            <div class="action-icon">💉</div>
+                            <strong>Basic Nursing</strong>
+                            <span>Process nursing results</span>
+                        </a>
+                        <a href="{{ url_for('run_script', script_name='exam_processor_bm') }}" class="action-btn">
+                            <div class="action-icon">🤰</div>
+                            <strong>Basic Midwifery</strong>
+                            <span>Process midwifery results</span>
+                        </a>
                         <a href="{{ url_for('run_script', script_name='utme') }}" class="action-btn">
                             <div class="action-icon">📘</div>
                             <strong>PUTME Results</strong>
-                            <span>Process Post-UTME examinations</span>
+                            <span>Process Post-UTME exams</span>
                         </a>
-                        
                         <a href="{{ url_for('run_script', script_name='caosce') }}" class="action-btn">
                             <div class="action-icon">📊</div>
                             <strong>CAOSCE Results</strong>
-                            <span>Process CAOSCE examinations</span>
+                            <span>Process CAOSCE exams</span>
                         </a>
-                        
                         <a href="{{ url_for('run_script', script_name='clean') }}" class="action-btn">
                             <div class="action-icon">📝</div>
                             <strong>Internal Exams</strong>
-                            <span>Clean objective exam results</span>
+                            <span>Clean objective results</span>
                         </a>
-                        
                         <a href="{{ url_for('run_script', script_name='split') }}" class="action-btn">
                             <div class="action-icon">👥</div>
                             <strong>JAMB Database</strong>
@@ -291,53 +771,43 @@
                         </a>
                     </div>
                 </div>
-
-                <!-- File Management Section -->
-                <div class="section-card files-card">
-                    <h3>📁 File Management</h3>
-                    <p>Upload raw files and download processed results:</p>
-                    
-                    <div class="action-grid">
-                        <a href="{{ url_for('upload_center') }}" class="action-btn">
-                            <div class="action-icon">📤</div>
-                            <strong>Upload Center</strong>
-                            <span>Upload raw examination files</span>
-                        </a>
-                        
-                        <a href="{{ url_for('download_center') }}" class="action-btn">
-                            <div class="action-icon">📥</div>
-                            <strong>Download Center</strong>
-                            <span>Download processed results</span>
-                        </a>
-                        
-                        <a href="{{ url_for('file_browser') }}" class="action-btn">
-                            <div class="action-icon">🔍</div>
-                            <strong>File Browser</strong>
-                            <span>Browse all files by type</span>
-                        </a>
-                        
-                        <a href="{{ url_for('debug_paths') }}" class="action-btn">
-                            <div class="action-icon">⚙️</div>
-                            <strong>System Tools</strong>
-                            <span>Debugging and monitoring</span>
-                        </a>
-                    </div>
-                </div>
             </div>
 
-            <!-- Quick Access Section -->
             <div class="file-management-section">
                 <h2>📈 Quick Access</h2>
-                <p>Most commonly used actions and recent processed files</p>
-                
+                <p>Common actions and recent files</p>
                 <div class="file-management-grid">
                     <div class="file-card">
                         <h4>🚀 Quick Process ND</h4>
-                        <p>Process ND exams with default settings</p>
-                        <form action="{{ url_for('run_script', script_name='exam_processor') }}" method="POST" style="margin: 0;">
-                            <input type="hidden" name="processing_mode" value="auto">
+                        <p>Process ND exams with defaults</p>
+                        <form action="{{ url_for('run_script', script_name='exam_processor_nd') }}" method="POST" style="margin: 0;">
                             <input type="hidden" name="selected_set" value="all">
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Quick Process</button>
+                            <input type="hidden" name="pass_threshold" value="50.0">
+                            <input type="hidden" name="upgrade_threshold" value="45">
+                            <input type="hidden" name="generate_pdf" value="true">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Quick Process ND</button>
+                        </form>
+                    </div>
+                    <div class="file-card">
+                        <h4>🚀 Quick Process Nursing</h4>
+                        <p>Process Nursing exams with defaults</p>
+                        <form action="{{ url_for('run_script', script_name='exam_processor_bn') }}" method="POST" style="margin: 0;">
+                            <input type="hidden" name="nursing_set" value="all">
+                            <input type="hidden" name="pass_threshold" value="50.0">
+                            <input type="hidden" name="upgrade_threshold" value="45">
+                            <input type="hidden" name="generate_pdf" value="true">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Quick Process BN</button>
+                        </form>
+                    </div>
+                    <div class="file-card">
+                        <h4>🚀 Quick Process Midwifery</h4>
+                        <p>Process Midwifery exams with defaults</p>
+                        <form action="{{ url_for('run_script', script_name='exam_processor_bm') }}" method="POST" style="margin: 0;">
+                            <input type="hidden" name="midwifery_set" value="all">
+                            <input type="hidden" name="pass_threshold" value="50.0">
+                            <input type="hidden" name="upgrade_threshold" value="45">
+                            <input type="hidden" name="generate_pdf" value="true">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Quick Process BM</button>
                         </form>
                     </div>
                     <div class="file-card">
@@ -345,25 +815,83 @@
                         <p>View latest processed files</p>
                         <a href="{{ url_for('download_center') }}" class="btn btn-success" style="display: block; width: 100%; box-sizing: border-box;">View Recent</a>
                     </div>
-                    <div class="file-card">
-                        <h4>🔧 Advanced Options</h4>
-                        <p>Custom processing with advanced settings</p>
-                        <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="btn btn-secondary" style="display: block; width: 100%; box-sizing: border-box;">Advanced Mode</a>
-                    </div>
                 </div>
             </div>
         </div>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About FCTCNS</h3>
+                    <p>Results Processing System for efficient examination management.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('upload_center') }}">Upload Center</a>
+                    <a href="{{ url_for('download_center') }}">Download Center</a>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact</h3>
+                    <div class="contact-item">
+                        <div class="contact-icon">📧</div>
+                        <a href="mailto:idokochukwudie@gmail.com">idokochukwudie@gmail.com</a>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-icon">💼</div>
+                        <a href="https://www.linkedin.com/in/chukwudi-idoko-b5608471" target="_blank" rel="noopener">LinkedIn Profile</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 FCT College. All rights reserved.</p>
+                <div class="powered-by">
+                    Powered by <strong>Cloudit Technologies</strong>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main');
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('mobile-open');
+                toggleBtn.textContent = sidebar.classList.contains('mobile-open') ? '←' : '☰';
+            } else {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+                toggleBtn.classList.toggle('shifted');
+                toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '←';
+            }
         }
 
-        // Auto-hide flash messages after 15 seconds
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar');
+                const toggleBtn = document.getElementById('toggleBtn');
+                
+                if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    sidebar.classList.remove('mobile-open');
+                    toggleBtn.textContent = '☰';
+                }
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleBtn');
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('mobile-open');
+                toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '←';
+            } else {
+                toggleBtn.textContent = sidebar.classList.contains('mobile-open') ? '←' : '☰';
+            }
+        });
+
         setTimeout(function() {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function(alert) {
@@ -374,6 +902,28 @@
                 }, 1000);
             });
         }, 15000);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '⏳ Processing...';
+                        submitBtn.disabled = true;
+                    }
+                });
+            });
+
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.sidebar-nav a');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                }
+            });
+        });
     </script>
 </body>
 </html>

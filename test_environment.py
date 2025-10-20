@@ -1,10 +1,16 @@
 # test_environment.py
 import os
 
+
 def is_running_on_railway():
     """Check if we're running on Railway - more accurate detection"""
-    railway_env_vars = ['RAILWAY_ENVIRONMENT', 'RAILWAY_STATIC_URL', 'RAILWAY_SERVICE_NAME']
+    railway_env_vars = [
+        "RAILWAY_ENVIRONMENT",
+        "RAILWAY_STATIC_URL",
+        "RAILWAY_SERVICE_NAME",
+    ]
     return any(var in os.environ for var in railway_env_vars)
+
 
 print("Environment check:")
 print(f"RAILWAY_ENVIRONMENT: {os.getenv('RAILWAY_ENVIRONMENT', 'Not set')}")

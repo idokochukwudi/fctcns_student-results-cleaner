@@ -4,14 +4,7 @@ caosce_result.py
 
 CAOSCE cleaning script (updated with robust FULL NAME extraction, proper S/N sorting, and timestamped output folders).
 
-Place raw files (CSV/XLS/XLSX) into:
-  /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT
-
-Cleaned output (CSV + formatted XLSX) will be saved to a timestamped folder:
-  /mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT/CAOSCE_RESULT_YYYY-MM-DD_HH:MM:SS
-
-Final cleaned layout:
-S/N  EXAM NO.  FULL NAME  PS1_Score/  PS3_Score/  PS5_Score/  QS2_Score/  QS4_Score/  QS6_Score/  VIVA/10
+Railway + Local compatible with new folder structure.
 """
 
 import os
@@ -24,10 +17,26 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 # ---------------------------
-# Configuration
+# Environment Detection & Directory Configuration
 # ---------------------------
-RAW_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/RAW_CAOSCE_RESULT"
-BASE_CLEAN_DIR = "/mnt/c/Users/MTECH COMPUTERS/Documents/PROCESS_RESULT/CAOSCE_RESULT/CLEAN_CAOSCE_RESULT"
+IS_RAILWAY = os.getenv('RAILWAY_ENVIRONMENT') is not None
+
+if IS_RAILWAY:
+    # Railway: BASE_DIR is set to /app/EXAMS_INTERNAL
+    BASE_DIR = os.getenv('BASE_DIR', '/app/EXAMS_INTERNAL')
+    print("🚂 Running on Railway")
+    print(f"   BASE_DIR: {BASE_DIR}")
+else:
+    # Local: use home directory structure
+    BASE_DIR = os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL')
+    print("💻 Running locally")
+    print(f"   BASE_DIR: {BASE_DIR}")
+
+# UPDATED: Directories now under CAOSCE_RESULT
+DEFAULT_BASE_DIR = os.path.join(BASE_DIR, "CAOSCE_RESULT")
+DEFAULT_RAW_DIR = os.path.join(DEFAULT_BASE_DIR, "RAW_CAOSCE_RESULT")
+DEFAULT_CLEAN_DIR = os.path.join(DEFAULT_BASE_DIR, "CLEAN_CAOSCE_RESULT")
+
 TIMESTAMP_FMT = "%Y-%m-%d_%H:%M:%S"
 OUTPUT_BASENAME = "CAOSCE_CLEANED"
 
@@ -42,13 +51,22 @@ STATION_COLUMN_MAP = {
 }
 
 UNWANTED_COL_PATTERNS = [
-    r"phone", r"department", r"city", r"town", r"state", r"started on", r"completed", r"time taken",
-    r"q\.\s*\d+", r"q\s*\.\s*\d+",
+    r"phone",
+    r"department",
+    r"city",
+    r"town",
+    r"state",
+    r"started on",
+    r"completed",
+    r"time taken",
+    r"q\.\s*\d+",
+    r"q\s*\.\s*\d+",
 ]
 
 NO_SCORE_FILL = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
 NO_SCORE_FONT = Font(bold=True, color="9C0006")
 HEADER_FONT = Font(bold=True)
+
 
 # ---------------------------
 # Helpers
@@ -64,21 +82,46 @@ def find_first_col(df, candidates):
                 return c
     return None
 
+
 def find_username_col(df):
-    return find_first_col(df, ["username", "user name", "exam no", "registration no", "reg no", "mat no", "matno", "regnum"])
+    return find_first_col(
+        df,
+        [
+            "username",
+            "user name",
+            "exam no",
+            "registration no",
+            "reg no",
+            "mat no",
+            "matno",
+            "regnum",
+        ],
+    )
+
 
 def find_fullname_col(df):
-    return find_first_col(df, ["full name", "user full name", "name", "candidate name", "student name"])
+    return find_first_col(
+        df, ["full name", "user full name", "name", "candidate name", "student name"]
+    )
+
 
 def find_viva_score_col(df):
     return find_first_col(df, ["enter student's score", "enter student score", "score"])
 
+
 def find_grade_column(df):
     for c in df.columns:
         cn = str(c).strip().lower()
-        if cn.startswith("grade/") or cn == "grade" or cn == "total" or "grade" in cn or "total" in cn:
+        if (
+            cn.startswith("grade/")
+            or cn == "grade"
+            or cn == "total"
+            or "grade" in cn
+            or "total" in cn
+        ):
             return c
     return None
+
 
 def sanitize_exam_no(v):
     if pd.isna(v):
@@ -86,6 +129,7 @@ def sanitize_exam_no(v):
     s = str(v).strip()
     s = re.sub(r"\.0+$", "", s)
     return s
+
 
 def numeric_safe(v):
     try:
@@ -99,10 +143,16 @@ def numeric_safe(v):
     except Exception:
         return None
 
+
 def auto_column_width(ws, min_width=8, max_width=60):
     for i, col in enumerate(ws.columns, 1):
-        max_len = max((len(str(cell.value)) for cell in col if cell.value is not None), default=0)
-        ws.column_dimensions[get_column_letter(i)].width = min(max_width, max(min_width, max_len + 2))
+        max_len = max(
+            (len(str(cell.value)) for cell in col if cell.value is not None), default=0
+        )
+        ws.column_dimensions[get_column_letter(i)].width = min(
+            max_width, max(min_width, max_len + 2)
+        )
+
 
 # ---------------------------
 # Main processing
@@ -110,13 +160,19 @@ def auto_column_width(ws, min_width=8, max_width=60):
 def process_files():
     print("Starting CAOSCE Results Cleaning...\n")
 
+    # Use the configured directories
+    RAW_DIR = DEFAULT_RAW_DIR
+    BASE_CLEAN_DIR = DEFAULT_CLEAN_DIR
+
     # Create timestamped output directory
     ts = datetime.now().strftime(TIMESTAMP_FMT)
     output_dir = os.path.join(BASE_CLEAN_DIR, f"CAOSCE_RESULT_{ts}")
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(RAW_DIR, exist_ok=True)
 
-    files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith((".xlsx", ".xls", ".csv"))]
+    files = [
+        f for f in os.listdir(RAW_DIR) if f.lower().endswith((".xlsx", ".xls", ".csv"))
+    ]
     if not files:
         print(f"No raw files found in {RAW_DIR}")
         return
@@ -130,14 +186,21 @@ def process_files():
         # Determine station type
         station_key = None
         if "procedure" in lower:
-            if "one" in lower or "station 1" in lower: station_key = "procedure_station_one"
-            elif "three" in lower or "station 3" in lower: station_key = "procedure_station_three"
-            elif "five" in lower or "station 5" in lower: station_key = "procedure_station_five"
+            if "one" in lower or "station 1" in lower:
+                station_key = "procedure_station_one"
+            elif "three" in lower or "station 3" in lower:
+                station_key = "procedure_station_three"
+            elif "five" in lower or "station 5" in lower:
+                station_key = "procedure_station_five"
         if "question" in lower:
-            if "two" in lower or "station 2" in lower: station_key = "question_station_two"
-            elif "four" in lower or "station 4" in lower: station_key = "question_station_four"
-            elif "six" in lower or "station 6" in lower: station_key = "question_station_six"
-        if "viva" in lower: station_key = "viva"
+            if "two" in lower or "station 2" in lower:
+                station_key = "question_station_two"
+            elif "four" in lower or "station 4" in lower:
+                station_key = "question_station_four"
+            elif "six" in lower or "station 6" in lower:
+                station_key = "question_station_six"
+        if "viva" in lower:
+            station_key = "viva"
 
         # Load file
         try:
@@ -158,7 +221,13 @@ def process_files():
 
         # Drop unwanted columns
         for pattern in UNWANTED_COL_PATTERNS:
-            df.drop(columns=[c for c in df.columns if re.search(pattern, str(c), flags=re.I)], inplace=True, errors="ignore")
+            df.drop(
+                columns=[
+                    c for c in df.columns if re.search(pattern, str(c), flags=re.I)
+                ],
+                inplace=True,
+                errors="ignore",
+            )
 
         rows_added = 0
         for _, row in df.iterrows():
@@ -170,9 +239,13 @@ def process_files():
                 results[exam_no] = {
                     "EXAM NO.": exam_no,
                     "FULL NAME": None,
-                    "PS1_Score/": None, "PS3_Score/": None, "PS5_Score/": None,
-                    "QS2_Score/": None, "QS4_Score/": None, "QS6_Score/": None,
-                    "VIVA/10": None
+                    "PS1_Score/": None,
+                    "PS3_Score/": None,
+                    "PS5_Score/": None,
+                    "QS2_Score/": None,
+                    "QS4_Score/": None,
+                    "QS6_Score/": None,
+                    "VIVA/10": None,
                 }
 
             # Robust FULL NAME extraction
@@ -187,7 +260,11 @@ def process_files():
                     if c == username_col:
                         continue
                     v = str(row.get(c, "")).strip()
-                    if v and re.search(r"[A-Za-z]{2,}", v) and not re.fullmatch(r"\d+", v):
+                    if (
+                        v
+                        and re.search(r"[A-Za-z]{2,}", v)
+                        and not re.fullmatch(r"\d+", v)
+                    ):
                         full_name_candidate = v
                         break
 
@@ -215,23 +292,43 @@ def process_files():
         print(f"Processed {fname} ({rows_added} rows read)")
 
     # Final DataFrame
-    final_cols = ["EXAM NO.", "FULL NAME",
-                  "PS1_Score/", "PS3_Score/", "PS5_Score/",
-                  "QS2_Score/", "QS4_Score/", "QS6_Score/",
-                  "VIVA/10"]
+    final_cols = [
+        "EXAM NO.",
+        "FULL NAME",
+        "PS1_Score/",
+        "PS3_Score/",
+        "PS5_Score/",
+        "QS2_Score/",
+        "QS4_Score/",
+        "QS6_Score/",
+        "VIVA/10",
+    ]
     df_out = pd.DataFrame(list(results.values()))
 
-    df_out["FULL NAME"] = df_out.groupby("EXAM NO.")["FULL NAME"].transform(lambda x: x.ffill().bfill())
+    df_out["FULL NAME"] = df_out.groupby("EXAM NO.")["FULL NAME"].transform(
+        lambda x: x.ffill().bfill()
+    )
 
     df_out["__exam_num_sort"] = pd.to_numeric(df_out["EXAM NO."], errors="coerce")
-    df_out.sort_values(by=["__exam_num_sort", "EXAM NO."], ascending=[True, True], inplace=True, na_position="last")
+    df_out.sort_values(
+        by=["__exam_num_sort", "EXAM NO."],
+        ascending=[True, True],
+        inplace=True,
+        na_position="last",
+    )
     df_out.drop(columns="__exam_num_sort", inplace=True)
     df_out.reset_index(drop=True, inplace=True)
 
     df_out.insert(0, "S/N", range(1, len(df_out) + 1))
 
     for col in final_cols[2:]:
-        df_out[col] = df_out[col].apply(lambda v: "NO SCORE" if v is None or (isinstance(v, float) and math.isnan(v)) else v)
+        df_out[col] = df_out[col].apply(
+            lambda v: (
+                "NO SCORE"
+                if v is None or (isinstance(v, float) and math.isnan(v))
+                else v
+            )
+        )
 
     # Save to timestamped directory
     out_csv = os.path.join(output_dir, f"{OUTPUT_BASENAME}_{ts}.csv")
@@ -252,11 +349,15 @@ def process_files():
 
         thin = Side(border_style="thin", color="000000")
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
-        for row_cells in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for row_cells in ws.iter_rows(
+            min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+        ):
             for cell in row_cells:
                 cell.border = border
 
-        score_cols_idx = [i + 1 for i, c in enumerate(df_out.columns) if c in final_cols[2:]]
+        score_cols_idx = [
+            i + 1 for i, c in enumerate(df_out.columns) if c in final_cols[2:]
+        ]
         for r in range(2, ws.max_row + 1):
             for col_idx in score_cols_idx:
                 cell = ws.cell(row=r, column=col_idx)

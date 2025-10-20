@@ -1,201 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>{{ script_desc }} - {{ college }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <style>
-        .upload-container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .upload-form {
-            margin: 20px 0;
-        }
-        .form-group {
-            margin: 15px 0;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-        select, input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        input[type="file"] {
-            padding: 8px;
-        }
-        .submit-btn {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-            margin-top: 20px;
-        }
-        .submit-btn:hover {
-            opacity: 0.9;
-        }
-        .back-btn {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-            display: inline-block;
-            margin-bottom: 20px;
-        }
-        .help-text {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .flash-messages {
-            margin: 20px 0;
-        }
-        .alert {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            border-left: 5px solid;
-        }
-        .alert-success {
-            background: #d4edda;
-            border-color: #28a745;
-            color: #155724;
-        }
-        .alert-error {
-            background: #f8d7da;
-            border-color: #dc3545;
-            color: #721c24;
-        }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ college }} - Upload {{ script_desc }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
-        <h2>FCTCNS</h2>
-        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
-        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
-        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
-        <a href="{{ url_for('file_browser') }}">📁 File Browser</a>
-        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    <div class="container mt-5">
+        <h2>Upload {{ script_desc }}</h2>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-info">
+                    {% for message in messages %}
+                        {{ message }}<br>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% if upload_types %}
+            <div class="mb-3">
+                <label for="upload_type" class="form-label">Upload Type</label>
+                <select class="form-select" id="upload_type" name="upload_type">
+                    {% for type in upload_types %}
+                        <option value="{{ type }}">{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label for="file" class="form-label">Select File (Excel or ZIP)</label>
+                <input type="file" class="form-control" id="file" name="file">
+            </div>
+            <button type="submit" class="btn btn-primary">Upload and Process</button>
+        </form>
+
+        {% if download_links %}
+            <h3 class="mt-4">Download Processed Files</h3>
+            <ul>
+                {% for link in download_links %}
+                    <li><a href="{{ url_for('download_file', filename=link) }}">{{ link }}</a></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
     </div>
 
-    <!-- Main content -->
-    <div class="main-content" id="main">
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-
-        <!-- Header -->
-        <div class="header-bar">
-            <div class="header-left">
-                <h1>{{ college }}</h1>
-                <h2>{{ department }}</h2>
-            </div>
-            <div class="header-right">
-                <p><strong>Unit:</strong> Examination</p>
-            </div>
-        </div>
-
-        <div class="upload-container">
-            <a href="{{ url_for('upload_center') }}" class="back-btn">← Back to Upload Center</a>
-            
-            <h2>{{ script_desc }}</h2>
-            <p>Upload files for processing:</p>
-
-            <!-- Flash Messages -->
-            <div class="flash-messages">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
-                                {% if category == 'success' %}✅{% else %}❌{% endif %} {{ message }}
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-            </div>
-            
-            <form method="POST" enctype="multipart/form-data" class="upload-form">
-                {% if script_name == "exam_processor" and nd_sets %}
-                <div class="form-group">
-                    <label for="nd_set"><strong>Select ND Set:</strong></label>
-                    <select name="nd_set" id="nd_set" required>
-                        <option value="">-- Select ND Set --</option>
-                        {% for nd_set in nd_sets %}
-                        <option value="{{ nd_set }}">{{ nd_set }}</option>
-                        {% endfor %}
-                    </select>
-                    <div class="help-text">Select the ND set where you want to upload files</div>
-                </div>
-                {% endif %}
-                
-                <div class="form-group">
-                    <label for="files"><strong>Select Files:</strong></label>
-                    <input type="file" name="files" id="files" accept=".xlsx,.xls,.csv,.zip" multiple required>
-                    <div class="help-text">You can select multiple files. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)</div>
-                </div>
-                
-                <button type="submit" class="submit-btn">Upload Files</button>
-            </form>
-
-            <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-                <h4>📋 Upload Instructions</h4>
-                <ul style="text-align: left; line-height: 1.6;">
-                    <li>Select the appropriate ND set (for ND examinations)</li>
-                    <li>Choose one or multiple files to upload</li>
-                    <li>Files will be saved directly to the RAW_RESULTS directory</li>
-                    <li>After uploading, go to <strong>Dashboard</strong> to process the files</li>
-                    <li>Processed files will be available in the <strong>Download Center</strong></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main');
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-        }
-
-        // Show file count when files are selected
-        document.getElementById('files').addEventListener('change', function(e) {
-            const fileCount = e.target.files.length;
-            if (fileCount > 0) {
-                const helpText = document.querySelector('.help-text');
-                helpText.textContent = `${fileCount} file(s) selected. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)`;
-            }
-        });
-
-        // Auto-hide flash messages after 15 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                alert.style.opacity = '0';
-                alert.style.transition = 'opacity 1s ease';
-                setTimeout(function() {
-                    alert.remove();
-                }, 1000);
-            });
-        }, 15000);
-    </script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

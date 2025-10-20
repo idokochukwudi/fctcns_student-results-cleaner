@@ -1,32 +1,304 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Launcher Login</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - {{ college | default('FCT College of Nursing Sciences') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 15px;
+        }
+        
+        .login-container {
+            max-width: 380px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .login-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            padding: 1.2rem;
+        }
+        
+        .card-header img {
+            max-width: 70px;
+            margin-bottom: 0.8rem;
+        }
+        
+        .card-header h4 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .card-header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+        
+        .card-body {
+            padding: 1.8rem;
+        }
+        
+        .flash-messages {
+            margin-bottom: 1.2rem;
+        }
+        
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            padding: 12px 15px;
+            border-left: 5px solid;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .alert-icon {
+            margin-right: 10px;
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            border-radius: 8px;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            width: 100%;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+        }
+        
+        .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+            border-color: #667eea;
+            background-color: white;
+            outline: none;
+        }
+        
+        .btn-primary {
+            border-radius: 8px;
+            padding: 10px;
+            width: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin-top: 5px;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #5a6fd8, #6a4190);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .form-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .invalid-feedback {
+            display: none;
+            font-size: 0.75rem;
+            color: #dc3545;
+            margin-top: 5px;
+        }
+        
+        .form-control:invalid:focus ~ .invalid-feedback {
+            display: block;
+        }
+        
+        .password-container {
+            position: relative;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .cursor-blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .login-container {
+                max-width: 100%;
+            }
+            
+            .card-body {
+                padding: 1.5rem;
+            }
+        }
+    </style>
 </head>
-<body class="bg-light">
-<div class="container py-5">
-  <div class="card mx-auto" style="max-width:520px;">
-    <div class="card-body">
-      <h4 class="card-title">{{ college }}</h4>
-      <p class="text-muted">{{ department }}</p>
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-      <form method="post">
-        <div class="mb-3">
-          <label>Password</label>
-          <input type="password" name="password" class="form-control" autofocus required>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <div class="card-header">
+                <img src="{{ logo_url | default(url_for('static', filename='logo.png')) }}" alt="{{ college | default('FCT College of Nursing Sciences') }} Logo" onerror="this.style.display='none'">
+                <h4>{{ college | default('FCT College of Nursing Sciences') }}</h4>
+                <p>{{ department | default('Examinations Office') }}</p>
+            </div>
+            <div class="card-body">
+                <div class="flash-messages">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert {% if category == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                        <span class="alert-icon">{% if category == 'success' %}✅{% else %}❌{% endif %}</span>
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                <form method="POST" id="loginForm">
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="password-container">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required autofocus>
+                            <button type="button" class="toggle-password" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">
+                            Please enter a valid password.
+                        </div>
+                        <small class="form-text">Enter the secure password provided by the ICT department.</small>
+                    </div>
+                    <button type="submit" class="btn-primary">Login</button>
+                </form>
+            </div>
         </div>
-        <button class="btn btn-primary">Login</button>
-      </form>
     </div>
-  </div>
-</div>
+
+    <script>
+        // Focus on password field and ensure cursor blinks
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordField = document.getElementById('password');
+            
+            // Set focus to password field
+            passwordField.focus();
+            
+            // Ensure cursor is visible and blinking
+            passwordField.setSelectionRange(0, 0);
+            
+            // Toggle password visibility
+            const togglePassword = document.getElementById('togglePassword');
+            togglePassword.addEventListener('click', function() {
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+            });
+            
+            // Form validation
+            document.getElementById('loginForm').addEventListener('submit', function(event) {
+                const form = this;
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    form.classList.add('was-validated');
+                }
+            });
+            
+            // Auto-dismiss alerts after 8 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    alert.style.opacity = '0';
+                    alert.style.transition = 'opacity 0.5s ease';
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 500);
+                });
+            }, 8000);
+        });
+    </script>
+    
+    <!-- Font Awesome for the eye icon -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </body>
 </html>

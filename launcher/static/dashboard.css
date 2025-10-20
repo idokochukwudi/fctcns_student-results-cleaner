@@ -5,18 +5,23 @@ body {
     background-color: #f4f6f9;
 }
 
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
 /* Sidebar */
 .sidebar {
-    height: 100%;
     width: 240px;
     position: fixed;
     top: 0;
     left: 0;
     background-color: #023047;
-    padding-top: 20px;
-    transition: 0.3s;
-    overflow-x: hidden;
+    padding: 20px;
+    height: 100%;
+    transition: width 0.3s ease;
     color: white;
+    overflow-x: hidden;
 }
 
 .sidebar img {
@@ -30,28 +35,32 @@ body {
 .sidebar h2 {
     text-align: center;
     margin-bottom: 20px;
+    font-size: 1.5rem;
 }
 
 .sidebar a {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     color: #ddd;
     padding: 12px 20px;
     text-decoration: none;
-    transition: 0.3s;
+    transition: background 0.3s ease;
+    border-radius: 5px;
 }
 
-.sidebar a:hover {
+.sidebar a:hover,
+.sidebar a.active {
     background-color: #035e7b;
     color: #fff;
 }
 
-/* Sidebar collapsed */
 .sidebar.collapsed {
     width: 60px;
 }
 
 .sidebar.collapsed h2,
-.sidebar.collapsed a span {
+.sidebar.collapsed .label {
     display: none;
 }
 
@@ -64,11 +73,11 @@ body {
 .main-content {
     margin-left: 240px;
     padding: 20px;
-    transition: margin-left 0.3s;
+    transition: margin-left 0.3s ease;
+    flex-grow: 1;
 }
 
-/* Collapsed main */
-.main-content.collapsed {
+.main-content.expanded {
     margin-left: 60px;
 }
 
@@ -76,12 +85,16 @@ body {
 .toggle-btn {
     font-size: 20px;
     cursor: pointer;
-    background: transparent;
+    background: #667eea;
+    color: white;
     border: none;
+    padding: 10px;
+    border-radius: 5px;
     margin-bottom: 15px;
+    display: none;
 }
 
-/* Sticky header bar */
+/* Header */
 .header-bar {
     position: sticky;
     top: 0;
@@ -98,24 +111,112 @@ body {
 
 .header-left h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: 1.8rem;
     color: #023047;
 }
 
 .header-left h2 {
-    margin: 0;
-    font-size: 16px;
+    margin: 5px 0 0;
+    font-size: 1.2rem;
     color: #555;
 }
 
 .header-right p {
     margin: 0;
     font-size: 14px;
-    color: #219ebc;
+}
+
+/* Environment badge */
+.environment-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
     font-weight: bold;
 }
 
+.environment-production {
+    background: #28a745;
+    color: white;
+}
+
+.environment-development {
+    background: #6c757d;
+    color: white;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin: 15px 0;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    border-left: 5px solid;
+}
+
+.alert-success {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.alert-error {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.alert-icon {
+    margin-right: 10px;
+}
+
 /* Buttons */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a6fd8;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+/* Button group */
 .button-group {
     margin-top: 20px;
 }
@@ -132,33 +233,21 @@ body {
     margin: 5px;
     border-radius: 5px;
     cursor: pointer;
-    transition: 0.3s;
+    transition: background 0.3s ease;
 }
 
 .button-group button:hover {
     background: #126782;
 }
 
-/* Flash messages */
-.flash-messages {
-    margin: 15px 0;
-    padding: 10px;
-    background: #e3f2fd;
-    border: 1px solid #90caf9;
-    border-radius: 5px;
-    color: #0d47a1;
+.btn-featured {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
     font-weight: bold;
 }
 
-/* Additional styles for new features */
-
-.btn-featured {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    color: white !important;
-    border: none !important;
-    font-weight: bold !important;
-}
-
+/* Stats section */
 .stats-section {
     margin-top: 30px;
     padding: 20px;
@@ -225,6 +314,31 @@ body {
 }
 
 .semester-option:hover {
-    background: #e3f2fd !important;
-    border-color: #2196f3 !important;
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 60px;
+    }
+
+    .sidebar h2,
+    .sidebar .label {
+        display: none;
+    }
+
+    .sidebar img {
+        width: 40px;
+        margin: 0 auto 10px auto;
+    }
+
+    .main-content {
+        margin-left: 60px;
+    }
+
+    .toggle-btn {
+        display: block;
+    }
 }

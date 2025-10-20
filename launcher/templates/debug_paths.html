@@ -1,27 +1,170 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Debug - Script Paths</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Script Paths - {{ college | default('FCT College of Nursing Sciences') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .path { margin: 10px 0; padding: 10px; border-left: 4px solid #ccc; }
-        .exists { border-left-color: green; }
-        .missing { border-left-color: red; }
+        :root {
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --border-color: #e9ecef;
+            --primary-color: #667eea;
+            --text-color: #333;
+        }
+        .debug-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .section-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+        }
+        .path {
+            margin: 10px 0;
+            padding: 15px;
+            border-left: 5px solid;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        .path.exists {
+            border-left-color: #28a745;
+        }
+        .path.missing {
+            border-left-color: #dc3545;
+        }
+        .path strong {
+            color: var(--text-color);
+            font-size: 1.1em;
+        }
+        .path p {
+            margin: 5px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 5px;
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        .flash-messages {
+            margin: 20px 0;
+        }
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+        }
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .alert-error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .alert-icon {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
-    <h1>Script Paths Debug</h1>
-    
-    {% for path in paths %}
-    <div class="path {% if path.exists %}exists{% else %}missing{% endif %}">
-        <strong>{{ path.script }}</strong><br>
-        Path: {{ path.path }}<br>
-        Exists: {{ path.exists }}<br>
-        Is File: {{ path.is_file }}
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+            <h2>FCTCNS</h2>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">🏠</span><span class="label">Dashboard</span></a>
+            <a href="{{ url_for('upload_center') }}"><span class="icon">📤</span><span class="label">Upload Center</span></a>
+            <a href="{{ url_for('download_center') }}"><span class="icon">📥</span><span class="label">Download Center</span></a>
+            <a href="{{ url_for('file_browser') }}"><span class="icon">📁</span><span class="label">File Browser</span></a>
+            <a href="{{ url_for('debug_paths') }}" class="active"><span class="icon">⚙️</span><span class="label">System Tools</span></a>
+            <a href="{{ url_for('logout') }}"><span class="icon">🚪</span><span class="label">Logout</span></a>
+        </div>
+
+        <div class="main-content" id="main">
+            <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+            <div class="header-bar">
+                <div class="header-left">
+                    <h1>{{ college | default('FCT College of Nursing Sciences') }}</h1>
+                    <h2>{{ department | default('Examinations Office') }}</h2>
+                </div>
+                <div class="header-right">
+                    <p><strong>Environment:</strong> 
+                        <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
+                            {{ environment | default('Local Development') }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flash-messages">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert {% if category == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                    <span class="alert-icon">{% if category == 'success' %}✅{% else %}❌{% endif %}</span>
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            <div class="debug-container">
+                <div class="section-card">
+                    <h3>⚙️ Script Paths Debug</h3>
+                    <p>Check the status of script paths configured in the system</p>
+                    {% for path in paths %}
+                    <div class="path {% if path.exists %}exists{% else %}missing{% endif %}">
+                        <strong>{{ path.script }}</strong>
+                        <p>Path: {{ path.path }}</p>
+                        <p>Exists: {{ 'Yes' if path.exists else 'No' }}</p>
+                        <p>Is File: {{ 'Yes' if path.is_file else 'No' }}</p>
+                    </div>
+                    {% endfor %}
+                    <a href="{{ url_for('dashboard') }}" class="btn">🏠 Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
     </div>
-    {% endfor %}
-    
-    <br>
-    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 1s ease';
+                setTimeout(function() {
+                    alert.remove();
+                }, 1000);
+            });
+        }, 15000);
+    </script>
 </body>
 </html>

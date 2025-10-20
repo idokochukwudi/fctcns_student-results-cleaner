@@ -2,201 +2,1335 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>File Browser - {{ college }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Browser - {{ college | default('FCT College of Nursing Sciences') }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .browser-container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
         }
-        .section-card {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .nd-set {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .nd-set-header {
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
             display: flex;
-            justify-content: between;
-            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 200px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            color: white;
+            padding: 0;
+            transition: width 0.3s ease, transform 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 50px;
+        }
+
+        .sidebar-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            padding: 15px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo-section {
+            text-align: center;
+        }
+
+        .logo-section img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo-section img {
+            width: 60px;
+            height: 60px;
+        }
+
+        .logo-section h2 {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+
+        .logo-section p {
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+
+        .sidebar.collapsed .logo-section h2,
+        .sidebar.collapsed .logo-section p,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .sidebar-nav a span:not(.nav-icon) {
+            display: none;
+        }
+
+        .sidebar-nav {
+            padding: 10px 0;
+        }
+
+        .nav-section {
             margin-bottom: 15px;
         }
-        .nd-set-name {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #333;
+
+        .nav-section-title {
+            padding: 6px 15px;
+            font-size: 0.6em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.5;
         }
-        .file-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 10px;
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.9em;
         }
-        .file-item {
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--secondary);
+        }
+
+        .nav-icon {
+            font-size: 1em;
+            width: 16px;
+            text-align: center;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper.expanded {
+            margin-left: 50px;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 15px;
+            left: 180px;
+            z-index: 1100;
             background: white;
-            border: 1px solid #e9ecef;
+            border: 2px solid #e0e0e0;
+            padding: 6px 10px;
             border-radius: 6px;
-            padding: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            color: var(--dark);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-btn.shifted {
+            left: 30px;
+        }
+
+        .toggle-btn:hover {
+            background: var(--secondary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .header-bar {
+            background: white;
+            padding: 15px 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1000px;
+            margin: 0 auto;
+            min-height: 50px;
+        }
+
+        .header-left h1 {
+            font-size: 1.2em;
+            color: var(--dark);
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .header-left h2 {
+            font-size: 0.75em;
+            color: #666;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1em;
+        }
+
+        .environment-badge {
+            padding: 5px 12px;
+            border-radius: 18px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .environment-production {
+            background: linear-gradient(135deg, var(--danger) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .environment-development {
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
+            color: white;
+        }
+
+        .env-indicator {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .browser-container {
+            max-width: 1000px;
+            margin: 15px auto;
+            padding: 15px 25px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+            border-left: 4px solid;
             transition: all 0.3s ease;
         }
-        .file-item:hover {
-            border-color: #667eea;
-            transform: translateY(-1px);
+
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
         }
-        .file-name {
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
+
+        .section-card.active {
+            background: #f8f9fa;
         }
-        .file-meta {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 8px;
+
+        .nd-card { border-left-color: var(--gradient-start); }
+        .bn-card { border-left-color: var(--gradient-end); }
+        .bm-card { border-left-color: var(--success); }
+        .other-card { border-left-color: var(--warning); }
+
+        .set {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
         }
-        .file-actions {
+
+        .set:hover {
+            background: white;
+            border-color: var(--secondary);
+        }
+
+        .set-header {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px 0;
+        }
+
+        .set-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
             gap: 8px;
         }
+
+        .accordion {
+            transition: transform 0.4s ease;
+            font-size: 0.9em;
+            color: var(--dark);
+        }
+
+        .accordion-content {
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .accordion-content.active {
+            opacity: 1;
+            max-height: 5000px;
+        }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .file-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: white;
+            border-color: var(--secondary);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+        }
+
+        .file-icon {
+            font-size: 1.2em;
+        }
+
+        .file-meta {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .file-type-indicator {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .btn {
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 10px 20px;
+            border-radius: 6px;
             text-decoration: none;
-            font-size: 11px;
+            font-weight: 600;
+            font-size: 0.85em;
             border: none;
             cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, var(--secondary) 0%, #2980b9 100%);
             color: white;
         }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         .btn-success {
-            background: #28a745;
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
             color: white;
         }
+
+        .btn-success:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, var(--danger) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .btn-delete:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #148d9f 100%);
+            color: white;
+        }
+
+        .btn-info:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .file-count-badge {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+
+        .file-count {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .flash-messages {
+            margin: 15px 0;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: var(--success);
+            color: #155724;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-color: var(--danger);
+            color: #721c24;
+        }
+
+        .alert-icon {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .debug-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+            color: #666;
+            border: 2px solid #e9ecef;
+            display: none;
+        }
+
+        .debug-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .debug-info-line {
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .debug-toggle-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+        }
+
+        .debug-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            border-color: var(--secondary);
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            font-weight: 500;
+        }
+
         .empty-state {
             text-align: center;
             padding: 30px;
             color: #666;
+            font-size: 0.9em;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 2px dashed #dee2e6;
         }
+
         .empty-state i {
-            font-size: 36px;
+            font-size: 2em;
             margin-bottom: 10px;
-            opacity: 0.5;
+            color: var(--secondary);
         }
-        .accordion {
-            cursor: pointer;
-        }
-        .accordion-content {
-            display: none;
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
             margin-top: 15px;
         }
-        .accordion.active + .accordion-content {
-            display: block;
+
+        .quick-action-btn {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--dark);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quick-action-btn:hover {
+            background: white;
+            border-color: var(--secondary);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            color: var(--secondary);
+        }
+
+        .quick-action-icon {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                transform: translateX(-200px);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .content-wrapper {
+                margin-left: 0;
+            }
+
+            .toggle-btn {
+                left: 10px;
+                top: 10px;
+            }
+
+            .toggle-btn.shifted {
+                left: 10px;
+            }
+
+            .header-bar {
+                padding: 10px 15px;
+                margin: 40px auto 0;
+                max-width: 100%;
+            }
+
+            .header-left h1 {
+                font-size: 1em;
+            }
+
+            .header-left h2 {
+                font-size: 0.7em;
+            }
+
+            .browser-container {
+                padding: 10px 15px;
+            }
+
+            .file-list {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .section-card {
+                padding: 15px;
+            }
+
+            .set {
+                padding: 12px;
+            }
+
+            .set-name {
+                font-size: 1em;
+            }
+
+            .file-item {
+                padding: 12px;
+            }
+
+            .btn, .quick-action-btn, .debug-toggle-btn {
+                padding: 8px 15px;
+                font-size: 0.8em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
-        <h2>FCTCNS</h2>
-        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
-        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
-        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
-        <a href="{{ url_for('file_browser') }}" class="active">📁 File Browser</a>
-        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+        <div class="sidebar-header">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="FCT College of Nursing Sciences" onerror="this.style.display='none'">
+                <h2>FCTCNS</h2>
+                <p>Results Processing</p>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main Menu</div>
+                <a href="{{ url_for('dashboard') }}">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">File Management</div>
+                <a href="{{ url_for('upload_center') }}">
+                    <span class="nav-icon">📤</span>
+                    <span>Upload Center</span>
+                </a>
+                <a href="{{ url_for('download_center') }}">
+                    <span class="nav-icon">📥</span>
+                    <span>Download Center</span>
+                </a>
+                <a href="{{ url_for('file_browser') }}" class="active">
+                    <span class="nav-icon">📁</span>
+                    <span>File Browser</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="{{ url_for('debug_paths') }}">
+                    <span class="nav-icon">⚙️</span>
+                    <span>System Tools</span>
+                </a>
+                <a href="{{ url_for('debug_dir_contents') }}">
+                    <span class="nav-icon">🔍</span>
+                    <span>Debug Directory Contents</span>
+                </a>
+                <a href="{{ url_for('logout') }}">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </nav>
     </div>
 
-    <!-- Main content -->
-    <div class="main-content" id="main">
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <div class="content-wrapper" id="main">
+        <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()">☰</button>
 
-        <!-- Header -->
         <div class="header-bar">
             <div class="header-left">
-                <h1>{{ college }}</h1>
-                <h2>File Browser - Organized by ND Sets</h2>
+                <h1>{{ college | default('FCT College of Nursing Sciences') }}</h1>
+                <h2>📁 File Browser - Organized by Examination Sets</h2>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9em;">Admin</div>
+                        <div style="font-size: 0.75em; color: #666;">Administrator</div>
+                    </div>
+                </div>
+                <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
+                    <span class="env-indicator"></span>
+                    {{ environment | default('Local Development') }}
+                </span>
             </div>
         </div>
 
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert {% if category == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                <span class="alert-icon">{% if category == 'success' %}✅{% else %}❌{% endif %}</span>
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
         <div class="browser-container">
-            <!-- ND Sets Section -->
+            <!-- Debug Section -->
+            {% if environment != 'Railway Production' %}
             <div class="section-card">
-                <h3>🎓 ND Examination Sets</h3>
+                <div class="debug-header">
+                    <h3><i class="fas fa-cog"></i> System Information</h3>
+                    <button class="debug-toggle-btn" onclick="toggleDebugInfo()">▶ Show Debug Info</button>
+                </div>
+                <div id="debug-section" class="debug-section">
+                    <div class="debug-info-line"><strong>BASE_DIR:</strong> {{ BASE_DIR | default('Not set') }}</div>
+                    <div class="debug-info-line"><strong>PROCESSED_DIR:</strong> {{ processed_dir | default('Not set') }}</div>
+                    <div class="debug-info-line"><strong>Total Sets Found:</strong> {{ sets | length }}</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ nd_sets | length }}</div>
+                            <div class="stat-label">ND Sets</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ bn_sets | length }}</div>
+                            <div class="stat-label">BN Sets</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ bm_sets | length }}</div>
+                            <div class="stat-label">BM Sets</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">
+                                {% set total_files = namespace(value=0) %}
+                                {% for set_key, folders in sets.items() %}
+                                    {% for folder in folders %}
+                                        {% set total_files.value = total_files.value + folder.files | length %}
+                                    {% endfor %}
+                                {% endfor %}
+                                {{ total_files.value }}
+                            </div>
+                            <div class="stat-label">Total Files</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <h4>Available Sets:</h4>
+                        <div style="font-size: 0.85em;">
+                            <strong>ND:</strong> {{ nd_sets | join(', ') or 'None' }}<br>
+                            <strong>BN:</strong> {{ bn_sets | join(', ') or 'None' }}<br>
+                            <strong>BM:</strong> {{ bm_sets | join(', ') or 'None' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Stats Section -->
+            <div class="section-card">
+                <h3><i class="fas fa-chart-bar"></i> Quick Overview</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {% set nd_files = namespace(value=0) %}
+                            {% for set_name in nd_sets %}
+                                {% set key = 'ND_' + set_name %}
+                                {% if sets[key] %}
+                                    {% for folder in sets[key] %}
+                                        {% set nd_files.value = nd_files.value + folder.files | length %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ nd_files.value }}
+                        </div>
+                        <div class="stat-label">ND Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {% set bn_files = namespace(value=0) %}
+                            {% for set_name in bn_sets %}
+                                {% set key = 'BN_' + set_name %}
+                                {% if sets[key] %}
+                                    {% for folder in sets[key] %}
+                                        {% set bn_files.value = bn_files.value + folder.files | length %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ bn_files.value }}
+                        </div>
+                        <div class="stat-label">BN Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {% set bm_files = namespace(value=0) %}
+                            {% for set_name in bm_sets %}
+                                {% set key = 'BM_' + set_name %}
+                                {% if sets[key] %}
+                                    {% for folder in sets[key] %}
+                                        {% set bm_files.value = bm_files.value + folder.files | length %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ bm_files.value }}
+                        </div>
+                        <div class="stat-label">BM Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">
+                            {% set other_files = namespace(value=0) %}
+                            {% for result_type in ['PUTME_RESULT', 'CAOSCE_RESULT', 'INTERNAL_RESULT', 'JAMB_DB'] %}
+                                {% if sets[result_type] %}
+                                    {% for folder in sets[result_type] %}
+                                        {% set other_files.value = other_files.value + folder.files | length %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ other_files.value }}
+                        </div>
+                        <div class="stat-label">Other Files</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ND Sets Section -->
+            <div class="section-card nd-card">
+                <div class="set-header" aria-expanded="false" aria-controls="nd-content">
+                    <h3><i class="fas fa-graduation-cap"></i> ND Examination Sets</h3>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="btn btn-info" onclick="toggleAllSets('nd')"><i class="fas fa-arrows-alt-v"></i> Toggle All ND Sets</button>
+                        <i class="fas fa-chevron-down accordion"></i>
+                    </div>
+                </div>
                 <p>Browse processed results organized by ND examination sets</p>
-                
-                {% if file_structure.nd_sets %}
-                    {% for nd_set in file_structure.nd_sets %}
-                    <div class="nd-set">
-                        <div class="nd-set-header accordion">
-                            <div class="nd-set-name">📂 {{ nd_set.name }}</div>
-                            <div style="font-size: 0.9em; color: #666;">
-                                {{ nd_set.clean_results|length }} file(s) available
+                <div id="nd-content">
+                    {% if nd_sets %}
+                        {% for set_name in nd_sets %}
+                        {% set key = 'ND_' + set_name %}
+                        {% set total_files = namespace(value=0) %}
+                        {% if sets[key] %}
+                            {% for folder in sets[key] %}
+                                {% set total_files.value = total_files.value + folder.files | length %}
+                            {% endfor %}
+                        {% endif %}
+                        <div class="set nd-set">
+                            <div class="set-header" data-set="{{ set_name }}" aria-expanded="false" aria-controls="{{ set_name }}-content">
+                                <div class="set-name">
+                                    <i class="fas fa-folder"></i> {{ set_name }}
+                                    {% if total_files.value > 0 %}
+                                    <span class="file-count-badge">{{ total_files.value }} files</span>
+                                    {% endif %}
+                                </div>
+                                <div class="file-count">{{ total_files.value }} file(s) available</div>
+                                <i class="fas fa-chevron-down accordion"></i>
+                            </div>
+                            <div class="accordion-content" id="{{ set_name }}-content">
+                                {% if sets[key] %}
+                                    {% for folder in sets[key] %}
+                                    <div style="margin-bottom: 20px;">
+                                        <h4 style="margin: 10px 0; color: #555; font-size: 1.1em;"><i class="fas fa-folder-open"></i> {{ folder.name }}</h4>
+                                        <div class="file-list">
+                                            {% for file in folder.files %}
+                                            <div class="file-item">
+                                                <div class="file-name">
+                                                    <i class="file-icon fas {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% elif file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.csv') %}fa-file-csv{% elif file.name.endswith('.zip') %}fa-file-archive{% else %}fa-file{% endif %}"></i>
+                                                    {{ file.name }}
+                                                </div>
+                                                <div class="file-meta">
+                                                    <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                                    <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
+                                                </div>
+                                                <div class="file-type-indicator">
+                                                    {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                                    Excel File
+                                                    {% elif file.name.endswith('.pdf') %}
+                                                    PDF File
+                                                    {% elif file.name.endswith('.csv') %}
+                                                    CSV File
+                                                    {% elif file.name.endswith('.zip') %}
+                                                    ZIP Archive
+                                                    {% endif %}
+                                                </div>
+                                                <div class="file-actions">
+                                                    <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary"><i class="fas fa-download"></i> Download</a>
+                                                    {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                                    <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-success" download><i class="fas fa-file-excel"></i> Excel</a>
+                                                    {% endif %}
+                                                    <form action="{{ url_for('delete', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
+                                                        <input type="hidden" name="confirm" value="true">
+                                                        <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div style="margin-top: 15px;">
+                                            <form action="{{ url_for('delete', filename='ND/' + set_name + '/CLEAN_RESULTS/' + folder.name) }}" method="POST" onsubmit="return confirmDelete('{{ folder.name }}');" class="delete-form">
+                                                <input type="hidden" name="confirm" value="true">
+                                                <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete Folder {{ folder.name }}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                <div style="margin-top: 15px; text-align: center;">
+                                    <a href="{{ url_for('download_zip', set_name='ND_' + set_name) }}" class="btn btn-primary"><i class="fas fa-file-archive"></i> Download Entire Set as ZIP</a>
+                                </div>
                             </div>
                         </div>
-                        <div class="accordion-content">
-                            {% if nd_set.clean_results %}
-                            <div class="file-list">
-                                {% for file in nd_set.clean_results %}
-                                <div class="file-item">
-                                    <div class="file-name">{{ file.name }}</div>
-                                    <div class="file-meta">
-                                        📏 {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
-                                        📅 {{ datetime.fromtimestamp(file.modified).strftime('%Y-%m-%d %H:%M') }}
-                                    </div>
-                                    <div class="file-actions">
-                                        <a href="{{ url_for('download_file', filename=file.path.replace(BASE_DIR + '/', '')) }}" class="btn btn-primary">Download</a>
-                                        {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
-                                        <a href="{{ url_for('download_file', filename=file.path.replace(BASE_DIR + '/', '')) }}" class="btn btn-success" download>Excel</a>
-                                        {% endif %}
-                                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p style="font-size: 1.1em; margin-bottom: 10px;">No ND examination sets available</p>
+                            <p>Process some ND examination results to see them here</p>
+                            <a href="{{ url_for('upload_center') }}" class="btn btn-primary"><i class="fas fa-upload"></i> Go to Upload Center</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Basic Nursing Sets Section -->
+            <div class="section-card bn-card">
+                <div class="set-header" aria-expanded="false" aria-controls="bn-content">
+                    <h3><i class="fas fa-user-nurse"></i> Basic Nursing Sets</h3>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="btn btn-info" onclick="toggleAllSets('bn')"><i class="fas fa-arrows-alt-v"></i> Toggle All BN Sets</button>
+                        <i class="fas fa-chevron-down accordion"></i>
+                    </div>
+                </div>
+                <p>Browse processed results organized by Basic Nursing examination sets</p>
+                <div id="bn-content">
+                    {% if bn_sets %}
+                        {% for set_name in bn_sets %}
+                        {% set key = 'BN_' + set_name %}
+                        {% set total_files = namespace(value=0) %}
+                        {% if sets[key] %}
+                            {% for folder in sets[key] %}
+                                {% set total_files.value = total_files.value + folder.files | length %}
+                            {% endfor %}
+                        {% endif %}
+                        <div class="set bn-set">
+                            <div class="set-header" data-set="{{ set_name }}" aria-expanded="false" aria-controls="{{ set_name }}-content">
+                                <div class="set-name">
+                                    <i class="fas fa-folder"></i> {{ set_name }}
+                                    {% if total_files.value > 0 %}
+                                    <span class="file-count-badge">{{ total_files.value }} files</span>
+                                    {% endif %}
                                 </div>
-                                {% endfor %}
+                                <div class="file-count">{{ total_files.value }} file(s) available</div>
+                                <i class="fas fa-chevron-down accordion"></i>
                             </div>
-                            
-                            <div style="margin-top: 15px; text-align: center;">
-                                <a href="{{ url_for('download_zip', nd_set_name=nd_set.name) }}" class="btn btn-primary" style="padding: 8px 16px;">
-                                    📦 Download Entire Set as ZIP
-                                </a>
+                            <div class="accordion-content" id="{{ set_name }}-content">
+                                {% if sets[key] %}
+                                    {% for folder in sets[key] %}
+                                    <div style="margin-bottom: 20px;">
+                                        <h4 style="margin: 10px 0; color: #555; font-size: 1.1em;"><i class="fas fa-folder-open"></i> {{ folder.name }}</h4>
+                                        <div class="file-list">
+                                            {% for file in folder.files %}
+                                            <div class="file-item">
+                                                <div class="file-name">
+                                                    <i class="file-icon fas {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% elif file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.csv') %}fa-file-csv{% elif file.name.endswith('.zip') %}fa-file-archive{% else %}fa-file{% endif %}"></i>
+                                                    {{ file.name }}
+                                                </div>
+                                                <div class="file-meta">
+                                                    <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                                    <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
+                                                </div>
+                                                <div class="file-type-indicator">
+                                                    {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                                    Excel File
+                                                    {% elif file.name.endswith('.pdf') %}
+                                                    PDF File
+                                                    {% elif file.name.endswith('.csv') %}
+                                                    CSV File
+                                                    {% elif file.name.endswith('.zip') %}
+                                                    ZIP Archive
+                                                    {% endif %}
+                                                </div>
+                                                <div class="file-actions">
+                                                    <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary"><i class="fas fa-download"></i> Download</a>
+                                                    {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                                    <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-success" download><i class="fas fa-file-excel"></i> Excel</a>
+                                                    {% endif %}
+                                                    <form action="{{ url_for('delete', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
+                                                        <input type="hidden" name="confirm" value="true">
+                                                        <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div style="margin-top: 15px;">
+                                            <form action="{{ url_for('delete', filename='BN/' + set_name + '/CLEAN_RESULTS/' + folder.name) }}" method="POST" onsubmit="return confirmDelete('{{ folder.name }}');" class="delete-form">
+                                                <input type="hidden" name="confirm" value="true">
+                                                <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete Folder {{ folder.name }}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                <div style="margin-top: 15px; text-align: center;">
+                                    <a href="{{ url_for('download_zip', set_name='BN_' + set_name) }}" class="btn btn-primary"><i class="fas fa-file-archive"></i> Download Entire Set as ZIP</a>
+                                </div>
                             </div>
-                            {% else %}
-                            <div class="empty-state">
-                                <div>📭</div>
-                                <p>No processed files available for {{ nd_set.name }}</p>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p style="font-size: 1.1em; margin-bottom: 10px;">No Basic Nursing examination sets available</p>
+                            <p>Process some Basic Nursing examination results to see them here</p>
+                            <a href="{{ url_for('upload_center') }}" class="btn btn-primary"><i class="fas fa-upload"></i> Go to Upload Center</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Basic Midwifery Sets Section -->
+            <div class="section-card bm-card">
+                <div class="set-header" aria-expanded="false" aria-controls="bm-content">
+                    <h3><i class="fas fa-baby"></i> Basic Midwifery Sets</h3>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="btn btn-info" onclick="toggleAllSets('bm')"><i class="fas fa-arrows-alt-v"></i> Toggle All BM Sets</button>
+                        <i class="fas fa-chevron-down accordion"></i>
+                    </div>
+                </div>
+                <p>Browse processed results organized by Basic Midwifery examination sets</p>
+                <div id="bm-content">
+                    {% if bm_sets %}
+                        {% for set_name in bm_sets %}
+                        {% set key = 'BM_' + set_name %}
+                        {% set total_files = namespace(value=0) %}
+                        {% if sets[key] %}
+                            {% for folder in sets[key] %}
+                                {% set total_files.value = total_files.value + folder.files | length %}
+                            {% endfor %}
+                        {% endif %}
+                        <div class="set bm-set">
+                            <div class="set-header" data-set="{{ set_name }}" aria-expanded="false" aria-controls="{{ set_name }}-content">
+                                <div class="set-name">
+                                    <i class="fas fa-folder"></i> {{ set_name }}
+                                    {% if total_files.value > 0 %}
+                                    <span class="file-count-badge">{{ total_files.value }} files</span>
+                                    {% endif %}
+                                </div>
+                                <div class="file-count">{{ total_files.value }} file(s) available</div>
+                                <i class="fas fa-chevron-down accordion"></i>
+                            </div>
+                            <div class="accordion-content" id="{{ set_name }}-content">
+                                {% if sets[key] %}
+                                    {% for folder in sets[key] %}
+                                    <div style="margin-bottom: 20px;">
+                                        <h4 style="margin: 10px 0; color: #555; font-size: 1.1em;"><i class="fas fa-folder-open"></i> {{ folder.name }}</h4>
+                                        <div class="file-list">
+                                            {% for file in folder.files %}
+                                            <div class="file-item">
+                                                <div class="file-name">
+                                                    <i class="file-icon fas {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% elif file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.csv') %}fa-file-csv{% elif file.name.endswith('.zip') %}fa-file-archive{% else %}fa-file{% endif %}"></i>
+                                                    {{ file.name }}
+                                                </div>
+                                                <div class="file-meta">
+                                                    <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                                    <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
+                                                </div>
+                                                <div class="file-type-indicator">
+                                                    {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                                    Excel File
+                                                    {% elif file.name.endswith('.pdf') %}
+                                                    PDF File
+                                                    {% elif file.name.endswith('.csv') %}
+                                                    CSV File
+                                                    {% elif file.name.endswith('.zip') %}
+                                                    ZIP Archive
+                                                    {% endif %}
+                                                </div>
+                                                <div class="file-actions">
+                                                    <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary"><i class="fas fa-download"></i> Download</a>
+                                                    {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                                    <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-success" download><i class="fas fa-file-excel"></i> Excel</a>
+                                                    {% endif %}
+                                                    <form action="{{ url_for('delete', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
+                                                        <input type="hidden" name="confirm" value="true">
+                                                        <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        <div style="margin-top: 15px;">
+                                            <form action="{{ url_for('delete', filename='BM/' + set_name + '/CLEAN_RESULTS/' + folder.name) }}" method="POST" onsubmit="return confirmDelete('{{ folder.name }}');" class="delete-form">
+                                                <input type="hidden" name="confirm" value="true">
+                                                <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete Folder {{ folder.name }}</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                <div style="margin-top: 15px; text-align: center;">
+                                    <a href="{{ url_for('download_zip', set_name='BM_' + set_name) }}" class="btn btn-primary"><i class="fas fa-file-archive"></i> Download Entire Set as ZIP</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p style="font-size: 1.1em; margin-bottom: 10px;">No Basic Midwifery examination sets available</p>
+                            <p>Process some Basic Midwifery examination results to see them here</p>
+                            <a href="{{ url_for('upload_center') }}" class="btn btn-primary"><i class="fas fa-upload"></i> Go to Upload Center</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Other Result Types Section -->
+            {% for result_type in ['PUTME_RESULT', 'CAOSCE_RESULT', 'INTERNAL_RESULT', 'JAMB_DB'] %}
+            <div class="section-card other-card">
+                <div class="set-header" aria-expanded="false" aria-controls="{{ result_type }}-content">
+                    <h3>
+                        {% if result_type == 'PUTME_RESULT' %}<i class="fas fa-book"></i> PUTME Results
+                        {% elif result_type == 'CAOSCE_RESULT' %}<i class="fas fa-chart-bar"></i> CAOSCE Results
+                        {% elif result_type == 'INTERNAL_RESULT' %}<i class="fas fa-file-alt"></i> Internal Examination Results
+                        {% elif result_type == 'JAMB_DB' %}<i class="fas fa-users"></i> JAMB Database
+                        {% else %}{{ result_type.replace('_', ' ') }}{% endif %}
+                    </h3>
+                    {% if result_type == 'INTERNAL_RESULT' and sets[result_type] %}
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="btn btn-info" onclick="toggleAllSets('internal')"><i class="fas fa-arrows-alt-v"></i> Toggle All Internal Sets</button>
+                        <i class="fas fa-chevron-down accordion"></i>
+                    </div>
+                    {% else %}
+                    <i class="fas fa-chevron-down accordion"></i>
+                    {% endif %}
+                </div>
+                <p>
+                    {% if result_type == 'INTERNAL_RESULT' %}
+                    Browse processed internal examination results and objective tests
+                    {% else %}
+                    Browse processed results for {{ result_type.replace('_', ' ') }}
+                    {% endif %}
+                </p>
+                <div id="{{ result_type }}-content">
+                    {% if sets[result_type] %}
+                        {% for folder in sets[result_type] %}
+                        <div class="set {% if result_type == 'INTERNAL_RESULT' %}internal-set{% endif %}">
+                            <div class="set-header" data-set="{{ folder.name }}" aria-expanded="false" aria-controls="{{ result_type }}-{{ folder.name }}-content">
+                                <div class="set-name">
+                                    <i class="fas fa-folder"></i> {{ folder.name }}
+                                    <span class="file-count-badge">{{ folder.files | length }} files</span>
+                                </div>
+                                <div class="file-count">{{ folder.files | length }} file(s) available</div>
+                                <i class="fas fa-chevron-down accordion"></i>
+                            </div>
+                            <div class="accordion-content" id="{{ result_type }}-{{ folder.name }}-content">
+                                <div class="file-list">
+                                    {% for file in folder.files %}
+                                    <div class="file-item">
+                                        <div class="file-name">
+                                            <i class="file-icon fas {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% elif file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.csv') %}fa-file-csv{% elif file.name.endswith('.zip') %}fa-file-archive{% else %}fa-file{% endif %}"></i>
+                                            {{ file.name }}
+                                        </div>
+                                        <div class="file-meta">
+                                            <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
+                                            <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
+                                        </div>
+                                        <div class="file-type-indicator">
+                                            {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                            Excel File
+                                            {% elif file.name.endswith('.pdf') %}
+                                            PDF File
+                                            {% elif file.name.endswith('.csv') %}
+                                            CSV File
+                                            {% elif file.name.endswith('.zip') %}
+                                            ZIP Archive
+                                            {% endif %}
+                                        </div>
+                                        <div class="file-actions">
+                                            <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary"><i class="fas fa-download"></i> Download</a>
+                                            {% if file.name.endswith('.xlsx') or file.name.endswith('.xls') %}
+                                            <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-success" download><i class="fas fa-file-excel"></i> Excel</a>
+                                            {% endif %}
+                                            <form action="{{ url_for('delete', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
+                                                <input type="hidden" name="confirm" value="true">
+                                                <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div style="margin-top: 15px;">
+                                    <form action="{{ url_for('delete', filename=result_type + '/' + folder.name) }}" method="POST" onsubmit="return confirmDelete('{{ folder.name }}');" class="delete-form">
+                                        <input type="hidden" name="confirm" value="true">
+                                        <button type="submit" class="btn btn-delete"><i class="fas fa-trash"></i> Delete Folder {{ folder.name }}</button>
+                                    </form>
+                                </div>
+                                <div style="margin-top: 15px; text-align: center;">
+                                    <a href="{{ url_for('download_zip', set_name=result_type + '/' + folder.name) }}" class="btn btn-primary"><i class="fas fa-file-archive"></i> Download Entire Set as ZIP</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p style="font-size: 1.1em; margin-bottom: 10px;">
+                                No {{ result_type.replace('_', ' ') }} available
+                            </p>
+                            <p>
+                                {% if result_type == 'INTERNAL_RESULT' %}
+                                Process some internal examination or objective test files to see them here
+                                {% else %}
+                                Process some {{ result_type.replace('_', ' ') }} files to see them here
+                                {% endif %}
+                            </p>
+                            {% if result_type == 'INTERNAL_RESULT' %}
+                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 0.9em;">
+                                <strong>Note:</strong> Internal results are processed using the "Internal Examination Results" processor 
+                                and stored in the OBJ_RESULT directory.
                             </div>
                             {% endif %}
+                            <a href="{{ url_for('upload_center') }}" class="btn btn-primary"><i class="fas fa-upload"></i> Go to Upload Center</a>
                         </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="empty-state">
-                        <div>📭</div>
-                        <p>No ND examination sets available</p>
-                        <p>Process some ND examination results to see them here</p>
-                    </div>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
+            {% endfor %}
 
             <!-- Quick Actions -->
             <div class="section-card">
-                <h3>⚡ Quick Actions</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-                    <a href="{{ url_for('upload_center') }}" class="btn btn-primary" style="padding: 12px; text-align: center;">
-                        📤 Upload New Files
+                <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                <div class="quick-actions">
+                    <a href="{{ url_for('upload_center') }}" class="quick-action-btn">
+                        <span class="quick-action-icon">📤</span>
+                        <span style="font-weight: 600;">Upload New Files</span>
+                        <span style="font-size: 0.9em; color: #666;">Add new examination files</span>
                     </a>
-                    <a href="{{ url_for('download_center') }}" class="btn btn-success" style="padding: 12px; text-align: center;">
-                        📥 Go to Download Center
+                    <a href="{{ url_for('download_center') }}" class="quick-action-btn">
+                        <span class="quick-action-icon">📥</span>
+                        <span style="font-weight: 600;">Download Center</span>
+                        <span style="font-size: 0.9em; color: #666;">Browse all processed files</span>
                     </a>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="padding: 12px; text-align: center;">
-                        🏠 Back to Dashboard
+                    <a href="{{ url_for('dashboard') }}" class="quick-action-btn">
+                        <span class="quick-action-icon">🏠</span>
+                        <span style="font-weight: 600;">Back to Dashboard</span>
+                        <span style="font-size: 0.9em; color: #666;">Return to main dashboard</span>
                     </a>
                 </div>
             </div>
@@ -207,22 +1341,173 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main');
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('mobile-open');
+                toggleBtn.textContent = sidebar.classList.contains('mobile-open') ? '←' : '☰';
+            } else {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('expanded');
+                toggleBtn.classList.toggle('shifted');
+                toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '←';
+            }
         }
 
-        // Accordion functionality
-        document.querySelectorAll('.accordion').forEach(accordion => {
-            accordion.addEventListener('click', function() {
-                this.classList.toggle('active');
-            });
+        document.addEventListener('click', function(event) {
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar');
+                const toggleBtn = document.getElementById('toggleBtn');
+                
+                if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    sidebar.classList.remove('mobile-open');
+                    toggleBtn.textContent = '☰';
+                }
+            }
         });
 
-        // Open first accordion by default
-        const firstAccordion = document.querySelector('.accordion');
-        if (firstAccordion) {
-            firstAccordion.classList.add('active');
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleBtn');
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('mobile-open');
+                toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '→' : '←';
+            } else {
+                toggleBtn.textContent = sidebar.classList.contains('mobile-open') ? '←' : '☰';
+            }
+        });
+
+        function confirmDelete(path) {
+            return confirm(`Are you sure you want to delete '${path}'? This action cannot be undone.`);
         }
+
+        function toggleDebugInfo() {
+            const debugSection = document.getElementById('debug-section');
+            debugSection.classList.toggle('active');
+            const btn = document.querySelector('.debug-toggle-btn');
+            btn.textContent = debugSection.classList.contains('active') ? '▼ Hide Debug Info' : '▶ Show Debug Info';
+        }
+
+        function toggleAllSets(program) {
+            const sets = document.querySelectorAll(`.${program}-set .set-header`);
+            const allVisible = Array.from(sets).every(set => set.nextElementSibling.classList.contains('active'));
+            
+            sets.forEach(set => {
+                if (allVisible) {
+                    set.nextElementSibling.classList.remove('active');
+                    set.querySelector('.accordion').style.transform = 'rotate(-90deg)';
+                    set.setAttribute('aria-expanded', 'false');
+                } else {
+                    set.nextElementSibling.classList.add('active');
+                    set.querySelector('.accordion').style.transform = 'rotate(0deg)';
+                    set.setAttribute('aria-expanded', 'true');
+                }
+            });
+        }
+
+        function updateFileCounts() {
+            document.querySelectorAll('.set').forEach(set => {
+                const fileCount = set.querySelectorAll('.file-item').length;
+                const countElement = set.querySelector('.file-count');
+                if (countElement) {
+                    countElement.textContent = `${fileCount} file(s) available`;
+                }
+                
+                const badgeElement = set.querySelector('.file-count-badge');
+                if (badgeElement && fileCount > 0) {
+                    badgeElement.textContent = `${fileCount} files`;
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.set-header').forEach(header => {
+                header.addEventListener('click', function(event) {
+                    if (event.target.closest('.btn-info')) return;
+                    const content = this.nextElementSibling;
+                    const toggleIcon = this.querySelector('.accordion');
+                    const isCollapsed = !content.classList.contains('active');
+                    
+                    if (isCollapsed) {
+                        content.classList.add('active');
+                        toggleIcon.style.transform = 'rotate(0deg)';
+                        this.setAttribute('aria-expanded', 'true');
+                    } else {
+                        content.classList.remove('active');
+                        toggleIcon.style.transform = 'rotate(-90deg)';
+                        this.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.section-card .set-header').forEach(header => {
+                header.addEventListener('click', function(event) {
+                    if (event.target.closest('.btn-info')) return;
+                    const content = document.getElementById(this.getAttribute('aria-controls'));
+                    const toggleIcon = this.querySelector('.accordion');
+                    const sectionCard = this.closest('.section-card');
+                    const isCollapsed = !content.classList.contains('active');
+                    
+                    if (isCollapsed) {
+                        content.classList.add('active');
+                        toggleIcon.style.transform = 'rotate(0deg)';
+                        sectionCard.classList.add('active');
+                        this.setAttribute('aria-expanded', 'true');
+                    } else {
+                        content.classList.remove('active');
+                        toggleIcon.style.transform = 'rotate(-90deg)';
+                        sectionCard.classList.remove('active');
+                        this.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            });
+
+            document.querySelectorAll('.section-card').forEach(section => {
+                const firstHeader = section.querySelector('.set-header');
+                if (firstHeader) {
+                    firstHeader.click();
+                }
+            });
+
+            updateFileCounts();
+
+            document.querySelectorAll('.btn-primary, .btn-success, .btn-delete, .btn-info').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!this.classList.contains('disabled')) {
+                        this.classList.add('disabled');
+                        this.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${this.classList.contains('btn-delete') ? 'Deleting...' : 'Downloading...'}`;
+                        setTimeout(() => {
+                            this.classList.remove('disabled');
+                            const icon = this.classList.contains('btn-success') ? 'fa-file-excel' : 
+                                        this.classList.contains('btn-delete') ? 'fa-trash' : 
+                                        this.classList.contains('btn-info') ? 'fa-arrows-alt-v' : 'fa-download';
+                            this.innerHTML = `<i class="fas ${icon}"></i> ${this.classList.contains('btn-delete') ? 'Delete' : 
+                                            this.classList.contains('btn-info') ? `Toggle All ${btn.closest('.section-card').querySelector('h3').textContent.split(' ')[0]} Sets` : 
+                                            this.classList.contains('btn-success') ? 'Excel' : 'Download'}`;
+                        }, 2000);
+                    }
+                });
+            });
+
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    alert.style.opacity = '0';
+                    alert.style.transition = 'opacity 1s ease';
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 1000);
+                });
+            }, 15000);
+
+            const navLinks = document.querySelectorAll('.sidebar-nav a');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === window.location.pathname) {
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                }
+            });
+        });
     </script>
 </body>
 </html>

@@ -27,25 +27,31 @@ with io.open(FILE_PATH, "r", encoding="utf-8") as f:
 
 # Find the start index of the target for-loop
 start_idx = None
-pattern_for = re.compile(r'^\s*for\s+code\s+in\s+ordered_codes\s+if\s+ordered_codes\s+else\s+\[\]\s*:')
+pattern_for = re.compile(
+    r"^\s*for\s+code\s+in\s+ordered_codes\s+if\s+ordered_codes\s+else\s+\[\]\s*:"
+)
 for i, ln in enumerate(lines):
     if pattern_for.match(ln):
         start_idx = i
         break
 
 if start_idx is None:
-    print("ERROR: Could not find 'for code in ordered_codes if ordered_codes else []:' in file.")
+    print(
+        "ERROR: Could not find 'for code in ordered_codes if ordered_codes else []:' in file."
+    )
     raise SystemExit(1)
 
 # Find the end index: the first subsequent line that contains 'sn += 1' (we will include that line)
 end_idx = None
-for j in range(start_idx+1, len(lines)):
-    if re.match(r'^\s*sn\s*\+=\s*1\s*$', lines[j]):
+for j in range(start_idx + 1, len(lines)):
+    if re.match(r"^\s*sn\s*\+=\s*1\s*$", lines[j]):
         end_idx = j
         break
 
 if end_idx is None:
-    print("ERROR: Could not find the loop end marker 'sn += 1' after the for-loop. Aborting.")
+    print(
+        "ERROR: Could not find the loop end marker 'sn += 1' after the for-loop. Aborting."
+    )
     raise SystemExit(1)
 
 # Prepare backup
@@ -63,7 +69,7 @@ replacement_block = [
 
 # We'll detect the indentation prefix used for the body (count spaces after for-line)
 for_line = lines[start_idx]
-m = re.match(r'^(\s*)for\s', for_line)
+m = re.match(r"^(\s*)for\s", for_line)
 indent = m.group(1) + "    "  # body should be 4 spaces deeper than for-line
 
 # Construct the new body with the detected indentation
@@ -116,11 +122,13 @@ body = f"""{indent}score = r.get(code)
 replacement_block.extend(body.splitlines(keepends=True))
 
 # Compose new file content
-new_lines = lines[:start_idx] + replacement_block + lines[end_idx+1:]
+new_lines = lines[:start_idx] + replacement_block + lines[end_idx + 1 :]
 
 # Write back
 with io.open(FILE_PATH, "w", encoding="utf-8") as f:
     f.writelines(new_lines)
 
 print(f"Patched file written: {FILE_PATH}")
-print("Done. Please run your script and verify upgrades are logged and mastersheet updated.")
+print(
+    "Done. Please run your script and verify upgrades are logged and mastersheet updated."
+)
