@@ -2,7 +2,7 @@
 """
 exam_result_processor.py
 Complete script with integrated carryover student management and resit processing.
-FIXED VERSION - Proper course mapping and mastersheet formatting
+FIXED VERSION - Enhanced course name matching for all semesters with robust case-insensitive handling
 """
 
 from openpyxl.cell import MergedCell
@@ -137,6 +137,9 @@ def get_form_parameters():
     if not selected_semesters or 'all' in selected_semesters:
         selected_semesters = SEMESTER_ORDER.copy()
     
+    # FIX: Convert selected semesters to UPPERCASE to match course data
+    selected_semesters = [sem.upper() for sem in selected_semesters]
+    
     print(f"🎯 FORM PARAMETERS:")
     print(f"   Selected Set: {selected_set}")
     print(f"   Processing Mode: {processing_mode}")
@@ -193,6 +196,97 @@ SEMESTER_ORDER = [
 # Global student tracker
 STUDENT_TRACKER = {}
 WITHDRAWN_STUDENTS = {}
+
+# ----------------------------
+# Enhanced Course Name Matching Functions
+# ----------------------------
+
+def normalize_course_name(name):
+    """Enhanced normalization for course title matching with better variations handling."""
+    if not isinstance(name, str):
+        return ""
+    
+    # Convert to lowercase and remove extra spaces
+    normalized = name.lower().strip()
+    
+    # Replace multiple spaces with single space
+    normalized = re.sub(r'\s+', ' ', normalized)
+    
+    # Remove special characters and extra words
+    normalized = re.sub(r'[^\w\s]', '', normalized)
+    
+    # Enhanced substitutions for variations
+    substitutions = {
+        'coomunication': 'communication',
+        'nsg': 'nursing',
+        'foundation': 'foundations',
+        'of of': 'of',  # handle double "of"
+        'emergency care': 'emergency',
+        'nursing/ emergency': 'nursing emergency',
+        'care i': 'care',
+        'foundations of nursing': 'foundations nursing',
+        'foundation of nsg': 'foundations nursing',
+        'foundation of nursing': 'foundations nursing',
+    }
+    
+    for old, new in substitutions.items():
+        normalized = normalized.replace(old, new)
+        
+    return normalized.strip()
+
+def find_best_course_match(column_name, course_map):
+    """Find the best matching course using enhanced matching algorithm."""
+    if not isinstance(column_name, str):
+        return None
+        
+    normalized_column = normalize_course_name(column_name)
+    
+    # First try exact match
+    if normalized_column in course_map:
+        return course_map[normalized_column]
+    
+    # Try partial matches with higher priority
+    for course_norm, course_info in course_map.items():
+        # Check if one is contained in the other
+        if course_norm in normalized_column or normalized_column in course_norm:
+            return course_info
+    
+    # Try word-based matching
+    column_words = set(normalized_column.split())
+    best_match = None
+    best_score = 0
+    
+    for course_norm, course_info in course_map.items():
+        course_words = set(course_norm.split())
+        common_words = column_words.intersection(course_words)
+        
+        if common_words:
+            score = len(common_words)
+            # Bonus for matching key words
+            key_words = ['foundation', 'nursing', 'emergency', 'care', 'communication', 'anatomy', 'physiology']
+            for word in key_words:
+                if word in column_words and word in course_words:
+                    score += 2
+            
+            if score > best_score:
+                best_score = score
+                best_match = course_info
+    
+    # Require at least 2 common words or 1 key word with good match
+    if best_match and best_score >= 2:
+        return best_match
+    
+    # Final fallback: use difflib for fuzzy matching
+    best_match = None
+    best_ratio = 0
+    
+    for course_norm, course_info in course_map.items():
+        ratio = difflib.SequenceMatcher(None, normalized_column, course_norm).ratio()
+        if ratio > best_ratio and ratio > 0.6:  # Lower threshold for fuzzy matching
+            best_ratio = ratio
+            best_match = course_info
+    
+    return best_match
 
 # ----------------------------
 # Carryover Management Functions
@@ -683,15 +777,6 @@ def normalize_path(path: str) -> str:
         path = path.replace("/c/", "/mnt/c/", 1)
     return os.path.abspath(path)
 
-def normalize_course_name(name):
-    """Simple normalization for course title matching."""
-    return re.sub(
-        r'\s+',
-        ' ',
-        str(name).strip().lower()).replace(
-        'coomunication',
-        'communication')
-
 def normalize_for_matching(s):
     if s is None:
         return ""
@@ -964,7 +1049,17 @@ def load_course_data():
         titles = dfx['COURSE TITLE'].astype(str).str.strip().tolist()
         cus = dfx['CU'].astype(float).astype(int).tolist()
 
-        semester_course_maps[sheet] = dict(zip(titles, codes))
+        # Create enhanced course mapping with normalized titles
+        enhanced_course_map = {}
+        for title, code in zip(titles, codes):
+            normalized_title = normalize_course_name(title)
+            enhanced_course_map[normalized_title] = {
+                'original_name': title,
+                'code': code,
+                'normalized': normalized_title
+            }
+            
+        semester_course_maps[sheet] = enhanced_course_map
         semester_credit_units[sheet] = dict(zip(codes, cus))
         semester_course_titles[sheet] = dict(zip(codes, titles))
 
@@ -2024,7 +2119,7 @@ def generate_individual_student_pdf(
     print(f"✅ Individual student PDF written: {out_pdf_path}")
 
 # ----------------------------
-# Main file processing (Enhanced with Carryover)
+# Main file processing (Enhanced with Carryover and Better Course Matching)
 # ----------------------------
 
 def process_single_file(
@@ -2044,7 +2139,7 @@ def process_single_file(
         upgrade_min_threshold=None):
     """
     Process a single raw file and produce mastersheet Excel and PDFs.
-    Enhanced with resit count tracking.
+    Enhanced with better course name matching and resit count tracking.
     """
     fname = os.path.basename(path)
     print(f"🔍 Processing file: {fname} for semester: {semester_key}")
@@ -2114,7 +2209,7 @@ def process_single_file(
     course_titles = semester_course_titles[sem]
 
     ordered_titles = list(course_map.keys())
-    ordered_codes = [course_map[t]
+    ordered_codes = [course_map[t]['code']
                      for t in ordered_titles if course_map.get(t)]
     ordered_codes = [c for c in ordered_codes if credit_units.get(c, 0) > 0]
     filtered_credit_units = {c: credit_units[c] for c in ordered_codes}
@@ -2176,19 +2271,16 @@ def process_single_file(
         # Debug: Show available columns for matching
         print(f"🔍 Available columns in {s} sheet: {df.columns.tolist()}")
 
+        # ENHANCED COURSE MATCHING - Use the new matching algorithm
         for col in [c for c in df.columns if c not in ["REG. No", "NAME"]]:
-            norm = normalize_course_name(col)
-            matched_code = None
-            for title, code in zip(
-                ordered_titles, [
-                    course_map[t] for t in ordered_titles]):
-                if normalize_course_name(title) == norm:
-                    matched_code = code
-                    break
-            if matched_code:
+            matched_course = find_best_course_match(col, course_map)
+            if matched_course:
+                matched_code = matched_course['code']
                 newcol = f"{matched_code}_{s.upper()}"
                 df.rename(columns={col: newcol}, inplace=True)
-                print(f"✅ Matched column '{col}' to course code '{matched_code}'")
+                print(f"✅ Matched column '{col}' to course code '{matched_code}' (original: {matched_course['original_name']})")
+            else:
+                print(f"❌ No match found for column: '{col}'")
 
         cur_cols = ["REG. No", "NAME"] + \
             [c for c in df.columns if c.endswith(f"_{s.upper()}")]
@@ -2486,9 +2578,10 @@ def process_single_file(
     start_row = 3
 
     display_course_titles = []
-    for t, c in zip(ordered_titles, [course_map[t] for t in ordered_titles]):
-        if c in ordered_codes:
-            display_course_titles.append(t)
+    for t in ordered_titles:
+        course_info = course_map.get(t)
+        if course_info and course_info['code'] in ordered_codes:
+            display_course_titles.append(course_info['original_name'])
 
     ws.append([""] * 3 + display_course_titles + [""] * 5)
     for i, cell in enumerate(
@@ -2809,11 +2902,14 @@ def process_semester_files(
     semester_files = []
     for rf in raw_files:
         detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-        if detected_sem == semester_key:
+        # FIX: Compare in uppercase for case-insensitive matching
+        if detected_sem.upper() == semester_key.upper():
             semester_files.append(rf)
+            print(f"✅ MATCH: {rf} belongs to {semester_key}")
 
     if not semester_files:
         print(f"⚠️ No files found for semester {semester_key}")
+        print(f"🔍 Available files: {raw_files}")
         return None
 
     print(
@@ -2959,7 +3055,7 @@ def process_resit_mode(params, base_dir_norm):
                 credit_units = semester_credit_units[semester_key]
                 
                 ordered_titles = list(course_map.keys())
-                ordered_codes = [course_map[t] for t in ordered_titles if course_map.get(t)]
+                ordered_codes = [course_map[t]['code'] for t in ordered_titles if course_map.get(t)]
                 ordered_codes = [c for c in ordered_codes if credit_units.get(c, 0) > 0]
                 filtered_credit_units = {c: credit_units[c] for c in ordered_codes}
                 
@@ -3056,6 +3152,10 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     selected_set = params['selected_set']
     selected_semesters = params['selected_semesters']
     
+    # FIX: Normalize semester names to uppercase for consistent matching
+    selected_semesters = [sem.upper() for sem in selected_semesters]
+    print(f"🎯 Processing semesters (normalized): {selected_semesters}")
+    
     # Get upgrade threshold from environment variable if provided
     upgrade_min_threshold = get_upgrade_threshold_from_env()
     
@@ -3088,6 +3188,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     # Load course data once
     try:
         semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+        print(f"✅ Loaded course data for semesters: {list(semester_course_maps.keys())}")
     except Exception as e:
         print(f"❌ Could not load course data: {e}")
         return False
@@ -3129,17 +3230,19 @@ def process_in_non_interactive_mode(params, base_dir_norm):
         os.makedirs(set_output_dir, exist_ok=True)
         print(f"📁 Created set output directory: {set_output_dir}")
         
-        # Process selected semesters
+        # Process selected semesters - FIXED: Use normalized (uppercase) semester names
         for semester_key in selected_semesters:
-            if semester_key not in SEMESTER_ORDER:
-                print(f"⚠️ Skipping unknown semester: {semester_key}")
+            # FIX: Check if semester exists in course data (case-sensitive)
+            if semester_key not in semester_course_maps:
+                print(f"⚠️ Semester '{semester_key}' not found in course data. Available: {list(semester_course_maps.keys())}")
                 continue
             
             # Check if there are files for this semester
             semester_files_exist = False
             for rf in raw_files:
                 detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-                if detected_sem == semester_key:
+                # FIX: Compare in uppercase for case-insensitive matching
+                if detected_sem.upper() == semester_key.upper():
                     semester_files_exist = True
                     break
             
@@ -3177,7 +3280,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
             else:
                 print(f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
         
-        # Create ZIP of the entire set results - FIXED: Ensure proper file creation
+        # Create ZIP of the entire set results
         try:
             zip_path = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}.zip")
             zip_success = create_zip_folder(set_output_dir, zip_path)
@@ -3351,7 +3454,7 @@ def main():
                     print(
                         f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
             
-            # Create ZIP of the entire set results - FIXED: Use the enhanced create_zip_folder function
+            # Create ZIP of the entire set results
             try:
                 zip_path = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}.zip")
                 zip_success = create_zip_folder(set_output_dir, zip_path)

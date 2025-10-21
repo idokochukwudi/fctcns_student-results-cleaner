@@ -1,0 +1,2194 @@
+[
+  {
+    "exam_number": "FCTCONS/ND24/109",
+    "name": "GEOFFREY DIVINE DESTINY",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/051",
+    "name": "NDUBUISI GIFT ONYIYECHI",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/099",
+    "name": "ABEL BENITA GIDADO",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/044",
+    "name": "EMMAJOHN MARVELOUS CHIFUNANYA",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/107",
+    "name": "OTTO QUEEN UBUGHENAAN",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 39.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/068",
+    "name": "CHIKEZE MIRIAM OLUEBUBE",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 41.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/137",
+    "name": "ELIZABETH DANIEL",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/111",
+    "name": "STANLEY SURELY ALI",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/042",
+    "name": "ASEBIOMO OLUWAFERANMI JOY",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/121",
+    "name": "HUSSAINI AISHA KUCHI",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/084",
+    "name": "EMMANUEL VICTORIA",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/119",
+    "name": "OGUEJI TREASURE UKAMAKA",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 43.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/075",
+    "name": "DENEN RUTH DOOSE",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/041",
+    "name": "IDRIS UMMULKHAIR NDATSU",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 49.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/069",
+    "name": "STEPHEN PRECIOUS BALA",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/127",
+    "name": "SANI ALIYU BASHIRU",
+    "failed_courses": [
+      {
+        "course_code": "NUR213",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/026",
+    "name": "OBADIAH MOSES",
+    "failed_courses": [
+      {
+        "course_code": "NUR213",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/133",
+    "name": "ELEGHASIM DELIGHT CHIDINMA",
+    "failed_courses": [
+      {
+        "course_code": "NUR213",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/136",
+    "name": "JACOB OJIMA PENIEL",
+    "failed_courses": [
+      {
+        "course_code": "NUR213",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/098",
+    "name": "SULEIMAN MARYAM HARUNA",
+    "failed_courses": [
+      {
+        "course_code": "NUR213",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/038",
+    "name": "SANI ADAM ADAMU",
+    "failed_courses": [
+      {
+        "course_code": "NUR213",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/060",
+    "name": "OCHEMEJE EMMANUELLA OMOJO",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/029",
+    "name": "JACKSON EDIDIONG JOHN",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/077",
+    "name": "OODOH COMFORT ONYENEFU",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/049",
+    "name": "EMMANUEL FAITH  AKOMENOMO",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/083",
+    "name": "AYENI JEMIMAH RHODA",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/095",
+    "name": "AYISA-ATANZE HAPPINESS CINCINSOKO",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 33.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/105",
+    "name": "IJAUKA HENRY UJI",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/052",
+    "name": "KAJANG FAVOUR ZIGWAI",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 36.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/013",
+    "name": "EJEMBI MARIA EHI",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/021",
+    "name": "EKEINDE OMOIKHEKPEN PRAISE",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 39.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/070",
+    "name": "VASCO ANNA SUNDAY",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 41.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/055",
+    "name": "AYODELE JOHN TANTOLUWA",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/039",
+    "name": "GABRIEL VICTORY EHIGOCHO",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/005",
+    "name": "PAUL CHIMDINDU FAVOUR",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/015",
+    "name": "BENSON MARY OLUWAKEMISOLA",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/073",
+    "name": "ONYEHI PRAISE MAXWELL",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/002",
+    "name": "UMAR AMINA MAKUN",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/102",
+    "name": "MICHEAL CATHERINE",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/100",
+    "name": "BAMIDELE FAVOUR DUPE",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/062",
+    "name": "ABUNIMYE FELICIA AMANUYE",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 42.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/090",
+    "name": "ANYIDAKWO SHEKWOYEMI GAMBO",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/058",
+    "name": "ISMAIL HAUWA YUSUF",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/092",
+    "name": "OKUCHE KOSISOCHUKWU SCHOLARSTICA",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/025",
+    "name": "ITEM PRAISEGOD CHIDOZIE",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 42.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/126",
+    "name": "NUHU ENDURANCE",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 41.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/019",
+    "name": "OGAH PRINCESS UWENYI",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/089",
+    "name": "IJEOMA RUTH DABERECHUKWU",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 42.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/010",
+    "name": "AMOS HOPE SHEKWOBAGU",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/110",
+    "name": "ABOKO DAVID JUNIOR",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/124",
+    "name": "IGWE GOODNESS CHINEYENWA",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/115",
+    "name": "YUNUS ZULEYHAT ONIZE",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/027",
+    "name": "BABAJI BENI DENNIS",
+    "failed_courses": [
+      {
+        "course_code": "NUS215",
+        "original_score": 42.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/140",
+    "name": "DONGAH GODSLOVE LODIYA",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/008",
+    "name": "OBICHEWE PAUL DAVID",
+    "failed_courses": [
+      {
+        "course_code": "NUS214",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS211",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/035",
+    "name": "AGBOOLA OLATOMIWA",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 39.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR212",
+        "original_score": 45.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/017",
+    "name": "MOHAMMED SAVIOUR SARAH",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR212",
+        "original_score": 49.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/088",
+    "name": "DUSU FAITH HARUNA",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 49.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR212",
+        "original_score": 34.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/028",
+    "name": "ISAH HARUNA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR211",
+        "original_score": 43.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/045",
+    "name": "AWYETU CHEBAWAZA DEBORAH",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR211",
+        "original_score": 43.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/067",
+    "name": "ADEGOKE MARVELLOUS ARAMIDE",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/018",
+    "name": "IGBASAN PHILBERTA  OLUWASEUN",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 33.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/059",
+    "name": "OBORO MABEL OGHENEMARO",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR212",
+        "original_score": 42.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/050",
+    "name": "IBRAHIM ZAINAB HAJIYA",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/001",
+    "name": "DAVID ELISHEBA TENI",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/022",
+    "name": "OPARINDE  RUTH MOTUNRAYO",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 49.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR213",
+        "original_score": 36.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/023",
+    "name": "IBRAHIM KHADIJAT KAKA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/122",
+    "name": "ONYEKWELU CHIAMAKA EUGENIA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 42.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS212",
+        "original_score": 39.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/135",
+    "name": "ABDUL-RAHMAN NABILA ONIZE",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 41.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/097",
+    "name": "UCHE ULOMA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 45.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/004",
+    "name": "ABANG STEPHANIE ADA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/134",
+    "name": "NUHU FAVOUR AUDU",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 39.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 30.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/101",
+    "name": "JAMES OMOH PATRICIA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/031",
+    "name": "MUHAMMAD NANA AISHA",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 45.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/054",
+    "name": "BINCHAK DIANA RINGNAN",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/009",
+    "name": "AGADA EMMANUEL ENECHE",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 45.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/114",
+    "name": "YUSUF BASHIRAT ADEOLA",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 45.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/078",
+    "name": "CHIKWELU PRECIOUS",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 32.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS211",
+        "original_score": 43.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/032",
+    "name": "LAWAL YUSUF",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 34.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR211",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/034",
+    "name": "IDOGBE GLORIA OWOFU",
+    "failed_courses": [
+      {
+        "course_code": "NUR211",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 49.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/024",
+    "name": "SULEIMAN SAMAILA",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR213",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/043",
+    "name": "NWOSU NNENNA ESTHER",
+    "failed_courses": [
+      {
+        "course_code": "NUR212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/072",
+    "name": "DAUDA HOPE AWYETU",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR213",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/103",
+    "name": "WAKILI SHEJIYABA CONFIDENCE",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR213",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/056",
+    "name": "MAINA SHAMMAH MUSA",
+    "failed_courses": [
+      {
+        "course_code": "NUS211",
+        "original_score": 47.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS212",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 44.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/020",
+    "name": "CHIDUME MESOMA  PRUDENT",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 38.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS214",
+        "original_score": 49.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS215",
+        "original_score": 40.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/046",
+    "name": "NKEMJIKA DABERECHI LOVETH",
+    "failed_courses": [
+      {
+        "course_code": "NUS213",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR213",
+        "original_score": 43.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS211",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "FCTCONS/ND24/094",
+    "name": "AWAJE DORCAS ASABE",
+    "failed_courses": [
+      {
+        "course_code": "NUS212",
+        "original_score": 48.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUS213",
+        "original_score": 45.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR212",
+        "original_score": 46.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "NUR213",
+        "original_score": 36.0,
+        "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "ND-2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "ND-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "ND-2025",
+    "identified_date": "2025-10-21 21:22:47",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  }
+]

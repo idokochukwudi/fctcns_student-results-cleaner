@@ -668,6 +668,75 @@
                 <button type="submit" class="submit-btn" id="submitBtn"><i class="fas fa-upload"></i> Upload Files</button>
             </form>
 
+            <!-- New section for Carryover/Resit Upload -->
+            <h2><i class="fas fa-redo"></i> Carryover/Resit Upload</h2>
+            <p>Upload resit results for carryover students. Select the set and semester(s) to update.</p>
+
+            <form method="POST" action="{{ url_for('handle_resit_upload') }}" enctype="multipart/form-data" class="upload-form" id="resitForm">
+                <div class="form-group">
+                    <label for="resit_program"><i class="fas fa-list"></i> Select Program</label>
+                    <select name="program" id="resit_program" required onchange="updateResitSetDropdown()" aria-describedby="resit-program-help">
+                        <option value="" disabled selected>Select Program</option>
+                        <option value="nd">National Diploma (ND)</option>
+                        <option value="bn">Basic Nursing (BN)</option>
+                        <option value="bm">Basic Midwifery (BM)</option>
+                    </select>
+                    <div class="help-text" id="resit-program-help"><i class="fas fa-info-circle"></i> Select the program for the resit file</div>
+                </div>
+
+                <div class="form-group" id="resit_nd_set_group" style="display: none;">
+                    <label for="resit_nd_set"><i class="fas fa-folder"></i> Select ND Set</label>
+                    <select name="nd_set" id="resit_nd_set" required aria-describedby="resit-nd-set-help">
+                        <option value="" disabled selected>Select ND Set</option>
+                        {% for nd_set in nd_sets %}
+                        <option value="{{ nd_set }}">{{ nd_set }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text" id="resit-nd-set-help"><i class="fas fa-info-circle"></i> Select the ND set for resit processing</div>
+                </div>
+
+                <div class="form-group" id="resit_bn_set_group" style="display: none;">
+                    <label for="resit_bn_set"><i class="fas fa-folder"></i> Select Basic Nursing Set</label>
+                    <select name="bn_set" id="resit_bn_set" required aria-describedby="resit-bn-set-help">
+                        <option value="" disabled selected>Select BN Set</option>
+                        {% for bn_set in bn_sets %}
+                        <option value="{{ bn_set }}">{{ bn_set }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text" id="resit-bn-set-help"><i class="fas fa-info-circle"></i> Select the Basic Nursing set for resit processing</div>
+                </div>
+
+                <div class="form-group" id="resit_bm_set_group" style="display: none;">
+                    <label for="resit_bm_set"><i class="fas fa-folder"></i> Select Basic Midwifery Set</label>
+                    <select name="bm_set" id="resit_bm_set" required aria-describedby="resit-bm-set-help">
+                        <option value="" disabled selected>Select BM Set</option>
+                        {% for bm_set in bm_sets %}
+                        <option value="{{ bm_set }}">{{ bm_set }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="help-text" id="resit-bm-set-help"><i class="fas fa-info-circle"></i> Select the Basic Midwifery set for resit processing</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="resit_semesters"><i class="fas fa-calendar"></i> Select Semester(s)</label>
+                    <select name="selected_semesters" id="resit_semesters" multiple required aria-describedby="resit-semesters-help">
+                        <option value="ND-FIRST-YEAR-FIRST-SEMESTER">First Year First Semester</option>
+                        <option value="ND-FIRST-YEAR-SECOND-SEMESTER">First Year Second Semester</option>
+                        <option value="ND-SECOND-YEAR-FIRST-SEMESTER">Second Year First Semester</option>
+                        <option value="ND-SECOND-YEAR-SECOND-SEMESTER">Second Year Second Semester</option>
+                    </select>
+                    <div class="help-text" id="resit-semesters-help"><i class="fas fa-info-circle"></i> Hold Ctrl/Cmd to select multiple semesters</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="resit_file"><i class="fas fa-upload"></i> Select Resit File</label>
+                    <input type="file" name="resit_file" id="resit_file" accept=".xlsx,.xls" required aria-describedby="resit-file-help">
+                    <div class="help-text" id="resit-file-help"><i class="fas fa-info-circle"></i> Upload the Excel file containing resit scores</div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="resitSubmitBtn"><i class="fas fa-upload"></i> Upload and Process Resit</button>
+            </form>
+
             <div class="instructions">
                 <h4><i class="fas fa-info-circle"></i> Upload Instructions</h4>
                 <ul>
@@ -732,11 +801,30 @@
             bmSetGroup.style.display = program === 'bm' ? 'block' : 'none';
         }
 
+        function updateResitSetDropdown() {
+            const program = document.getElementById('resit_program').value;
+            const ndSetGroup = document.getElementById('resit_nd_set_group');
+            const bnSetGroup = document.getElementById('resit_bn_set_group');
+            const bmSetGroup = document.getElementById('resit_bm_set_group');
+
+            ndSetGroup.style.display = program === 'nd' ? 'block' : 'none';
+            bnSetGroup.style.display = program === 'bn' ? 'block' : 'none';
+            bmSetGroup.style.display = program === 'bm' ? 'block' : 'none';
+        }
+
         document.getElementById('files').addEventListener('change', function(e) {
             const fileCount = e.target.files.length;
             if (fileCount > 0) {
                 const helpText = document.querySelector('#files-help');
                 helpText.textContent = `${fileCount} file(s) selected. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)`;
+            }
+        });
+
+        document.getElementById('resit_file').addEventListener('change', function(e) {
+            const fileCount = e.target.files.length;
+            if (fileCount > 0) {
+                const helpText = document.querySelector('#resit-file-help');
+                helpText.textContent = `${fileCount} file(s) selected. Supported formats: Excel (.xlsx, .xls)`;
             }
         });
 
@@ -785,6 +873,59 @@
             // Show loading state
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading...`;
+        });
+
+        document.getElementById('resitForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('resitSubmitBtn');
+            const program = document.getElementById('resit_program').value;
+            const file = document.getElementById('resit_file').files[0];
+            const semesters = document.getElementById('resit_semesters').selectedOptions;
+            
+            // Validate form
+            if (!program) {
+                e.preventDefault();
+                alert('Please select a program');
+                return;
+            }
+            
+            if (!file) {
+                e.preventDefault();
+                alert('Please select a resit file to upload');
+                return;
+            }
+            
+            if (semesters.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one semester');
+                return;
+            }
+            
+            // Validate set selection
+            const ndSet = document.getElementById('resit_nd_set').value;
+            const bnSet = document.getElementById('resit_bn_set').value;
+            const bmSet = document.getElementById('resit_bm_set').value;
+            
+            if (program === 'nd' && !ndSet) {
+                e.preventDefault();
+                alert('Please select an ND set');
+                return;
+            }
+            
+            if (program === 'bn' && !bnSet) {
+                e.preventDefault();
+                alert('Please select a Basic Nursing set');
+                return;
+            }
+            
+            if (program === 'bm' && !bmSet) {
+                e.preventDefault();
+                alert('Please select a Basic Midwifery set');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading and Processing...`;
         });
 
         document.addEventListener('DOMContentLoaded', function() {
