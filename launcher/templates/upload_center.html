@@ -613,7 +613,8 @@
                 {% endwith %}
             </div>
 
-            <form method="POST" enctype="multipart/form-data" class="upload-form">
+            <!-- FIXED: Added action attribute to form -->
+            <form method="POST" action="{{ url_for('handle_upload') }}" enctype="multipart/form-data" class="upload-form" id="uploadForm">
                 <div class="form-group">
                     <label for="program"><i class="fas fa-list"></i> Select Program</label>
                     <select name="program" id="program" required onchange="updateSetDropdown()" aria-describedby="program-help">
@@ -664,7 +665,7 @@
                     <div class="help-text" id="files-help"><i class="fas fa-info-circle"></i> You can select multiple files. Supported formats: Excel (.xlsx, .xls), CSV (.csv), or ZIP (.zip)</div>
                 </div>
 
-                <button type="submit" class="submit-btn"><i class="fas fa-upload"></i> Upload Files</button>
+                <button type="submit" class="submit-btn" id="submitBtn"><i class="fas fa-upload"></i> Upload Files</button>
             </form>
 
             <div class="instructions">
@@ -739,18 +740,55 @@
             }
         });
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelector('.submit-btn').addEventListener('click', function() {
-                if (!this.classList.contains('disabled')) {
-                    this.classList.add('disabled');
-                    this.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading...`;
-                    setTimeout(() => {
-                        this.classList.remove('disabled');
-                        this.innerHTML = `<i class="fas fa-upload"></i> Upload Files`;
-                    }, 2000);
-                }
-            });
+        // Enhanced form submission handling
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const program = document.getElementById('program').value;
+            const files = document.getElementById('files').files;
+            
+            // Validate form
+            if (!program) {
+                e.preventDefault();
+                alert('Please select a program');
+                return;
+            }
+            
+            if (files.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one file to upload');
+                return;
+            }
+            
+            // Validate set selection based on program
+            const ndSet = document.getElementById('nd_set').value;
+            const bnSet = document.getElementById('bn_set').value;
+            const bmSet = document.getElementById('bm_set').value;
+            
+            if (program === 'nd' && !ndSet) {
+                e.preventDefault();
+                alert('Please select an ND set');
+                return;
+            }
+            
+            if (program === 'bn' && !bnSet) {
+                e.preventDefault();
+                alert('Please select a Basic Nursing set');
+                return;
+            }
+            
+            if (program === 'bm' && !bmSet) {
+                e.preventDefault();
+                alert('Please select a Basic Midwifery set');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Uploading...`;
+        });
 
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-hide flash messages after 10 seconds
             setTimeout(function() {
                 const alerts = document.querySelectorAll('.alert');
                 alerts.forEach(function(alert) {
@@ -760,8 +798,9 @@
                         alert.remove();
                     }, 1000);
                 });
-            }, 15000);
+            }, 10000);
 
+            // Set active navigation
             const navLinks = document.querySelectorAll('.sidebar-nav a');
             navLinks.forEach(link => {
                 if (link.getAttribute('href') === window.location.pathname) {
