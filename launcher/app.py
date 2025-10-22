@@ -7,6 +7,7 @@ import shutil
 import time
 import socket
 import logging
+import json  # ADD THIS MISSING IMPORT
 from pathlib import Path
 from datetime import datetime
 from flask import (
@@ -1265,57 +1266,67 @@ def handle_upload():
         app.logger.error(f"Upload error: {e}")
         flash(f"Upload failed: {str(e)}", "error")
         return redirect(url_for("upload_center"))
-
-# NEW ROUTE: Handle resit file uploads
+        
+# NEW ROUTE: Handle resit file uploads for carryover processing
 @app.route("/handle_resit_upload", methods=["POST"])
 @login_required
 def handle_resit_upload():
-    """Handle resit file uploads for carryover processing"""
+    """Handle dynamic set selection and multiple semesters"""
     try:
-        program = request.form.get("resit_program")
-        set_name = request.form.get("resit_set")
-        semester_key = request.form.get("resit_semester")
-        resit_files = request.files.getlist("resit_files")
+        print("🔄 CARRYOVER UPLOAD: Route called")
         
-        if not program or not set_name or not semester_key:
-            flash("Please select program, set, and semester for resit processing.", "error")
+        # Get form data
+        program = request.form.get("program", "nd")
+        set_name = request.form.get("nd_set") or request.form.get("bn_set") or request.form.get("bm_set") or "unknown"
+        selected_semesters = request.form.getlist("selected_semesters")  # This is now a list
+        resit_file = request.files.get("resit_file")
+        
+        print(f"📥 Received - Program: {program}, Set: {set_name}, Semesters: {selected_semesters}, File: {resit_file.filename if resit_file else 'None'}")
+        
+        # Validate inputs
+        if not resit_file or resit_file.filename == '':
+            flash("❌ Please select a file", "error")
             return redirect(url_for("upload_center"))
-            
-        if not resit_files or all(file.filename == '' for file in resit_files):
-            flash("Please select at least one resit file to upload.", "error")
+        
+        if not program or program == "":
+            flash("❌ Please select a program", "error")
             return redirect(url_for("upload_center"))
         
-        # Create resit directory structure
-        resit_dir = os.path.join(BASE_DIR, program, set_name, "RESIT_RESULTS")
-        os.makedirs(resit_dir, exist_ok=True)
+        if set_name == "unknown" or not set_name:
+            flash("❌ Please select a set", "error")
+            return redirect(url_for("upload_center"))
         
-        # Create semester-specific subdirectory
-        semester_dir = os.path.join(resit_dir, semester_key)
-        os.makedirs(semester_dir, exist_ok=True)
+        if not selected_semesters:
+            flash("❌ Please select at least one semester", "error")
+            return redirect(url_for("upload_center"))
         
-        saved_files = []
+        # Map program to directory
+        program_map = {"nd": "ND", "bn": "BN", "bm": "BM"}
+        program_code = program_map.get(program, "ND")
         
-        for file in resit_files:
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file_path = os.path.join(semester_dir, filename)
-                
-                # Save the file
-                file.save(file_path)
-                saved_files.append(filename)
-                logger.info(f"✅ Saved resit file: {file_path}")
+        # Create target directory
+        raw_dir = os.path.join(BASE_DIR, program_code, set_name, "RAW_RESULTS", "CARRYOVER")
+        os.makedirs(raw_dir, exist_ok=True)
+        print(f"📁 Target directory: {raw_dir}")
         
-        if saved_files:
-            flash(f"✅ Successfully uploaded {len(saved_files)} resit file(s) for {program}/{set_name}/{semester_key}", "success")
-            logger.info(f"✅ Resit upload completed for {program}/{set_name}/{semester_key}")
-        else:
-            flash("No valid resit files were uploaded.", "error")
-            
+        # Save file
+        filename = secure_filename(resit_file.filename)
+        file_path = os.path.join(raw_dir, filename)
+        resit_file.save(file_path)
+        
+        print(f"✅ File saved: {file_path}")
+        
+        # Create success message with semesters
+        semester_display = ", ".join(selected_semesters)
+        flash(f"✅ Successfully uploaded carryover file to {program_code}/{set_name}/RAW_RESULTS/CARRYOVER for semesters: {semester_display}", "success")
+        
         return redirect(url_for("upload_center"))
         
     except Exception as e:
-        app.logger.error(f"Resit upload error: {e}")
-        flash(f"Resit upload failed: {str(e)}", "error")
+        print(f"❌ ERROR in handle_resit_upload: {str(e)}")
+        import traceback
+        print(f"🔍 Stack trace: {traceback.format_exc()}")
+        flash(f"❌ Upload failed: {str(e)}", "error")
         return redirect(url_for("upload_center"))
 
 @app.route("/download_center")
