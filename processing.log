@@ -1,0 +1,23 @@
+2025-10-26 13:23:06,726 - INFO - Using BASE_DIR from environment: /home/ernest/student_result_cleaner/EXAMS_INTERNAL
+2025-10-26 13:23:06,727 - INFO - INTEGRATED CARRYOVER PROCESSOR - ALL FIXES APPLIED
+2025-10-26 13:23:06,727 - INFO - ============================================================
+2025-10-26 13:23:06,727 - INFO - Found 4 raw files: ['FIRST-YEAR-SECOND-SEMESTER.xlsx', 'SECOND-YEAR-SECOND-SEMESTER.xlsx', 'FIRST-YEAR-FIRST-SEMESTER.xlsx', 'SECOND-YEAR-FIRST-SEMESTER.xlsx']
+2025-10-26 13:23:06,728 - INFO - Processing ND-SECOND-YEAR-SECOND-SEMESTER → Output: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/CLEAN_RESULTS/RESIT_20251026_132306
+2025-10-26 13:23:06,728 - INFO - Processing raw file: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/RAW_RESULTS/FIRST-YEAR-SECOND-SEMESTER.xlsx
+2025-10-26 13:23:06,756 - INFO - Columns in FIRST-YEAR-SECOND-SEMESTER.xlsx: ['S/N', 'REG. No', 'NAME', 'Human Anatomy II', 'Human Physiology II', 'Developmental Psychology', 'Human Nutrition', 'Pharmacology I', 'Foundations Of Nursing II', 'Primary Health Care (PHC) I', 'Intro. To Entrepreneurship']
+2025-10-26 13:23:06,756 - ERROR - No exam number column found in FIRST-YEAR-SECOND-SEMESTER.xlsx
+2025-10-26 13:23:06,756 - INFO - Processing raw file: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/RAW_RESULTS/SECOND-YEAR-SECOND-SEMESTER.xlsx
+2025-10-26 13:23:06,782 - INFO - Columns in SECOND-YEAR-SECOND-SEMESTER.xlsx: ['S/N', 'REG. No', 'NAME', 'Human Anatomy IV', 'Human Physiology IV', 'Foundations Of Nursing IV', 'Medical-Surgical  Nursing II', 'Reproductive Health I', 'Mental Health / Psychiatric Nursing', 'Practice Of Entrepreneurship', 'Research Methodology II', 'Seminar In Nursing', 'Client Case/Care Study', 'Community Based Clinical Practice', 'Hospital Based Clinical Practice']
+2025-10-26 13:23:06,782 - ERROR - No exam number column found in SECOND-YEAR-SECOND-SEMESTER.xlsx
+2025-10-26 13:23:06,782 - INFO - Processing raw file: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/RAW_RESULTS/FIRST-YEAR-FIRST-SEMESTER.xlsx
+2025-10-26 13:23:06,829 - INFO - Columns in FIRST-YEAR-FIRST-SEMESTER.xlsx: ['S/N', 'REG. No', 'NAME', 'HUMAN ANATOMY I', 'MEDICAL MICROBIOLOGY', 'COOMUNICATION IN ENGLISH I', 'CITIZENSHIP EDUCATION I', 'APPLIED CHEMISTRY', 'Foundations of Nursing/ Emergency Care I', 'APPLIED PHYSICS', 'HUMAN PHYSIOLOGY I', 'USE OF COMPUTER', 'INTRODUCTION TO SOCIOLOGY']
+2025-10-26 13:23:06,829 - ERROR - No exam number column found in FIRST-YEAR-FIRST-SEMESTER.xlsx
+2025-10-26 13:23:06,829 - INFO - Processing raw file: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/RAW_RESULTS/SECOND-YEAR-FIRST-SEMESTER.xlsx
+2025-10-26 13:23:06,855 - INFO - Columns in SECOND-YEAR-FIRST-SEMESTER.xlsx: ['S/N', 'REG. No', 'NAME', 'Human Anatomy III', 'Human Physiology III', 'Foundations Of Nursing III', 'Pharmacology II', 'Primary Health Care(PHC) II', 'Dietetics', 'Medical- Surgical Nursing I', 'Biostatistics', 'Research Methodology I', 'Communication In English II']
+2025-10-26 13:23:06,855 - ERROR - No exam number column found in SECOND-YEAR-FIRST-SEMESTER.xlsx
+2025-10-26 13:23:06,855 - ERROR - No valid data processed from raw files
+2025-10-26 13:23:06,856 - INFO - Created placeholder file: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/CLEAN_RESULTS/RESIT_20251026_132306/no_valid_data_ND-SECOND-YEAR-SECOND-SEMESTER_20251026_132306.txt
+2025-10-26 13:23:06,856 - INFO - PROCESSING COMPLETE!
+2025-10-26 13:23:06,856 - INFO - Output: /home/ernest/student_result_cleaner/EXAMS_INTERNAL/ND/ND-2024/CLEAN_RESULTS/ND-2024_RESULT-20251026_132306
+2025-10-26 13:23:06,856 - INFO - Students tracked: 0
+2025-10-26 13:23:06,856 - INFO - Carryovers: 0

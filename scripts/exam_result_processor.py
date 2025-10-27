@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 exam_result_processor.py
-Complete script with integrated carryover student management and resit processing.
-FIXED VERSION - Enhanced course name matching for all semesters with robust case-insensitive handling
+Complete script with integrated carryover student management.
+FIXED VERSION - Fixed 'env' variable reference issue and improved error handling
 """
 
 from openpyxl.cell import MergedCell
@@ -22,14 +22,7 @@ import glob
 import tempfile
 import shutil
 import json
-
-# PDF generation
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+import subprocess
 
 # ----------------------------
 # Configuration
@@ -45,26 +38,46 @@ def is_running_on_railway():
 
 def get_base_directory():
     """Get base directory - compatible with both local and Railway environments"""
-    # Check Railway environment first
-    railway_base = os.getenv('BASE_DIR')
-    if railway_base and os.path.exists(railway_base):
-        return railway_base
+    # Check if BASE_DIR is explicitly set in environment (highest priority)
+    base_dir_env = os.getenv('BASE_DIR')
+    if base_dir_env:
+        if os.path.exists(base_dir_env):
+            print(f"✅ Using BASE_DIR from environment: {base_dir_env}")
+            return base_dir_env
+        else:
+            print(f"⚠️ BASE_DIR from environment doesn't exist: {base_dir_env}, trying alternatives...")
     
-    # Check if we're running on Railway but BASE_DIR doesn't exist
+    # Check if we're running on Railway
     if is_running_on_railway():
         # Create the directory structure on Railway
         railway_base = '/app/EXAMS_INTERNAL'
         os.makedirs(railway_base, exist_ok=True)
         os.makedirs(os.path.join(railway_base, 'ND', 'ND-COURSES'), exist_ok=True)
+        print(f"✅ Using Railway base directory: {railway_base}")
         return railway_base
     
-    # Local development fallback - updated to match your structure
-    local_path = os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL')
-    if os.path.exists(local_path):
-        return local_path
+    # Local development fallbacks - check multiple possible locations
+    local_paths = [
+        # Your specific structure
+        os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL'),
+        # Common development locations
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'EXAMS_INTERNAL'),
+        os.path.join(os.getcwd(), 'EXAMS_INTERNAL'),
+        # Relative to script location
+        os.path.join(os.path.dirname(__file__), 'EXAMS_INTERNAL'),
+    ]
     
-    # Final fallback - current directory
-    return os.path.join(os.path.dirname(__file__), 'EXAMS_INTERNAL')
+    for local_path in local_paths:
+        if os.path.exists(local_path):
+            print(f"✅ Using local base directory: {local_path}")
+            return local_path
+    
+    # Final fallback - create in current working directory
+    fallback_path = os.path.join(os.getcwd(), 'EXAMS_INTERNAL')
+    print(f"⚠️ No existing directory found, creating fallback: {fallback_path}")
+    os.makedirs(fallback_path, exist_ok=True)
+    os.makedirs(os.path.join(fallback_path, 'ND', 'ND-COURSES'), exist_ok=True)
+    return fallback_path
 
 BASE_DIR = get_base_directory()
 # UPDATED: ND directories now under ND folder
@@ -76,6 +89,10 @@ os.makedirs(BASE_DIR, exist_ok=True)
 os.makedirs(ND_BASE_DIR, exist_ok=True)
 os.makedirs(ND_COURSES_DIR, exist_ok=True)
 
+print(f"📁 Base directory: {BASE_DIR}")
+print(f"📁 ND base directory: {ND_BASE_DIR}")
+print(f"📁 ND courses directory: {ND_COURSES_DIR}")
+
 # Global variables for threshold upgrade
 THRESHOLD_UPGRADED = False
 ORIGINAL_THRESHOLD = 50.0
@@ -84,7 +101,6 @@ UPGRADE_MAX = 49
 
 # Global carryover tracker
 CARRYOVER_STUDENTS = {}
-RESIT_HISTORY = {}
 
 def is_web_mode():
     """Check if running in web mode (file upload)"""
@@ -122,8 +138,10 @@ def get_form_parameters():
     pass_threshold = float(os.getenv('PASS_THRESHOLD', '50.0'))
     generate_pdf = os.getenv('GENERATE_PDF', 'True').lower() == 'true'
     track_withdrawn = os.getenv('TRACK_WITHDRAWN', 'True').lower() == 'true'
-    process_resit = os.getenv('PROCESS_RESIT', 'False').lower() == 'true'
-    resit_file_path = os.getenv('RESIT_FILE_PATH', '')
+    
+    # NEW: Check for carryover processing mode
+    process_carryover = os.getenv('PROCESS_CARRYOVER', 'False').lower() == 'true'
+    carryover_file_path = os.getenv('CARRYOVER_FILE_PATH', '')
     
     # Convert semester string to list - handle both comma-separated and single values
     selected_semesters = []
@@ -147,8 +165,8 @@ def get_form_parameters():
     print(f"   Pass Threshold: {pass_threshold}")
     print(f"   Generate PDF: {generate_pdf}")
     print(f"   Track Withdrawn: {track_withdrawn}")
-    print(f"   Process Resit: {process_resit}")
-    print(f"   Resit File Path: {resit_file_path}")
+    print(f"   Process Carryover: {process_carryover}")
+    print(f"   Carryover File Path: {carryover_file_path}")
     
     return {
         'selected_set': selected_set,
@@ -157,8 +175,8 @@ def get_form_parameters():
         'pass_threshold': pass_threshold,
         'generate_pdf': generate_pdf,
         'track_withdrawn': track_withdrawn,
-        'process_resit': process_resit,
-        'resit_file_path': resit_file_path
+        'process_carryover': process_carryover,
+        'carryover_file_path': carryover_file_path
     }
 
 def get_pass_threshold():
@@ -175,17 +193,32 @@ DEFAULT_PASS_THRESHOLD = get_pass_threshold()
 
 TIMESTAMP_FMT = "%Y-%m-%d_%H%M%S"
 
-DEFAULT_LOGO_PATH = os.path.normpath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "launcher",
-        "static",
-        "logo.png"))
+# FIXED: More robust logo path detection
+def get_logo_path():
+    """Get the logo path with multiple fallback options."""
+    possible_paths = [
+        # Relative to script
+        os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "launcher", "static", "logo.png")),
+        # Common locations
+        os.path.join(os.path.dirname(__file__), "logo.png"),
+        os.path.join(os.getcwd(), "logo.png"),
+        # Absolute path fallback
+        "/app/launcher/static/logo.png"  # For Railway deployment
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            print(f"✅ Found logo at: {path}")
+            return path
+    
+    print("⚠️ Logo not found, PDF generation will proceed without logo")
+    return None
+
+DEFAULT_LOGO_PATH = get_logo_path()
 
 NAME_WIDTH_CAP = 40
 
-# Define semester processing order
+# Define semester processing order - FIXED: Use consistent uppercase
 SEMESTER_ORDER = [
     "ND-FIRST-YEAR-FIRST-SEMESTER",
     "ND-FIRST-YEAR-SECOND-SEMESTER",
@@ -196,6 +229,91 @@ SEMESTER_ORDER = [
 # Global student tracker
 STUDENT_TRACKER = {}
 WITHDRAWN_STUDENTS = {}
+
+# ----------------------------
+# DATA TRANSFORMATION FUNCTIONS - NEW ADDITION
+# ----------------------------
+
+def transform_transposed_data(df, sheet_type):
+    """
+    Transform transposed data format to wide format.
+    Input: Each student appears multiple times with different courses
+    Output: Each student appears once with all courses as columns
+    """
+    print(f"🔄 Transforming {sheet_type} sheet from transposed to wide format...")
+    
+    # Find the registration and name columns
+    reg_col = find_column_by_names(df, ["REG. No", "Reg No", "Registration Number", "EXAM NUMBER"])
+    name_col = find_column_by_names(df, ["NAME", "Full Name", "Candidate Name"])
+    
+    if not reg_col:
+        print("❌ Could not find registration column for transformation")
+        return df
+    
+    # Get all course columns (columns that contain course codes)
+    course_columns = [col for col in df.columns 
+                     if col not in [reg_col, name_col] and col not in ['', None]]
+    
+    print(f"📊 Found {len(course_columns)} course columns: {course_columns}")
+    
+    # Create a new dataframe to store transformed data
+    transformed_data = []
+    student_dict = {}
+    
+    # Process each row
+    for idx, row in df.iterrows():
+        exam_no = str(row[reg_col]).strip()
+        student_name = str(row[name_col]).strip() if name_col and pd.notna(row.get(name_col)) else ""
+        
+        if exam_no not in student_dict:
+            student_dict[exam_no] = {
+                'REG. No': exam_no,
+                'NAME': student_name
+            }
+        
+        # Add course scores for this student
+        for course_col in course_columns:
+            score = row.get(course_col)
+            if pd.notna(score) and score != "" and score != " ":
+                # Create column name with sheet type suffix
+                column_name = f"{course_col}_{sheet_type}"
+                student_dict[exam_no][column_name] = score
+    
+    # Convert dictionary to list
+    transformed_data = list(student_dict.values())
+    
+    # Create new DataFrame
+    if transformed_data:
+        transformed_df = pd.DataFrame(transformed_data)
+        print(f"✅ Transformed data: {len(transformed_df)} students, {len(transformed_df.columns)} columns")
+        return transformed_df
+    else:
+        print("❌ No data after transformation")
+        return df
+
+def detect_data_format(df, sheet_type):
+    """
+    Detect if data is in transposed format (students appear multiple times)
+    Returns True if transposed format is detected
+    """
+    reg_col = find_column_by_names(df, ["REG. No", "Reg No", "Registration Number", "EXAM NUMBER"])
+    
+    if not reg_col:
+        return False
+    
+    # Count occurrences of each student
+    student_counts = df[reg_col].value_counts()
+    max_occurrences = student_counts.max()
+    
+    # If any student appears more than once, it's likely transposed format
+    if max_occurrences > 1:
+        print(f"📊 Data format detection for {sheet_type}:")
+        print(f"   Total students: {len(student_counts)}")
+        print(f"   Max occurrences per student: {max_occurrences}")
+        print(f"   Students with multiple entries: {(student_counts > 1).sum()}")
+        return True
+    
+    return False
 
 # ----------------------------
 # Enhanced Course Name Matching Functions
@@ -294,9 +412,8 @@ def find_best_course_match(column_name, course_map):
 
 def initialize_carryover_tracker():
     """Initialize the global carryover tracker."""
-    global CARRYOVER_STUDENTS, RESIT_HISTORY
+    global CARRYOVER_STUDENTS
     CARRYOVER_STUDENTS = {}
-    RESIT_HISTORY = {}
 
 def identify_carryover_students(mastersheet_df, semester_key, set_name, pass_threshold=50.0):
     """
@@ -307,12 +424,12 @@ def identify_carryover_students(mastersheet_df, semester_key, set_name, pass_thr
     
     # Get course columns (excluding student info columns)
     course_columns = [col for col in mastersheet_df.columns 
-                     if col not in ['S/N', 'EXAMS NUMBER', 'NAME', 'REMARKS', 
+                     if col not in ['S/N', 'EXAM NUMBER', 'NAME', 'REMARKS', 
                                    'CU Passed', 'CU Failed', 'TCPE', 'GPA', 'AVERAGE']]
     
     for idx, student in mastersheet_df.iterrows():
         failed_courses = []
-        exam_no = str(student['EXAMS NUMBER'])
+        exam_no = str(student['EXAM NUMBER'])
         student_name = student['NAME']
         
         for course in course_columns:
@@ -400,291 +517,240 @@ def save_carryover_records(carryover_students, output_dir, set_name, semester_ke
     print(f"📁 Carryover records saved in: {carryover_dir}")
     return carryover_dir
 
-def load_carryover_records(output_dir, set_name, semester_key):
+def check_existing_carryover_files(raw_dir, set_name, semester_key):
     """
-    Load carryover records from the clean results folder.
+    Check if carryover files already exist for a given set and semester.
+    Returns list of existing carryover file paths.
     """
-    carryover_dir = os.path.join(output_dir, "CARRYOVER_RECORDS")
+    carryover_dir = os.path.join(raw_dir, "CARRYOVER")
     if not os.path.exists(carryover_dir):
-        return None
+        return []
     
-    # Look for the most recent carryover file for this set and semester
-    pattern = f"co_student_{set_name}_{semester_key}_*.json"
-    matching_files = []
+    # Look for carryover files matching the pattern
+    pattern = f"CARRYOVER-{semester_key}-{set_name}*.xlsx"
+    existing_files = []
     
     for file in os.listdir(carryover_dir):
-        if file.startswith(f"co_student_{set_name}_{semester_key}_") and file.endswith(".json"):
-            matching_files.append(file)
+        if file.startswith(f"CARRYOVER-{semester_key}-{set_name}") and file.endswith('.xlsx'):
+            existing_files.append(os.path.join(carryover_dir, file))
     
-    if not matching_files:
-        return None
-    
-    # Get the most recent file
-    latest_file = sorted(matching_files)[-1]
-    json_file = os.path.join(carryover_dir, latest_file)
-    
-    try:
-        with open(json_file, 'r') as f:
-            carryover_data = json.load(f)
-        print(f"✅ Loaded carryover records: {json_file}")
-        return carryover_data
-    except Exception as e:
-        print(f"❌ Error loading carryover records: {e}")
-        return None
+    print(f"🔍 Found {len(existing_files)} existing carryover files for {set_name}/{semester_key}")
+    return existing_files
 
-def process_resit_results(resit_file_path, output_dir, set_name, semester_key, pass_threshold=50.0):
+# ----------------------------
+# CGPA Tracking Functions
+# ----------------------------
+
+def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     """
-    Process resit results and update student records.
-    Returns updated mastersheet DataFrame.
+    Create a CGPA summary sheet that aggregates GPA across all semesters.
     """
-    print(f"🔄 Processing resit results for {set_name} - {semester_key}")
-    
-    # Load existing carryover records
-    carryover_records = load_carryover_records(output_dir, set_name, semester_key)
-    if not carryover_records:
-        print(f"❌ No carryover records found for {set_name} - {semester_key}")
-        return None
-    
-    # Load resit results
     try:
-        resit_df = pd.read_excel(resit_file_path)
-        print(f"✅ Loaded resit file: {resit_file_path}")
-        print(f"📊 Resit file columns: {resit_df.columns.tolist()}")
-    except Exception as e:
-        print(f"❌ Error loading resit file: {e}")
-        return None
-    
-    # Load the current mastersheet
-    mastersheet_path = os.path.join(output_dir, f"mastersheet_*.xlsx")
-    mastersheet_files = glob.glob(mastersheet_path)
-    
-    if not mastersheet_files:
-        print(f"❌ No mastersheet found in {output_dir}")
-        return None
-    
-    latest_mastersheet = sorted(mastersheet_files)[-1]
-    try:
-        mastersheet_df = pd.read_excel(latest_mastersheet, sheet_name=semester_key)
-        print(f"✅ Loaded mastersheet: {latest_mastersheet}")
-    except Exception as e:
-        print(f"❌ Error loading mastersheet: {e}")
-        return None
-    
-    # Process resit results and update records
-    updated_students = []
-    update_count = 0
-    
-    for student in carryover_records:
-        exam_no = student['exam_number']
-        student_updated = False
+        print("📊 Creating CGPA Summary Sheet...")
         
-        # Find student in resit results
-        student_resits = resit_df[resit_df['EXAMS NUMBER'] == exam_no]
+        # Load the mastersheet workbook
+        wb = load_workbook(mastersheet_path)
         
-        if not student_resits.empty:
-            for course in student['failed_courses']:
-                course_code = course['course_code']
+        # Collect GPA data from all semesters
+        cgpa_data = {}
+        
+        for sheet_name in wb.sheetnames:
+            if sheet_name in SEMESTER_ORDER:
+                df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
                 
-                # Check if course exists in resit results
-                if course_code in student_resits.columns:
-                    resit_score = student_resits[course_code].iloc[0]
-                    
-                    if pd.notna(resit_score):
-                        try:
-                            resit_score_val = float(resit_score)
-                            
-                            # Update course record
-                            course['resit_attempts'] += 1
-                            course['best_score'] = max(course['best_score'], resit_score_val)
-                            
-                            if resit_score_val >= pass_threshold:
-                                course['status'] = 'Passed_Resit'
-                                print(f"✅ {exam_no} passed {course_code} with {resit_score_val}")
-                            else:
-                                course['status'] = 'Failed_Resit'
-                                print(f"❌ {exam_no} failed {course_code} resit with {resit_score_val}")
-                            
-                            # Update mastersheet
-                            student_mask = mastersheet_df['EXAMS NUMBER'] == exam_no
-                            if student_mask.any():
-                                mastersheet_df.loc[student_mask, course_code] = resit_score_val
-                                update_count += 1
-                            
-                            student_updated = True
-                            student['total_resit_attempts'] += 1
-                            
-                        except (ValueError, TypeError) as e:
-                            print(f"⚠️ Invalid score for {exam_no} - {course_code}: {resit_score}")
-                            continue
+                # Find exam number and GPA columns
+                exam_col = find_exam_number_column(df)
+                gpa_col = None
+                name_col = None
+                
+                for col in df.columns:
+                    col_str = str(col).upper()
+                    if 'GPA' in col_str:
+                        gpa_col = col
+                    elif 'NAME' in col_str:
+                        name_col = col
+                
+                if exam_col and gpa_col:
+                    for idx, row in df.iterrows():
+                        exam_no = str(row[exam_col]).strip()
+                        if exam_no and exam_no != 'nan':
+                            if exam_no not in cgpa_data:
+                                cgpa_data[exam_no] = {
+                                    'name': row[name_col] if name_col and pd.notna(row.get(name_col)) else '',
+                                    'gpas': {}
+                                }
+                            cgpa_data[exam_no]['gpas'][sheet_name] = row[gpa_col]
         
-        if student_updated:
-            updated_students.append(student)
-    
-    if updated_students:
-        # Save updated carryover records
-        updated_carryover_dir = save_carryover_records(updated_students, output_dir, set_name, semester_key)
+        # Create CGPA summary dataframe
+        summary_data = []
+        for exam_no, data in cgpa_data.items():
+            row = {
+                'EXAM NUMBER': exam_no,
+                'NAME': data['name']
+            }
+            
+            # Add GPA for each semester
+            total_gpa = 0
+            semester_count = 0
+            
+            for semester in SEMESTER_ORDER:
+                if semester in data['gpas']:
+                    row[semester] = data['gpas'][semester]
+                    if pd.notna(data['gpas'][semester]):
+                        total_gpa += data['gpas'][semester]
+                        semester_count += 1
+                else:
+                    row[semester] = None
+            
+            # Calculate CGPA
+            row['CGPA'] = round(total_gpa / semester_count, 2) if semester_count > 0 else 0.0
+            summary_data.append(row)
         
-        # Recompute GPA and metrics for updated students
-        mastersheet_df = recompute_student_metrics(mastersheet_df, semester_key, set_name, pass_threshold)
+        # Create summary dataframe
+        summary_df = pd.DataFrame(summary_data)
         
-        # Save updated mastersheet
-        updated_mastersheet_path = latest_mastersheet.replace('.xlsx', '_RESIT_UPDATED.xlsx')
-        try:
-            with pd.ExcelWriter(updated_mastersheet_path, engine='openpyxl') as writer:
-                mastersheet_df.to_excel(writer, sheet_name=semester_key, index=False)
-            print(f"✅ Updated mastersheet saved: {updated_mastersheet_path}")
-        except Exception as e:
-            print(f"❌ Error saving updated mastersheet: {e}")
+        # Add the summary sheet to the workbook
+        if 'CGPA_SUMMARY' in wb.sheetnames:
+            del wb['CGPA_SUMMARY']
         
-        print(f"✅ Updated {update_count} scores for {len(updated_students)} students")
+        ws = wb.create_sheet('CGPA_SUMMARY')
         
-        # Update resit history
-        update_resit_history(updated_students, set_name, semester_key)
+        # Write header
+        headers = ['EXAM NUMBER', 'NAME'] + SEMESTER_ORDER + ['CGPA']
+        for col_idx, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_idx, value=header)
         
-        return mastersheet_df
-    else:
-        print("⚠️ No students updated from resit results")
-        return None
-
-def recompute_student_metrics(mastersheet_df, semester_key, set_name, pass_threshold):
-    """
-    Recompute GPA and other metrics after resit updates.
-    """
-    print("🔄 Recomputing student metrics after resit updates...")
-    
-    # Get course data for this semester
-    try:
-        semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-        course_map = semester_course_maps[semester_key]
-        credit_units = semester_credit_units[semester_key]
+        # Write data
+        for row_idx, row_data in enumerate(summary_data, 2):
+            for col_idx, header in enumerate(headers, 1):
+                ws.cell(row=row_idx, column=col_idx, value=row_data.get(header, ''))
         
-        ordered_titles = list(course_map.keys())
-        ordered_codes = [course_map[t] for t in ordered_titles if course_map.get(t)]
-        ordered_codes = [c for c in ordered_codes if credit_units.get(c, 0) > 0]
-        filtered_credit_units = {c: credit_units[c] for c in ordered_codes}
-        total_cu = sum(filtered_credit_units.values())
+        # Style the header
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        wb.save(mastersheet_path)
+        print("✅ CGPA Summary sheet created successfully")
+        
+        return summary_df
         
     except Exception as e:
-        print(f"⚠️ Error loading course data for recomputation: {e}")
-        return mastersheet_df
-    
-    # Recompute TCPE, TCUP, TCUF, GPA for each student
-    for idx, student in mastersheet_df.iterrows():
-        tcpe = 0.0
-        tcup = 0
-        tcuf = 0
-        
-        for code in ordered_codes:
-            if code in mastersheet_df.columns:
-                score = student.get(code, 0)
-                try:
-                    score_val = float(score) if pd.notna(score) else 0
-                    cu = filtered_credit_units.get(code, 0)
-                    gp = get_grade_point(score_val)
-                    
-                    # TCPE: Grade Point × Credit Units
-                    tcpe += gp * cu
-                    
-                    # TCUP/TCUF: Count credit units based on pass/fail
-                    if score_val >= pass_threshold:
-                        tcup += cu
-                    else:
-                        tcuf += cu
-                        
-                except (ValueError, TypeError):
-                    continue
-        
-        # Update student metrics
-        mastersheet_df.at[idx, "TCPE"] = round(tcpe, 1)
-        mastersheet_df.at[idx, "CU Passed"] = tcup
-        mastersheet_df.at[idx, "CU Failed"] = tcuf
-        
-        # Calculate GPA
-        gpa = round((tcpe / total_cu), 2) if total_cu > 0 else 0.0
-        mastersheet_df.at[idx, "GPA"] = gpa
-        
-        # Update average
-        valid_scores = [student.get(code, 0) for code in ordered_codes if code in mastersheet_df.columns]
-        valid_scores = [s for s in valid_scores if pd.notna(s)]
-        if valid_scores:
-            mastersheet_df.at[idx, "AVERAGE"] = round(sum(valid_scores) / len(valid_scores), 0)
-        
-        # Update remarks
-        fails = [code for code in ordered_codes if float(student.get(code, 0) or 0) < pass_threshold]
-        if not fails:
-            mastersheet_df.at[idx, "REMARKS"] = "Passed"
-        else:
-            failed_courses_str = ", ".join(sorted(fails))
-            mastersheet_df.at[idx, "REMARKS"] = f"Failed: {failed_courses_str}"
-    
-    # Add resit count column if not exists
-    if "RESIT COUNT" not in mastersheet_df.columns:
-        mastersheet_df["RESIT COUNT"] = 0
-    
-    # Update resit counts based on carryover records
-    carryover_records = load_carryover_records(os.path.dirname(mastersheet_df), set_name, semester_key)
-    if carryover_records:
-        for student in carryover_records:
-            exam_no = student['exam_number']
-            total_resits = student['total_resit_attempts']
-            
-            student_mask = mastersheet_df['EXAMS NUMBER'] == exam_no
-            if student_mask.any():
-                mastersheet_df.loc[student_mask, "RESIT COUNT"] = total_resits
-    
-    return mastersheet_df
+        print(f"❌ Error creating CGPA summary sheet: {e}")
+        return None
 
-def update_resit_history(updated_students, set_name, semester_key):
+def create_analysis_sheet(mastersheet_path, timestamp):
     """
-    Update global resit history tracker.
+    Create an analysis sheet with comprehensive statistics.
     """
-    global RESIT_HISTORY
-    
-    for student in updated_students:
-        exam_no = student['exam_number']
-        student_key = f"{exam_no}_{set_name}_{semester_key}"
+    try:
+        print("📈 Creating Analysis Sheet...")
         
-        if student_key not in RESIT_HISTORY:
-            RESIT_HISTORY[student_key] = []
+        wb = load_workbook(mastersheet_path)
         
-        resit_record = {
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'courses_attempted': [c['course_code'] for c in student['failed_courses'] if c['resit_attempts'] > 0],
-            'total_attempts': student['total_resit_attempts'],
-            'results': {c['course_code']: c['best_score'] for c in student['failed_courses'] if c['resit_attempts'] > 0}
+        # Collect data from all semesters
+        analysis_data = {
+            'semester': [],
+            'total_students': [],
+            'passed_all': [],
+            'carryover_students': [],
+            'withdrawn_students': [],
+            'average_gpa': [],
+            'pass_rate': []
         }
         
-        RESIT_HISTORY[student_key].append(resit_record)
-
-def get_resit_summary(set_name, semester_key):
-    """
-    Get summary of resit activity for a set and semester.
-    """
-    summary = {
-        'total_students_with_resits': 0,
-        'total_resit_attempts': 0,
-        'courses_with_resits': {},
-        'successful_resits': 0,
-        'failed_resits': 0
-    }
-    
-    for student_key, history in RESIT_HISTORY.items():
-        if set_name in student_key and semester_key in student_key:
-            summary['total_students_with_resits'] += 1
-            for record in history:
-                summary['total_resit_attempts'] += record['total_attempts']
+        for sheet_name in wb.sheetnames:
+            if sheet_name in SEMESTER_ORDER:
+                df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
                 
-                for course, score in record['results'].items():
-                    if course not in summary['courses_with_resits']:
-                        summary['courses_with_resits'][course] = 0
-                    summary['courses_with_resits'][course] += 1
-                    
-                    if score >= DEFAULT_PASS_THRESHOLD:
-                        summary['successful_resits'] += 1
-                    else:
-                        summary['failed_resits'] += 1
-    
-    return summary
+                # Basic statistics
+                total_students = len(df)
+                passed_all = len(df[df['REMARKS'] == 'Passed']) if 'REMARKS' in df.columns else 0
+                
+                # Calculate carryover students
+                carryover_count = 0
+                if 'REMARKS' in df.columns:
+                    carryover_count = len(df[df['REMARKS'].str.contains('Failed', na=False)])
+                
+                # Calculate average GPA
+                avg_gpa = df['GPA'].mean() if 'GPA' in df.columns and not df['GPA'].isna().all() else 0
+                
+                # Calculate pass rate
+                pass_rate = (passed_all / total_students * 100) if total_students > 0 else 0
+                
+                analysis_data['semester'].append(sheet_name)
+                analysis_data['total_students'].append(total_students)
+                analysis_data['passed_all'].append(passed_all)
+                analysis_data['carryover_students'].append(carryover_count)
+                analysis_data['withdrawn_students'].append(0)  # You can track this if available
+                analysis_data['average_gpa'].append(round(avg_gpa, 2))
+                analysis_data['pass_rate'].append(round(pass_rate, 2))
+        
+        # Create analysis dataframe
+        analysis_df = pd.DataFrame(analysis_data)
+        
+        # Add overall statistics
+        overall_stats = {
+            'semester': 'OVERALL',
+            'total_students': analysis_df['total_students'].sum(),
+            'passed_all': analysis_df['passed_all'].sum(),
+            'carryover_students': analysis_df['carryover_students'].sum(),
+            'withdrawn_students': analysis_df['withdrawn_students'].sum(),
+            'average_gpa': round(analysis_df['average_gpa'].mean(), 2),
+            'pass_rate': round(analysis_df['pass_rate'].mean(), 2)
+        }
+        analysis_df = pd.concat([analysis_df, pd.DataFrame([overall_stats])], ignore_index=True)
+        
+        # Add the analysis sheet to the workbook
+        if 'ANALYSIS' in wb.sheetnames:
+            del wb['ANALYSIS']
+        
+        ws = wb.create_sheet('ANALYSIS')
+        
+        # Write header
+        headers = ['SEMESTER', 'TOTAL STUDENTS', 'PASSED ALL', 'CARRYOVER STUDENTS', 
+                  'WITHDRAWN STUDENTS', 'AVERAGE GPA', 'PASS RATE (%)']
+        for col_idx, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_idx, value=header)
+        
+        # Write data
+        for row_idx, row_data in analysis_df.iterrows():
+            ws.cell(row=row_idx+2, column=1, value=row_data['semester'])
+            ws.cell(row=row_idx+2, column=2, value=row_data['total_students'])
+            ws.cell(row=row_idx+2, column=3, value=row_data['passed_all'])
+            ws.cell(row=row_idx+2, column=4, value=row_data['carryover_students'])
+            ws.cell(row=row_idx+2, column=5, value=row_data['withdrawn_students'])
+            ws.cell(row=row_idx+2, column=6, value=row_data['average_gpa'])
+            ws.cell(row=row_idx+2, column=7, value=row_data['pass_rate'])
+        
+        # Style the header
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="27ae60", end_color="27ae60", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        wb.save(mastersheet_path)
+        print("✅ Analysis sheet created successfully")
+        
+        return analysis_df
+        
+    except Exception as e:
+        print(f"❌ Error creating analysis sheet: {e}")
+        return None
 
 # ----------------------------
 # Upgrade Rule Functions
@@ -743,7 +809,7 @@ def apply_upgrade_rule(mastersheet, ordered_codes, min_threshold):
         for idx in mastersheet.index:
             score = mastersheet.at[idx, code]
             if isinstance(score, (int, float)) and min_threshold <= score <= 49:
-                exam_no = mastersheet.at[idx, "EXAMS NUMBER"]
+                exam_no = mastersheet.at[idx, "EXAM NUMBER"]
                 original_score = score
                 mastersheet.at[idx, code] = 50
                 upgraded_count += 1
@@ -776,6 +842,26 @@ def normalize_path(path: str) -> str:
     if path.startswith("/c/") and os.path.exists("/mnt/c"):
         path = path.replace("/c/", "/mnt/c/", 1)
     return os.path.abspath(path)
+
+def create_zip_folder(source_dir, zip_path):
+    """
+    Create a ZIP file from a directory.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        import zipfile
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(source_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    # Create relative path for ZIP
+                    arcname = os.path.relpath(file_path, source_dir)
+                    zipf.write(file_path, arcname)
+        print(f"✅ Successfully created ZIP: {zip_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to create ZIP: {e}")
+        return False
 
 def normalize_for_matching(s):
     if s is None:
@@ -883,14 +969,19 @@ def filter_out_withdrawn_students(mastersheet, semester_key):
     removed_students = []
     filtered_mastersheet = mastersheet.copy()
 
+    exam_col = find_exam_number_column(mastersheet)
+    if not exam_col:
+        print("❌ Could not find exam number column for filtering withdrawn students")
+        return mastersheet, []
+
     for idx, row in mastersheet.iterrows():
-        exam_no = str(row["EXAMS NUMBER"]).strip()
+        exam_no = str(row[exam_col]).strip()
         if is_student_withdrawn(exam_no):
             withdrawal_history = get_withdrawal_history(exam_no)
             # Only remove if student was withdrawn in a PREVIOUS semester
             if withdrawal_history and withdrawal_history['withdrawn_semester'] != semester_key:
                 removed_students.append(exam_no)
-                filtered_mastersheet = filtered_mastersheet[filtered_mastersheet["EXAMS NUMBER"] != exam_no]
+                filtered_mastersheet = filtered_mastersheet[filtered_mastersheet[exam_col].astype(str) != exam_no]
 
     if removed_students:
         print(
@@ -1169,6 +1260,17 @@ def find_column_by_names(df, candidate_names):
     for cand in candidates:
         for col, ncol in norm_map.items():
             if ncol == cand:
+                return col
+    return None
+
+def find_exam_number_column(df):
+    """Find the exam number column in a DataFrame with flexible matching."""
+    possible_names = ['EXAM NUMBER', 'Reg No', 'REG NO', 'REGISTRATION NUMBER', 'MAT NO', 'STUDENT ID']
+    
+    for col in df.columns:
+        col_upper = str(col).upper()
+        for possible_name in possible_names:
+            if possible_name in col_upper:
                 return col
     return None
 
@@ -1613,6 +1715,13 @@ def generate_individual_student_pdf(
     Create a PDF with one page per student matching the sample format exactly.
     Enhanced to include resit information.
     """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
     doc = SimpleDocTemplate(
         out_pdf_path,
         pagesize=A4,
@@ -1734,7 +1843,7 @@ def generate_individual_student_pdf(
         elems.append(Spacer(1, 8))
 
         # Student particulars - SEPARATE FROM PASSPORT PHOTO
-        exam_no = str(r.get("EXAMS NUMBER", r.get("REG. No", "")))
+        exam_no = str(r.get("EXAM NUMBER", r.get("REG. No", "")))
         student_name = str(r.get("NAME", ""))
 
         # Determine level and semester using the new function
@@ -1841,7 +1950,7 @@ def generate_individual_student_pdf(
                     # Use the upgraded score for PDF display
                     score_val = 50.0
                     score_display = "50"
-                    print(f"🔼 PDF: Upgraded score for {exam_no} - {code}: → 50")
+                    print(f"🔼 PDF: Upgraded score for {exam_no} - {code}: {original_score} → 50")
                 else:
                     score_display = str(int(round(score_val)))
                 # -----------------------
@@ -1906,7 +2015,7 @@ def generate_individual_student_pdf(
             2) if total_units > 0 else 0.0
 
         # Get previous GPA if available
-        exam_no = str(r.get("EXAMS NUMBER", "")).strip()
+        exam_no = str(r.get("EXAM NUMBER", "")).strip()
         previous_gpa = previous_gpas.get(
             exam_no, None) if previous_gpas else None
 
@@ -2095,9 +2204,9 @@ def generate_individual_student_pdf(
                      "____________________"],
                     [Paragraph("<b>EXAMS SECRETARY</b>",
                                ParagraphStyle('SigStyle',
-                                      parent=styles['Normal'],
-                                      fontSize=10,
-                                      alignment=TA_CENTER)),
+                                              parent=styles['Normal'],
+                                              fontSize=10,
+                                              alignment=TA_CENTER)),
                      Paragraph("<b>V.P. ACADEMICS</b>",
                        ParagraphStyle('SigStyle',
                                      parent=styles['Normal'],
@@ -2119,7 +2228,7 @@ def generate_individual_student_pdf(
     print(f"✅ Individual student PDF written: {out_pdf_path}")
 
 # ----------------------------
-# Main file processing (Enhanced with Carryover and Better Course Matching)
+# Main file processing (Enhanced with Data Transformation)
 # ----------------------------
 
 def process_single_file(
@@ -2139,7 +2248,7 @@ def process_single_file(
         upgrade_min_threshold=None):
     """
     Process a single raw file and produce mastersheet Excel and PDFs.
-    Enhanced with better course name matching and resit count tracking.
+    Enhanced with data transformation for transposed formats.
     """
     fname = os.path.basename(path)
     print(f"🔍 Processing file: {fname} for semester: {semester_key}")
@@ -2154,6 +2263,7 @@ def process_single_file(
 
     expected_sheets = ['CA', 'OBJ', 'EXAM']
     dfs = {}
+    
     for s in expected_sheets:
         if s in xl.sheet_names:
             try:
@@ -2161,6 +2271,14 @@ def process_single_file(
                 dfs[s] = pd.read_excel(path, sheet_name=s, dtype=str, header=0)
                 print(f"✅ Loaded sheet {s} with shape: {dfs[s].shape}")
                 print(f"📊 Sheet {s} columns: {dfs[s].columns.tolist()}")
+                
+                # NEW: Check if data is in transposed format and transform if needed
+                if detect_data_format(dfs[s], s):
+                    print(f"🔄 Data in {s} sheet is in transposed format, transforming...")
+                    dfs[s] = transform_transposed_data(dfs[s], s)
+                    print(f"✅ Transformed {s} sheet to wide format")
+                    print(f"📊 Transformed shape: {dfs[s].shape}")
+                    print(f"📋 Transformed columns: {dfs[s].columns.tolist()}")
                 
                 # Debug: Show first few rows of data
                 if not dfs[s].empty:
@@ -2182,6 +2300,10 @@ def process_single_file(
                 except Exception as e2:
                     print(f"❌ Alternative load also failed for sheet {s}: {e2}")
                     dfs[s] = pd.DataFrame()
+        else:
+            print(f"⚠️ Sheet {s} not found in {fname}")
+            dfs[s] = pd.DataFrame()
+            
     if not dfs:
         print("❌ No CA/OBJ/EXAM sheets detected — skipping file.")
         return None
@@ -2223,7 +2345,7 @@ def process_single_file(
                                             "Reg No",
                                             "Registration Number",
                                             "Mat No",
-                                            "Exam No",
+                                            "EXAM NUMBER",
                                             "Student ID"]) for s,
                    df in dfs.items()}
     name_cols = {
@@ -2289,7 +2411,7 @@ def process_single_file(
         # Debug: Show data before merging
         print(f"📊 Data in {s} sheet - Shape: {cur.shape}")
         if not cur.empty:
-            print(f"🔍 First 2 rows of {s} data:")
+            print(f"🔍 First 3 rows of {s} data:")
             for i in range(min(2, len(cur))):
                 print(f"   Row {i}: REG. No='{cur.iloc[i]['REG. No']}', NAME='{cur.iloc[i]['NAME']}'")
         
@@ -2349,7 +2471,7 @@ def process_single_file(
         return None
 
     mastersheet = merged[["REG. No", "NAME"]].copy()
-    mastersheet.rename(columns={"REG. No": "EXAMS NUMBER"}, inplace=True)
+    mastersheet.rename(columns={"REG. No": "EXAM NUMBER"}, inplace=True)
 
     print("🎯 Calculating scores for each course...")
     
@@ -2405,8 +2527,8 @@ def process_single_file(
         # In non-interactive mode, use the provided threshold or None
         upgraded_scores_count = 0
         if upgrade_min_threshold is not None:
-            print(f"🔄 Applying upgrade rule from parameters: {upgrade_min_threshold}–49 → 50")
-    
+            print(f"🔄 Applying upgrade upgrade from parameters: {upgrade_min_threshold}–49 → 50")
+
     if upgrade_min_threshold is not None:
         mastersheet, upgraded_scores_count = apply_upgrade_rule(mastersheet, ordered_codes, upgrade_min_threshold)
 
@@ -2479,14 +2601,44 @@ def process_single_file(
         student_status = determine_student_status(
             row, total_cu, pass_threshold)
         if student_status == "Withdrawn":
-            exam_no = str(row["EXAMS NUMBER"]).strip()
+            exam_no = str(row["EXAM NUMBER"]).strip()
             withdrawn_students.append(exam_no)
             mark_student_withdrawn(exam_no, semester_key)
             print(f"🚫 Student {exam_no} marked as withdrawn in {semester_key}")
 
     # Update student tracker with current semester's students (after filtering)
-    exam_numbers = mastersheet["EXAMS NUMBER"].astype(str).str.strip().tolist()
+    exam_numbers = mastersheet["EXAM NUMBER"].astype(str).str.strip().tolist()
     update_student_tracker(semester_key, exam_numbers, withdrawn_students)
+
+    # Identify and save carryover students after processing
+    carryover_students = identify_carryover_students(mastersheet, semester_key, set_name, pass_threshold)
+    
+    if carryover_students:
+        carryover_dir = save_carryover_records(
+            carryover_students, output_dir, set_name, semester_key
+        )
+        print(f"✅ Saved {len(carryover_students)} carryover records to: {carryover_dir}")
+        
+        # ADD: Log the carryover record file path for debugging
+        carryover_file = os.path.join(carryover_dir, f"co_student_{set_name}_{semester_key}_*.json")
+        print(f"📁 Carryover file pattern: {carryover_file}")
+        
+        # Print carryover summary
+        total_failed_courses = sum(len(s['failed_courses']) for s in carryover_students)
+        print(f"📊 Carryover Summary: {total_failed_courses} failed courses across all students")
+        
+        # Show most frequently failed courses
+        course_fail_count = {}
+        for student in carryover_students:
+            for course in student['failed_courses']:
+                course_code = course['course_code']
+                course_fail_count[course_code] = course_fail_count.get(course_code, 0) + 1
+        
+        if course_fail_count:
+            top_failed = sorted(course_fail_count.items(), key=lambda x: x[1], reverse=True)[:5]
+            print(f"📚 Most failed courses: {top_failed}")
+    else:
+        print("✅ No carryover students identified")
 
     def sort_key(remark):
         if remark == "Passed":
@@ -2509,7 +2661,7 @@ def process_single_file(
             mastersheet = mastersheet[["S/N"] + cols]
 
     course_cols = ordered_codes
-    out_cols = ["S/N", "EXAMS NUMBER", "NAME"] + course_cols + \
+    out_cols = ["S/N", "EXAM NUMBER", "NAME"] + course_cols + \
         ["REMARKS", "CU Passed", "CU Failed", "TCPE", "GPA", "AVERAGE"]
     for c in out_cols:
         if c not in mastersheet.columns:
@@ -2626,7 +2778,7 @@ def process_single_file(
         rowvals = [r[col] for col in headers]
         ws.append(rowvals)
 
-    # FIXED: Freeze the column headers (S/N, EXAMS NUMBER, NAME, etc.) at row start_row + 3
+    # FIXED: Freeze the column headers (S/N, EXAM NUMBER, NAME, etc.) at row start_row + 3
     # This ensures all column headers remain visible when scrolling
     ws.freeze_panes = ws.cell(row=start_row + 3, column=1)
 
@@ -2711,9 +2863,9 @@ def process_single_file(
         # For "Failed" remarks, calculate the length considering all course
         # codes
         if remark_str.startswith("Failed:"):
-            # Count the total characters in failed courses list
+            # Count the total total characters in failed courses list
             failed_courses = remark_str.replace("Failed: ", "")
-            # Estimate width needed for the course codes
+            # Estimate the total total characters
             failed_length = len(failed_courses)
             # Add some padding for the "Failed: " prefix and spacing
             total_length = failed_length + 15
@@ -2741,7 +2893,7 @@ def process_single_file(
         column_letter = get_column_letter(col_idx)
         if col_idx == 1:  # S/N
             ws.column_dimensions[column_letter].width = 6
-        elif column_letter == "B" or headers[col_idx - 1] in ["EXAMS NUMBER", "EXAM NO"]:
+        elif column_letter == "B" or headers[col_idx - 1] in ["EXAM NUMBER", "EXAM NO"]:
             ws.column_dimensions[column_letter].width = 18
         elif headers[col_idx - 1] == "NAME":
             ws.column_dimensions[column_letter].width = name_col_width
@@ -2899,14 +3051,10 @@ def process_semester_files(
     print(f"{'='*60}")
 
     # Filter files for this semester
-    semester_files = []
-    for rf in raw_files:
-        detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-        # FIX: Compare in uppercase for case-insensitive matching
-        if detected_sem.upper() == semester_key.upper():
-            semester_files.append(rf)
-            print(f"✅ MATCH: {rf} belongs to {semester_key}")
-
+    normalized_key = semester_key.replace('ND-', '').upper()
+    semester_files = [f for f in raw_files 
+                      if normalized_key in f.upper().replace('ND-', '')]
+    
     if not semester_files:
         print(f"⚠️ No files found for semester {semester_key}")
         print(f"🔍 Available files: {raw_files}")
@@ -2914,6 +3062,12 @@ def process_semester_files(
 
     print(
         f"📁 Found {len(semester_files)} files for {semester_key}: {semester_files}")
+
+    # Check for existing carryover files
+    existing_carryover_files = check_existing_carryover_files(raw_dir, set_name, semester_key)
+    if existing_carryover_files:
+        print(f"📋 Found existing carryover files: {existing_carryover_files}")
+        print("ℹ️ Carryover processing will be available after regular processing")
 
     # Process each file for this semester
     mastersheet_result = None
@@ -2950,34 +3104,6 @@ def process_semester_files(
             if result is not None:
                 print(f"✅ Successfully processed {rf}")
                 mastersheet_result = result
-                
-                # Identify and save carryover students after processing
-                carryover_students = identify_carryover_students(
-                    result, semester_key, set_name, pass_threshold
-                )
-                
-                if carryover_students:
-                    carryover_dir = save_carryover_records(
-                        carryover_students, output_dir, set_name, semester_key
-                    )
-                    print(f"✅ Identified {len(carryover_students)} carryover students")
-                    
-                    # Print carryover summary
-                    total_failed_courses = sum(len(s['failed_courses']) for s in carryover_students)
-                    print(f"📊 Carryover Summary: {total_failed_courses} failed courses across all students")
-                    
-                    # Show most frequently failed courses
-                    course_fail_count = {}
-                    for student in carryover_students:
-                        for course in student['failed_courses']:
-                            course_code = course['course_code']
-                            course_fail_count[course_code] = course_fail_count.get(course_code, 0) + 1
-                    
-                    if course_fail_count:
-                        top_failed = sorted(course_fail_count.items(), key=lambda x: x[1], reverse=True)[:5]
-                        print(f"📚 Most failed courses: {top_failed}")
-                else:
-                    print("✅ No carryover students identified")
             else:
                 print(f"❌ Failed to process {rf}")
 
@@ -2985,168 +3111,257 @@ def process_semester_files(
             print(f"❌ Error processing {rf}: {e}")
             import traceback
             traceback.print_exc()
+
+    # ADD: Verify carryover records were created
+    carryover_records_dir = os.path.join(output_dir, "CARRYOVER_RECORDS")
+    if os.path.exists(carryover_records_dir):
+        json_files = glob.glob(os.path.join(carryover_records_dir, f"co_student_{set_name}_{semester_key}_*.json"))
+        if json_files:
+            print(f"✅ Carryover records created: {len(json_files)} file(s)")
+            print(f"📝 Latest: {sorted(json_files)[-1]}")
+        else:
+            print(f"⚠️ No carryover records found for {semester_key}")
     
     return mastersheet_result
 
 # ----------------------------
-# Resit Processing Mode
+# Main runner (Enhanced)
 # ----------------------------
 
-def process_resit_mode(params, base_dir_norm):
-    """
-    Process resit results in non-interactive mode for web interface.
-    """
-    print("🔄 Running in RESIT PROCESSING mode")
+def main():
+    print("Starting ND Examination Results Processing with Data Transformation...")
+    ts = datetime.now().strftime(TIMESTAMP_FMT)
+
+    # Initialize trackers
+    initialize_student_tracker()
+    initialize_carryover_tracker()
+
+    # Check if running in web mode
+    if is_web_mode():
+        uploaded_file_path = get_uploaded_file_path()
+        if uploaded_file_path and os.path.exists(uploaded_file_path):
+            print("🔧 Running in WEB MODE with uploaded file")
+            # This would need to be adapted for your specific uploaded file processing
+            print("⚠️ Uploaded file processing for individual files not fully implemented in this version")
+            return
+
+    # Get parameters from form
+    params = get_form_parameters()
     
-    resit_file_path = params['resit_file_path']
-    selected_set = params['selected_set']
-    selected_semesters = params['selected_semesters']
+    # Use the parameters
+    global DEFAULT_PASS_THRESHOLD
+    DEFAULT_PASS_THRESHOLD = params['pass_threshold']
     
-    if not resit_file_path or not os.path.exists(resit_file_path):
-        print(f"❌ Resit file not found: {resit_file_path}")
-        return False
-    
-    print(f"📁 Processing resit file: {resit_file_path}")
-    print(f"🎯 Target set: {selected_set}")
-    print(f"📚 Target semesters: {selected_semesters}")
-    
-    success_count = 0
-    
-    for semester_key in selected_semesters:
-        # Find the clean directory for this set and semester
-        clean_dir = normalize_path(os.path.join(base_dir_norm, "ND", selected_set, "CLEAN_RESULTS"))
+    base_dir_norm = normalize_path(BASE_DIR)
+    print(f"Using base directory: {base_dir_norm}")
+
+    # Check if we should use interactive or non-interactive mode
+    if should_use_interactive_mode():
+        print("🔧 Running in INTERACTIVE mode (CLI)")
         
-        if not os.path.exists(clean_dir):
-            print(f"❌ Clean results directory not found: {clean_dir}")
-            continue
-        
-        # Look for the most recent timestamped folder
-        timestamp_folders = [f for f in os.listdir(clean_dir) 
-                           if f.startswith(f"{selected_set}_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
-        
-        if not timestamp_folders:
-            print(f"❌ No result folders found in {clean_dir}")
-            continue
-        
-        latest_folder = sorted(timestamp_folders)[-1]
-        output_dir = os.path.join(clean_dir, latest_folder)
-        
-        print(f"🔍 Processing resit for {semester_key} in {output_dir}")
-        
-        # Process resit results
-        updated_mastersheet = process_resit_results(
-            resit_file_path, output_dir, selected_set, semester_key, params['pass_threshold']
-        )
-        
-        if updated_mastersheet is not None:
-            print(f"✅ Successfully processed resit for {semester_key}")
-            success_count += 1
+        try:
+            semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+        except Exception as e:
+            print(f"❌ Could not load course data: {e}")
+            return
+
+        # Get available sets and let user choose
+        available_sets = get_available_sets(base_dir_norm)
+
+        if not available_sets:
+            print(
+                f"No ND-* directories found in {base_dir_norm}. Nothing to process.")
+            print(f"Available directories: {os.listdir(base_dir_norm)}")
+            return
+
+        print(f"📚 Found {len(available_sets)} available sets: {available_sets}")
+
+        # Let user choose which set(s) to process
+        sets_to_process = get_user_set_choice(available_sets)
+
+        print(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
+
+        for nd_set in sets_to_process:
+            print(f"\n{'='*60}")
+            print(f"PROCESSING SET: {nd_set}")
+            print(f"{'='*60}")
+
+            # Generate a single timestamp for this set processing
+            ts = datetime.now().strftime(TIMESTAMP_FMT)
             
-            # Generate updated PDFs
+            # UPDATED: Raw and clean directories now under ND folder
+            raw_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "RAW_RESULTS"))
+            clean_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "CLEAN_RESULTS"))
+
+            # Create directories if they don't exist
+            os.makedirs(raw_dir, exist_ok=True)
+            os.makedirs(clean_dir, exist_ok=True)
+
+            # Check if raw directory exists and has files
+            if not os.path.exists(raw_dir):
+                print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
+                continue
+
+            raw_files = [
+                f for f in os.listdir(raw_dir) if f.lower().endswith(
+                    (".xlsx", ".xls")) and not f.startswith("~$")]
+            if not raw_files:
+                print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
+                print(f"   Available files: {os.listdir(raw_dir)}")
+                continue
+
+            print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
+
+            # Create a single timestamped folder for this set
+            set_output_dir = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}")
+            os.makedirs(set_output_dir, exist_ok=True)
+            print(f"📁 Created set output directory: {set_output_dir}")
+
+            # Get user choice for which semesters to process
+            semesters_to_process = get_user_semester_choice()
+
+            print(
+                f"\n🎯 PROCESSING SELECTED SEMESTERS for {nd_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
+
+            # Process selected semesters in the correct order
+            for semester_key in semesters_to_process:
+                if semester_key not in SEMESTER_ORDER:
+                    print(f"⚠️ Skipping unknown semester: {semester_key}")
+                    continue
+
+                # Check if there are files for this semester
+                semester_files_exist = False
+                for rf in raw_files:
+                    detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
+                    if detected_sem == semester_key:
+                        semester_files_exist = True
+                        break
+
+                if semester_files_exist:
+                    print(f"\n🎯 Processing {semester_key} in {nd_set}...")
+                    process_semester_files(
+                        semester_key,
+                        raw_files,
+                        raw_dir,
+                        set_output_dir,
+                        ts,
+                        DEFAULT_PASS_THRESHOLD,
+                        semester_course_maps,
+                        semester_credit_units,
+                        semester_lookup,
+                        semester_course_titles,
+                        DEFAULT_LOGO_PATH,
+                        nd_set)
+                else:
+                    print(
+                        f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
+            
+            # Create ZIP of the entire set results
             try:
-                safe_sem = re.sub(r'[^\w\-]', '_', semester_key)
-                student_pdf_path = os.path.join(
-                    output_dir,
-                    f"mastersheet_students_RESIT_UPDATED_{safe_sem}.pdf")
+                zip_path = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}.zip")
+                zip_success = create_zip_folder(set_output_dir, zip_path)
                 
-                # Get course data for PDF generation
-                semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-                course_map = semester_course_maps[semester_key]
-                credit_units = semester_credit_units[semester_key]
-                
-                ordered_titles = list(course_map.keys())
-                ordered_codes = [course_map[t]['code'] for t in ordered_titles if course_map.get(t)]
-                ordered_codes = [c for c in ordered_codes if credit_units.get(c, 0) > 0]
-                filtered_credit_units = {c: credit_units[c] for c in ordered_codes}
-                
-                # Generate PDF with resit information
-                generate_individual_student_pdf(
-                    updated_mastersheet,
-                    student_pdf_path,
-                    semester_key,
-                    logo_path=DEFAULT_LOGO_PATH,
-                    filtered_credit_units=filtered_credit_units,
-                    ordered_codes=ordered_codes,
-                    course_titles_map=semester_course_titles[semester_key],
-                    previous_gpas=None,
-                    cgpa_data=None,
-                    total_cu=sum(filtered_credit_units.values()),
-                    pass_threshold=params['pass_threshold'],
-                    upgrade_min_threshold=None
-                )
-                
-                print(f"✅ Updated PDF generated: {student_pdf_path}")
-                
+                if zip_success:
+                    print(f"✅ ZIP file created: {zip_path}")
+                    
+                    # Verify file size
+                    if os.path.exists(zip_path):
+                        zip_size = os.path.getsize(zip_path)
+                        zip_size_mb = zip_size / (1024 * 1024)
+                        print(f"📦 ZIP file size: {zip_size_mb:.2f} MB")
+                    
+                else:
+                    print(f"❌ Failed to create ZIP file for {nd_set}")
+                    
             except Exception as e:
-                print(f"⚠️ Error generating updated PDF: {e}")
+                print(f"⚠️ Failed to create ZIP for {nd_set}: {e}")
+
+        # Print student tracking summary
+        print(f"\n📊 STUDENT TRACKING SUMMARY:")
+        print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
+        print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+
+        # Print carryover summary
+        if CARRYOVER_STUDENTS:
+            print(f"\n📋 CARRYOVER STUDENT SUMMARY:")
+            print(f"Total carryover students: {len(CARRYOVER_STUDENTS)}")
+            
+            # Count by semester
+            semester_counts = {}
+            for student_key, data in CARRYOVER_STUDENTS.items():
+                semester = data['semester']
+                semester_counts[semester] = semester_counts.get(semester, 0) + 1
+            
+            for semester, count in semester_counts.items():
+                print(f"  {semester}: {count} students")
+
+        # Print withdrawn students who reappeared
+        reappeared_count = 0
+        for exam_no, data in WITHDRAWN_STUDENTS.items():
+            if data['reappeared_semesters']:
+                reappeared_count += 1
+                print(
+                    f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
+
+        if reappeared_count > 0:
+            print(
+                f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
+
+        # Analyze student progression
+        sem_counts = {}
+        for student_data in STUDENT_TRACKER.values():
+            sem_count = len(student_data['semesters_present'])
+            if sem_count not in sem_counts:
+                sem_counts[sem_count] = 0
+            sem_counts[sem_count] += 1
+
+        for sem_count, student_count in sorted(sem_counts.items()):
+            print(f"Students present in {sem_count} semester(s): {student_count}")
+
+        print("\n✅ ND Examination Results Processing completed successfully.")
+    else:
+        print("🔧 Running in NON-INTERACTIVE mode (Web)")
+        
+        # NEW: Check if this is carryover processing mode
+        if params.get('process_carryover', False):
+            print("🎯 Detected CARRYOVER processing mode - redirecting to integrated_carryover_processor.py")
+            
+            # Set environment variables for the carryover processor
+            os.environ['CARRYOVER_FILE_PATH'] = params['carryover_file_path']
+            os.environ['SET_NAME'] = params['selected_set']
+            os.environ['SEMESTER_KEY'] = params['selected_semesters'][0] if params['selected_semesters'] else ''
+            os.environ['BASE_DIR'] = BASE_DIR
+
+            # Path to the integrated_carryover_processor.py script
+            carryover_script_path = os.path.join(os.path.dirname(__file__), 'integrated_carryover_processor.py')
+            
+            if not os.path.exists(carryover_script_path):
+                print(f"❌ Carryover processor script not found: {carryover_script_path}")
+                return False
+
+            print(f"🚀 Running carryover processor: {carryover_script_path}")
+            
+            # Run the carryover processor
+            result = subprocess.run([sys.executable, carryover_script_path], capture_output=True, text=True)
+
+            # Print the output and return
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
+
+            return result.returncode == 0
         else:
-            print(f"❌ Failed to process resit for {semester_key}")
-    
-    print(f"📊 RESIT PROCESSING SUMMARY: {success_count}/{len(selected_semesters)} semesters updated")
-    return success_count > 0
-
-# ----------------------------
-# Non-interactive mode processing (Enhanced)
-# ----------------------------
-
-def create_zip_folder(source_dir, zip_path):
-    """Create a ZIP file from a directory"""
-    import zipfile
-    print(f"📦 Creating ZIP file from: {source_dir}")
-    print(f"📦 ZIP destination: {zip_path}")
-    
-    # Check if source directory exists and has files
-    if not os.path.exists(source_dir):
-        print(f"❌ Source directory does not exist: {source_dir}")
-        return False
-    
-    files_in_dir = []
-    for root, dirs, files in os.walk(source_dir):
-        for file in files:
-            files_in_dir.append(os.path.join(root, file))
-    
-    if not files_in_dir:
-        print(f"❌ No files found in source directory: {source_dir}")
-        return False
-    
-    print(f"📁 Found {len(files_in_dir)} files to include in ZIP")
-    
-    try:
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in files_in_dir:
-                # Calculate relative path for proper ZIP structure
-                arcname = os.path.relpath(file_path, source_dir)
-                zipf.write(file_path, arcname)
-                print(f"📄 Added to ZIP: {arcname}")
-        
-        # Verify the ZIP was created and has content
-        zip_size = os.path.getsize(zip_path)
-        print(f"✅ ZIP created successfully: {zip_path} ({zip_size} bytes)")
-        
-        # List contents of ZIP for verification
-        with zipfile.ZipFile(zip_path, 'r') as zipf:
-            file_list = zipf.namelist()
-            print(f"📋 ZIP contains {len(file_list)} files")
-            for f in file_list[:5]:  # Show first 5 files
-                print(f"   - {f}")
-            if len(file_list) > 5:
-                print(f"   ... and {len(file_list) - 5} more files")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error creating ZIP file: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+            # Regular processing mode
+            success = process_in_non_interactive_mode(params, base_dir_norm)
+            if success:
+                print("✅ ND Examination Results Processing completed successfully")
+            else:
+                print("❌ ND Examination Results Processing failed")
+        return
 
 def process_in_non_interactive_mode(params, base_dir_norm):
     """Process exams in non-interactive mode for web interface."""
     print("🔧 Running in NON-INTERACTIVE mode (web interface)")
-    
-    # Check if this is resit processing mode
-    if params.get('process_resit', False):
-        return process_resit_mode(params, base_dir_norm)
     
     # Use parameters from environment variables
     selected_set = params['selected_set']
@@ -3321,209 +3536,6 @@ def process_in_non_interactive_mode(params, base_dir_norm):
             print(f"   {semester}: {count} students")
     
     return total_processed > 0
-
-# ----------------------------
-# Main runner (Enhanced)
-# ----------------------------
-
-def main():
-    print("Starting ND Examination Results Processing with Carryover Management...")
-    ts = datetime.now().strftime(TIMESTAMP_FMT)
-
-    # Initialize trackers
-    initialize_student_tracker()
-    initialize_carryover_tracker()
-
-    # Check if running in web mode
-    if is_web_mode():
-        uploaded_file_path = get_uploaded_file_path()
-        if uploaded_file_path and os.path.exists(uploaded_file_path):
-            print("🔧 Running in WEB MODE with uploaded file")
-            # This would need to be adapted for your specific uploaded file processing
-            print("⚠️ Uploaded file processing for individual files not fully implemented in this version")
-            return
-
-    # Get parameters from form
-    params = get_form_parameters()
-    
-    # Use the parameters
-    global DEFAULT_PASS_THRESHOLD
-    DEFAULT_PASS_THRESHOLD = params['pass_threshold']
-    
-    base_dir_norm = normalize_path(BASE_DIR)
-    print(f"Using base directory: {base_dir_norm}")
-
-    # Check if we should use interactive or non-interactive mode
-    if should_use_interactive_mode():
-        print("🔧 Running in INTERACTIVE mode (CLI)")
-        
-        try:
-            semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-        except Exception as e:
-            print(f"❌ Could not load course data: {e}")
-            return
-
-        # Get available sets and let user choose
-        available_sets = get_available_sets(base_dir_norm)
-
-        if not available_sets:
-            print(
-                f"No ND-* directories found in {base_dir_norm}. Nothing to process.")
-            print(f"Available directories: {os.listdir(base_dir_norm)}")
-            return
-
-        print(f"📚 Found {len(available_sets)} available sets: {available_sets}")
-
-        # Let user choose which set(s) to process
-        sets_to_process = get_user_set_choice(available_sets)
-
-        print(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
-
-        for nd_set in sets_to_process:
-            print(f"\n{'='*60}")
-            print(f"PROCESSING SET: {nd_set}")
-            print(f"{'='*60}")
-
-            # Generate a single timestamp for this set processing
-            ts = datetime.now().strftime(TIMESTAMP_FMT)
-            
-            # UPDATED: Raw and clean directories now under ND folder
-            raw_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "RAW_RESULTS"))
-            clean_dir = normalize_path(os.path.join(base_dir_norm, "ND", nd_set, "CLEAN_RESULTS"))
-
-            # Create directories if they don't exist
-            os.makedirs(raw_dir, exist_ok=True)
-            os.makedirs(clean_dir, exist_ok=True)
-
-            # Check if raw directory exists and has files
-            if not os.path.exists(raw_dir):
-                print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
-                continue
-
-            raw_files = [
-                f for f in os.listdir(raw_dir) if f.lower().endswith(
-                    (".xlsx", ".xls")) and not f.startswith("~$")]
-            if not raw_files:
-                print(f"⚠️ No raw files in {raw_dir}; skipping {nd_set}")
-                print(f"   Available files: {os.listdir(raw_dir)}")
-                continue
-
-            print(f"📁 Found {len(raw_files)} raw files in {nd_set}: {raw_files}")
-
-            # Create a single timestamped folder for this set
-            set_output_dir = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}")
-            os.makedirs(set_output_dir, exist_ok=True)
-            print(f"📁 Created set output directory: {set_output_dir}")
-
-            # Get user choice for which semesters to process
-            semesters_to_process = get_user_semester_choice()
-
-            print(
-                f"\n🎯 PROCESSING SELECTED SEMESTERS for {nd_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
-
-            # Process selected semesters in the correct order
-            for semester_key in semesters_to_process:
-                if semester_key not in SEMESTER_ORDER:
-                    print(f"⚠️ Skipping unknown semester: {semester_key}")
-                    continue
-
-                # Check if there are files for this semester
-                semester_files_exist = False
-                for rf in raw_files:
-                    detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-                    if detected_sem == semester_key:
-                        semester_files_exist = True
-                        break
-
-                if semester_files_exist:
-                    print(f"\n🎯 Processing {semester_key} in {nd_set}...")
-                    process_semester_files(
-                        semester_key,
-                        raw_files,
-                        raw_dir,
-                        set_output_dir,
-                        ts,
-                        DEFAULT_PASS_THRESHOLD,
-                        semester_course_maps,
-                        semester_credit_units,
-                        semester_lookup,
-                        semester_course_titles,
-                        DEFAULT_LOGO_PATH,
-                        nd_set)
-                else:
-                    print(
-                        f"⚠️ No files found for {semester_key} in {nd_set}, skipping...")
-            
-            # Create ZIP of the entire set results
-            try:
-                zip_path = os.path.join(clean_dir, f"{nd_set}_RESULT-{ts}.zip")
-                zip_success = create_zip_folder(set_output_dir, zip_path)
-                
-                if zip_success:
-                    print(f"✅ ZIP file created: {zip_path}")
-                    
-                    # Verify file size
-                    if os.path.exists(zip_path):
-                        zip_size = os.path.getsize(zip_path)
-                        zip_size_mb = zip_size / (1024 * 1024)
-                        print(f"📦 ZIP file size: {zip_size_mb:.2f} MB")
-                else:
-                    print(f"❌ Failed to create ZIP file for {nd_set}")
-                    
-            except Exception as e:
-                print(f"⚠️ Failed to create ZIP for {nd_set}: {e}")
-
-        # Print student tracking summary
-        print(f"\n📊 STUDENT TRACKING SUMMARY:")
-        print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
-        print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
-
-        # Print carryover summary
-        if CARRYOVER_STUDENTS:
-            print(f"\n📋 CARRYOVER STUDENT SUMMARY:")
-            print(f"Total carryover students: {len(CARRYOVER_STUDENTS)}")
-            
-            # Count by semester
-            semester_counts = {}
-            for student_key, data in CARRYOVER_STUDENTS.items():
-                semester = data['semester']
-                semester_counts[semester] = semester_counts.get(semester, 0) + 1
-            
-            for semester, count in semester_counts.items():
-                print(f"  {semester}: {count} students")
-
-        # Print withdrawn students who reappeared
-        reappeared_count = 0
-        for exam_no, data in WITHDRAWN_STUDENTS.items():
-            if data['reappeared_semesters']:
-                reappeared_count += 1
-                print(
-                    f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
-
-        if reappeared_count > 0:
-            print(
-                f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
-
-        # Analyze student progression
-        sem_counts = {}
-        for student_data in STUDENT_TRACKER.values():
-            sem_count = len(student_data['semesters_present'])
-            if sem_count not in sem_counts:
-                sem_counts[sem_count] = 0
-            sem_counts[sem_count] += 1
-
-        for sem_count, student_count in sorted(sem_counts.items()):
-            print(f"Students present in {sem_count} semester(s): {student_count}")
-
-        print("\n✅ ND Examination Results Processing completed successfully.")
-    else:
-        print("🔧 Running in NON-INTERACTIVE mode (Web)")
-        success = process_in_non_interactive_mode(params, base_dir_norm)
-        if success:
-            print("✅ ND Examination Results Processing completed successfully")
-        else:
-            print("❌ ND Examination Results Processing failed")
-        return
 
 if __name__ == "__main__":
     try:

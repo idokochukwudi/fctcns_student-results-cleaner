@@ -1,3 +1,4 @@
+# app.py (Full updated code with all fixes)
 import os
 import subprocess
 import re
@@ -7,7 +8,7 @@ import shutil
 import time
 import socket
 import logging
-import json  # ADD THIS MISSING IMPORT
+import json
 from pathlib import Path
 from datetime import datetime
 from flask import (
@@ -39,31 +40,31 @@ load_dotenv()
 # Define directory structure relative to project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SCRIPT_DIR = os.path.join(PROJECT_ROOT, "scripts")
-BASE_DIR = os.path.join(PROJECT_ROOT, "EXAMS_INTERNAL")
+BASE_DIR = os.getenv("BASE_DIR", "/home/ernest/student_result_cleaner/EXAMS_INTERNAL")
 
 # Launcher-specific directories
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 # Log paths for verification
-logger.info(f"🔍 PROJECT_ROOT: {PROJECT_ROOT}")
-logger.info(f"🔍 SCRIPT_DIR: {SCRIPT_DIR}")
-logger.info(f"🔍 BASE_DIR (EXAMS_INTERNAL): {BASE_DIR}")
-logger.info(f"🔍 TEMPLATE_DIR: {TEMPLATE_DIR}")
-logger.info(f"🔍 STATIC_DIR: {STATIC_DIR}")
-logger.info(f"🔍 Template dir exists: {os.path.exists(TEMPLATE_DIR)}")
-logger.info(f"🔍 Static dir exists: {os.path.exists(STATIC_DIR)}")
+logger.info(f"PROJECT_ROOT: {PROJECT_ROOT}")
+logger.info(f"SCRIPT_DIR: {SCRIPT_DIR}")
+logger.info(f"BASE_DIR (EXAMS_INTERNAL): {BASE_DIR}")
+logger.info(f"TEMPLATE_DIR: {TEMPLATE_DIR}")
+logger.info(f"STATIC_DIR: {STATIC_DIR}")
+logger.info(f"Template dir exists: {os.path.exists(TEMPLATE_DIR)}")
+logger.info(f"Static dir exists: {os.path.exists(STATIC_DIR)}")
 
 # Verify templates
 if os.path.exists(TEMPLATE_DIR):
     templates = os.listdir(TEMPLATE_DIR)
-    logger.info(f"🔍 Templates found: {templates}")
+    logger.info(f"Templates found: {templates}")
     if "login.html" in templates:
-        logger.info(f"✅ login.html found in {TEMPLATE_DIR}")
+        logger.info(f"login.html found in {TEMPLATE_DIR}")
     else:
-        logger.warning(f"❌ login.html NOT found in {TEMPLATE_DIR}")
+        logger.warning(f"login.html NOT found in {TEMPLATE_DIR}")
 else:
-    logger.error(f"❌ Template directory not found: {TEMPLATE_DIR}")
+    logger.error(f"Template directory not found: {TEMPLATE_DIR}")
 
 # Initialize Flask with explicit paths
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
@@ -80,6 +81,16 @@ ND_SETS = ["ND-2024", "ND-2025"]
 BN_SETS = ["SET47", "SET48"]
 BM_SETS = ["SET2023", "SET2024", "SET2025"]
 PROGRAMS = ["ND", "BN", "BM"]
+
+def get_program_from_set(set_name):
+    """Determine program from set name"""
+    if set_name in ND_SETS:
+        return "ND"
+    elif set_name in BN_SETS:
+        return "BN"
+    elif set_name in BM_SETS:
+        return "BM"
+    return None
 
 # Jinja2 filters
 def datetimeformat(timestamp):
@@ -106,15 +117,15 @@ def is_local_environment():
             return False
         return os.path.exists(BASE_DIR)
     except Exception as e:
-        logger.error(f"⚠️ Error checking environment: {e}")
+        logger.error(f"Error checking environment: {e}")
         return True
 
 # Check if BASE_DIR exists
 if not os.path.exists(BASE_DIR):
-    logger.info(f"📁 Creating BASE_DIR: {BASE_DIR}")
+    logger.info(f"Creating BASE_DIR: {BASE_DIR}")
     os.makedirs(BASE_DIR, exist_ok=True)
 else:
-    logger.info(f"✅ BASE_DIR already exists: {BASE_DIR}")
+    logger.info(f"BASE_DIR already exists: {BASE_DIR}")
 
 # Define required subdirectories structure - ONLY create if they don't exist
 required_dirs = [
@@ -159,13 +170,13 @@ for dir_path in required_dirs:
     if not os.path.exists(dir_path):
         try:
             os.makedirs(dir_path, exist_ok=True)
-            logger.info(f"📁 Created subdirectory: {dir_path}")
+            logger.info(f"Created subdirectory: {dir_path}")
         except Exception as e:
-            logger.error(f"⚠️ Could not create {dir_path}: {e}")
+            logger.error(f"Could not create {dir_path}: {e}")
     else:
-        logger.info(f"✅ Directory already exists: {dir_path}")
+        logger.info(f"Directory already exists: {dir_path}")
 
-# Script mapping
+# Script mapping - FIXED: Correct mapping for integrated_carryover_processor
 SCRIPT_MAP = {
     "utme": "utme_result.py",
     "caosce": "caosce_result.py",
@@ -174,9 +185,10 @@ SCRIPT_MAP = {
     "exam_processor_nd": "exam_result_processor.py",
     "exam_processor_bn": "exam_processor_bn.py",
     "exam_processor_bm": "exam_processor_bm.py",
+    "integrated_carryover_processor": "integrated_carryover_processor.py",  # FIXED: Correct script
 }
 
-# Success indicators for detecting processed files
+# Success indicators - Update for integrated_carryover_processor
 SUCCESS_INDICATORS = {
     "utme": [
         r"Processing: (PUTME 2025-Batch\d+[A-Z] Post-UTME Quiz-grades\.xlsx)",
@@ -190,55 +202,63 @@ SUCCESS_INDICATORS = {
     ],
     "clean": [
         r"Processing: (Set2025-.*?\.xlsx)",
-        r"✅ Cleaned CSV saved in.*?cleaned_(Set2025-.*?\.csv)",
-        r"🎉 Master CSV saved in.*?master_cleaned_results\.csv",
-        r"✅ All processing completed successfully!",
+        r"Cleaned CSV saved in.*?cleaned_(Set2025-.*?\.csv)",
+        r"Master CSV saved in.*?master_cleaned_results\.csv",
+        r"All processing completed successfully!",
     ],
     "split": [r"Saved processed file: (clean_jamb_DB_.*?\.csv)"],
     "exam_processor_nd": [
         r"PROCESSING SEMESTER: (ND-[A-Za-z0-9\s\-]+)",
-        r"✅ Successfully processed .*",
-        r"✅ Mastersheet saved:.*",
-        r"📁 Found \d+ raw files",
+        r"Successfully processed .*",
+        r"Mastersheet saved:.*",
+        r"Found \d+ raw files",
         r"Processing: (.*?\.xlsx)",
-        r"✅ Processing complete",
-        r"✅ ND Examination Results Processing completed successfully",
-        r"🔄 Applying upgrade rule:.*→ 50",
-        r"✅ Upgraded \d+ scores from.*to 50",
-        r"✅ Identified \d+ carryover students",
-        r"✅ Carryover records saved:.*",
-        r"🔄 Processing resit results for.*",
-        r"✅ Updated \d+ scores for \d+ students",
+        r"Processing complete",
+        r"ND Examination Results Processing completed successfully",
+        r"Applying upgrade rule:.*→ 50",
+        r"Upgraded \d+ scores from.*to 50",
+        r"Identified \d+ carryover students",
+        r"Carryover records saved:.*",
+        r"Processing resit results for.*",
+        r"Updated \d+ scores for \d+ students",
     ],
     "exam_processor_bn": [
         r"PROCESSING SET: (SET47|SET48)",
-        r"✅ Successfully processed .*",
-        r"✅ Mastersheet saved:.*",
-        r"📁 Found \d+ raw files",
+        r"Successfully processed .*",
+        r"Mastersheet saved:.*",
+        r"Found \d+ raw files",
         r"Processing: (.*?\.xlsx)",
-        r"✅ Processing complete",
-        r"✅ Basic Nursing Examination Results Processing completed successfully",
-        r"🔄 Applying upgrade rule:.*→ 50",
-        r"✅ Upgraded \d+ scores from.*to 50",
-        r"✅ Identified \d+ carryover students",
-        r"✅ Carryover records saved:.*",
-        r"🔄 Processing resit results for.*",
-        r"✅ Updated \d+ scores for \d+ students",
+        r"Processing complete",
+        r"Basic Nursing Examination Results Processing completed successfully",
+        r"Applying upgrade rule:.*→ 50",
+        r"Upgraded \d+ scores from.*to 50",
+        r"Identified \d+ carryover students",
+        r"Carryover records saved:.*",
+        r"Processing resit results for.*",
+        r"Updated \d+ scores for \d+ students",
     ],
     "exam_processor_bm": [
         r"PROCESSING SET: (SET2023|SET2024|SET2025)",
-        r"✅ Successfully processed .*",
-        r"✅ Mastersheet saved:.*",
-        r"📁 Found \d+ raw files",
+        r"Successfully processed .*",
+        r"Mastersheet saved:.*",
+        r"Found \d+ raw files",
         r"Processing: (.*?\.xlsx)",
-        r"✅ Processing complete",
-        r"✅ Basic Midwifery Examination Results Processing completed successfully",
-        r"🔄 Applying upgrade rule:.*→ 50",
-        r"✅ Upgraded \d+ scores from.*to 50",
-        r"✅ Identified \d+ carryover students",
-        r"✅ Carryover records saved:.*",
-        r"🔄 Processing resit results for.*",
-        r"✅ Updated \d+ scores for \d+ students",
+        r"Processing complete",
+        r"Basic Midwifery Examination Results Processing completed successfully",
+        r"Applying upgrade rule:.*→ 50",
+        r"Upgraded \d+ scores from.*to 50",
+        r"Identified \d+ carryover students",
+        r"Carryover records saved:.*",
+        r"Processing resit results for.*",
+        r"Updated \d+ scores for \d+ students",
+    ],
+    "integrated_carryover_processor": [
+        r"Updated \d+ scores for \d+ students",
+        r"Updated mastersheet saved:.*",
+        r"Updated carryover Excel saved:.*",
+        r"Updated individual student PDF written:.*",
+        r"Carryover processing completed successfully",
+        r"Processing resit results for.*",
     ],
 }
 
@@ -250,12 +270,12 @@ def allowed_file(filename):
 
 def get_raw_directory(script_name, program=None, set_name=None):
     """Get the RAW_RESULTS directory for a specific script/program/set"""
-    logger.info(f"🔍 Getting raw directory for: script={script_name}, program={program}, set={set_name}")
+    logger.info(f"Getting raw directory for: script={script_name}, program={program}, set={set_name}")
     
-    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"] or script_name == "integrated_carryover_processor":
         if program and set_name:
             raw_dir = os.path.join(BASE_DIR, program, set_name, "RAW_RESULTS")
-            logger.info(f"🔍 Exam processor raw directory: {raw_dir}")
+            logger.info(f"Exam processor raw directory: {raw_dir}")
             return raw_dir
         return BASE_DIR
     
@@ -266,12 +286,12 @@ def get_raw_directory(script_name, program=None, set_name=None):
         "split": os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB"),
     }
     raw_dir = raw_paths.get(script_name, BASE_DIR)
-    logger.info(f"🔍 Other script raw directory: {raw_dir}")
+    logger.info(f"Other script raw directory: {raw_dir}")
     return raw_dir
 
 def get_clean_directory(script_name, program=None, set_name=None):
     """Get the CLEAN_RESULTS directory for a specific script/program/set"""
-    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"] or script_name == "integrated_carryover_processor":
         if program and set_name:
             return os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         return BASE_DIR
@@ -285,21 +305,29 @@ def get_clean_directory(script_name, program=None, set_name=None):
     return clean_paths.get(script_name, BASE_DIR)
 
 def get_input_directory(script_name, program=None, set_name=None):
-    """Returns the correct input directory for raw results"""
-    logger.info(f"🔍 Getting input directory for: {script_name}, program={program}, set={set_name}")
+    """Returns the correct input directory for raw results - FIXED VERSION"""
+    logger.info(f"Getting input directory for: {script_name}, program={program}, set={set_name}")
     
-    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+    if script_name == "integrated_carryover_processor" and set_name:
+        program = get_program_from_set(set_name)
+        if program:
+            logger.info(f"Overrode program to {program} based on set {set_name}")
+        else:
+            logger.warning(f"Could not determine program from set {set_name}")
+    
+    # FIXED: Remove PROCESSOR directory from path construction
+    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
         if program and set_name and set_name != "all":
+            # FIXED: Use correct path structure without PROCESSOR
             input_dir = os.path.join(BASE_DIR, program, set_name, "RAW_RESULTS")
-            logger.info(f"🔍 Exam processor specific input directory: {input_dir}")
+            logger.info(f"Exam processor specific input directory: {input_dir}")
             return input_dir
-        # If no specific set or "all", return the program directory to scan all sets
         input_dir = os.path.join(BASE_DIR, program) if program else BASE_DIR
-        logger.info(f"🔍 Exam processor general input directory: {input_dir}")
+        logger.info(f"Exam processor general input directory: {input_dir}")
         return input_dir
     
     input_dir = get_raw_directory(script_name)
-    logger.info(f"🔍 Other script input directory: {input_dir}")
+    logger.info(f"Other script input directory: {input_dir}")
     return input_dir
 
 def login_required(f):
@@ -310,23 +338,20 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# FIXED: Improved file detection function with better status checking
 def check_exam_processor_files(input_dir, program, selected_set=None):
     """Check if exam processor files exist, optionally filtering by selected set"""
-    logger.info(f"🔍 Checking exam processor files in: {input_dir}")
-    logger.info(f"🔍 Program: {program}, Selected Set: {selected_set}")
+    logger.info(f"Checking exam processor files in: {input_dir}")
+    logger.info(f"Program: {program}, Selected Set: {selected_set}")
     
     if not os.path.isdir(input_dir):
-        logger.error(f"❌ Input directory doesn't exist: {input_dir}")
+        logger.error(f"Input directory doesn't exist: {input_dir}")
         return False
 
-    # Check course file - FIXED: More flexible course file detection
     course_dir = os.path.join(BASE_DIR, program, f"{program}-COURSES")
     course_file = None
     course_file_found = False
     
     if os.path.exists(course_dir):
-        # Look for any course file with common patterns
         course_patterns = [
             "N-course-code-creditUnit.xlsx",
             "M-course-code-creditUnit.xlsx", 
@@ -340,41 +365,38 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
                 if file.lower().endswith('.xlsx') and any(keyword in file.lower() for keyword in ['course', 'credit']):
                     course_file = os.path.join(course_dir, file)
                     course_file_found = True
-                    logger.info(f"✅ Found course file: {course_file}")
+                    logger.info(f"Found course file: {course_file}")
                     break
             if course_file:
                 break
     
     if not course_file_found:
-        logger.warning(f"⚠️ Course file not found in: {course_dir}")
-        # Don't return False here - let the processor handle missing course files
+        logger.warning(f"Course file not found in: {course_dir}")
 
     program_dir = os.path.join(BASE_DIR, program)
     if not os.path.exists(program_dir):
-        logger.error(f"❌ Program directory not found: {program_dir}")
+        logger.error(f"Program directory not found: {program_dir}")
         return False
 
-    program_sets = []
     valid_sets = BN_SETS if program == "BN" else (BM_SETS if program == "BM" else ND_SETS)
     
-    # FIXED: Better set filtering logic
     if selected_set and selected_set != "all":
         if selected_set in valid_sets:
             program_sets = [selected_set]
-            logger.info(f"🔍 Processing specific set: {selected_set}")
+            logger.info(f"Processing specific set: {selected_set}")
         else:
-            logger.error(f"❌ Invalid set selected: {selected_set}")
+            logger.error(f"Invalid set selected: {selected_set}")
             return False
     else:
-        # Process all valid sets
+        program_sets = []
         for item in os.listdir(program_dir):
             item_path = os.path.join(program_dir, item)
             if os.path.isdir(item_path) and item in valid_sets:
                 program_sets.append(item)
-        logger.info(f"🔍 Processing all sets: {program_sets}")
+        logger.info(f"Processing all sets: {program_sets}")
 
     if not program_sets:
-        logger.error(f"❌ No {program} sets found in {program_dir} (valid sets: {valid_sets})")
+        logger.error(f"No {program} sets found in {program_dir} (valid sets: {valid_sets})")
         return False
 
     total_files_found = 0
@@ -382,19 +404,17 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
     
     for program_set in program_sets:
         raw_results_path = os.path.join(program_dir, program_set, "RAW_RESULTS")
-        logger.info(f"🔍 Checking raw results path: {raw_results_path}")
+        logger.info(f"Checking raw results path: {raw_results_path}")
         
         if not os.path.exists(raw_results_path):
-            logger.warning(f"⚠️ RAW_RESULTS not found in {raw_results_path}")
+            logger.warning(f"RAW_RESULTS not found in {raw_results_path}")
             continue
             
-        # FIXED: More accurate file detection - only count valid Excel files
         files = []
         for f in os.listdir(raw_results_path):
             file_path = os.path.join(raw_results_path, f)
-            # Check if it's a file (not directory) and has allowed extension
             if (os.path.isfile(file_path) and 
-                f.lower().endswith((".xlsx", ".xls")) and  # FIXED: Only Excel files for processing
+                f.lower().endswith((".xlsx", ".xls")) and
                 not f.startswith("~$") and
                 not f.startswith(".")):
                 files.append(f)
@@ -403,14 +423,13 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
         total_files_found += len(files)
         
         if files:
-            logger.info(f"📁 Found {len(files)} files in {raw_results_path}: {files}")
+            logger.info(f"Found {len(files)} files in {raw_results_path}: {files}")
         else:
-            logger.warning(f"⚠️ No Excel files found in {raw_results_path}")
+            logger.warning(f"No Excel files found in {raw_results_path}")
 
-    logger.info(f"📊 Total Excel files found for {program}: {total_files_found}")
-    logger.info(f"📄 Files found: {files_found}")
+    logger.info(f"Total Excel files found for {program}: {total_files_found}")
+    logger.info(f"Files found: {files_found}")
     
-    # FIXED: Return True only if we have actual Excel files to process
     return total_files_found > 0
 
 def check_putme_files(input_dir):
@@ -441,14 +460,21 @@ def check_split_files(input_dir):
 
 def check_input_files(input_dir, script_name, selected_set=None):
     """Check input files with optional set filtering"""
-    logger.info(f"🔍 Checking input files for {script_name} in {input_dir} (selected_set: {selected_set})")
+    logger.info(f"Checking input files for {script_name} in {input_dir} (selected_set: {selected_set})")
     
     if not os.path.isdir(input_dir):
-        logger.error(f"❌ Input directory doesn't exist: {input_dir}")
+        logger.error(f"Input directory doesn't exist: {input_dir}")
         return False
         
-    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+    if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
         program = script_name.split("_")[-1].upper()
+        if script_name == "integrated_carryover_processor":
+            program = get_program_from_set(selected_set)
+            if program:
+                logger.info(f"Set program to {program} for carryover based on set {selected_set}")
+            else:
+                logger.error(f"Could not determine program for set {selected_set}")
+                return False
         return check_exam_processor_files(input_dir, program, selected_set)
     elif script_name == "utme":
         return check_putme_files(input_dir)
@@ -466,10 +492,16 @@ def check_input_files(input_dir, script_name, selected_set=None):
     except Exception:
         return False
 
-# NEW: Function to get detailed file status for templates
 def get_exam_processor_status(program, selected_set=None):
     """Get detailed status for exam processor including file counts"""
-    logger.info(f"🔍 Getting status for {program}, set: {selected_set}")
+    logger.info(f"Getting status for {program}, set: {selected_set}")
+    
+    if program == "PROCESSOR" and selected_set:
+        program = get_program_from_set(selected_set)
+        if program:
+            logger.info(f"Overrode program to {program} based on set {selected_set}")
+        else:
+            logger.warning(f"Could not determine program from set {selected_set}")
     
     status_info = {
         'ready': False,
@@ -479,7 +511,6 @@ def get_exam_processor_status(program, selected_set=None):
         'sets_ready': {}
     }
     
-    # Check course file
     course_dir = os.path.join(BASE_DIR, program, f"{program}-COURSES")
     if os.path.exists(course_dir):
         for file in os.listdir(course_dir):
@@ -488,9 +519,12 @@ def get_exam_processor_status(program, selected_set=None):
                 break
     
     program_dir = os.path.join(BASE_DIR, program)
+    if not os.path.exists(program_dir):
+        logger.error(f"Program directory not found: {program_dir}")
+        return status_info
+    
     valid_sets = BN_SETS if program == "BN" else (BM_SETS if program == "BM" else ND_SETS)
     
-    # Determine which sets to check
     sets_to_check = []
     if selected_set and selected_set != "all":
         if selected_set in valid_sets:
@@ -517,12 +551,11 @@ def get_exam_processor_status(program, selected_set=None):
         status_info['raw_files_list'].extend([f"{set_name}/{f}" for f in set_files])
         total_files += len(set_files)
     
-    # Overall ready status: must have course file AND at least one raw file
     status_info['ready'] = status_info['course_file'] and total_files > 0
     
-    logger.info(f"📊 Status for {program}: course_file={status_info['course_file']}, raw_files={total_files}, ready={status_info['ready']}")
+    logger.info(f"Status for {program}: course_file={status_info['course_file']}, raw_files={total_files}, ready={status_info['ready']}")
     return status_info
-
+    
 def count_processed_files(output_lines, script_name, selected_set=None):
     success_indicators = SUCCESS_INDICATORS.get(script_name, [])
     processed_files_set = set()
@@ -534,22 +567,22 @@ def count_processed_files(output_lines, script_name, selected_set=None):
         for indicator in success_indicators:
             match = re.search(indicator, line, re.IGNORECASE)
             if match:
-                if script_name in ["exam_processor_bn", "exam_processor_bm", "exam_processor_nd"]:
+                if script_name in ["exam_processor_bn", "exam_processor_bm", "exam_processor_nd", "integrated_carryover_processor"]:
                     if "PROCESSING SEMESTER:" in line.upper() or "PROCESSING SET:" in line.upper():
                         set_name = match.group(1)
                         if set_name:
                             processed_files_set.add(f"Set: {set_name}")
-                            logger.info(f"🔍 DETECTED SET: {set_name}")
+                            logger.info(f"DETECTED SET: {set_name}")
                     elif "Mastersheet saved:" in line:
                         file_name = match.group(0).split("Mastersheet saved:")[-1].strip()
                         processed_files_set.add(f"Saved: {file_name}")
-                    elif "✅ Identified" in line and "carryover students" in line:
+                    elif "Identified" in line and "carryover students" in line:
                         processed_files_set.add("Carryover students identified")
-                    elif "✅ Carryover records saved:" in line:
+                    elif "Carryover records saved:" in line:
                         processed_files_set.add("Carryover records saved")
-                    elif "🔄 Processing resit results for" in line:
+                    elif "Processing resit results for" in line:
                         processed_files_set.add("Resit processing started")
-                    elif "✅ Updated" in line and "scores for" in line and "students" in line:
+                    elif "Updated" in line and "scores for" in line and "students" in line:
                         processed_files_set.add("Resit scores updated")
                 elif script_name == "utme":
                     if "Processing:" in line:
@@ -562,12 +595,12 @@ def count_processed_files(output_lines, script_name, selected_set=None):
                     if "Processing:" in line:
                         file_name = match.group(1)
                         processed_files_set.add(f"Processed: {file_name}")
-                    elif "✅ Cleaned CSV saved" in line:
+                    elif "Cleaned CSV saved" in line:
                         file_name = match.group(1) if match.groups() else "cleaned_file"
                         processed_files_set.add(f"Cleaned: {file_name}")
-                    elif "🎉 Master CSV saved" in line:
+                    elif "Master CSV saved" in line:
                         processed_files_set.add("Master file created")
-                    elif "✅ All processing completed successfully!" in line:
+                    elif "All processing completed successfully!" in line:
                         processed_files_set.add("Processing completed")
                 else:
                     file_name = match.group(1) if match.groups() else line
@@ -579,7 +612,7 @@ def get_success_message(script_name, processed_files, output_lines, selected_set
     if processed_files == 0:
         return None
     if script_name == "clean":
-        if any("✅ All processing completed successfully!" in line for line in output_lines):
+        if any("All processing completed successfully!" in line for line in output_lines):
             return f"Successfully processed internal examination results! Generated master file and individual cleaned files."
         return f"Processed {processed_files} internal examination file(s)."
     elif script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
@@ -589,32 +622,55 @@ def get_success_message(script_name, processed_files, output_lines, selected_set
         upgrade_count = ""
         carryover_info = ""
         resit_info = ""
+        resit_updates = ""
         
         for line in output_lines:
-            if "🔄 Applying upgrade rule:" in line:
-                upgrade_match = re.search(r"🔄 Applying upgrade rule: (\d+)–49 → 50", line)
+            if "Applying upgrade rule:" in line:
+                upgrade_match = re.search(r"Applying upgrade rule: (\d+)–49 → 50", line)
                 if upgrade_match:
                     upgrade_info = f" Upgrade rule applied: {upgrade_match.group(1)}-49 → 50"
                     break
-            elif "✅ Upgraded" in line:
-                upgrade_count_match = re.search(r"✅ Upgraded (\d+) scores", line)
+            elif "Upgraded" in line:
+                upgrade_count_match = re.search(r"Upgraded (\d+) scores", line)
                 if upgrade_count_match:
                     upgrade_count = f" Upgraded {upgrade_count_match.group(1)} scores"
                     break
-            elif "✅ Identified" in line and "carryover students" in line:
-                carryover_match = re.search(r"✅ Identified (\d+) carryover students", line)
+            elif "Identified" in line and "carryover students" in line:
+                carryover_match = re.search(r"Identified (\d+) carryover students", line)
                 if carryover_match:
                     carryover_info = f" Identified {carryover_match.group(1)} carryover students"
                     break
-            elif "🔄 Processing resit results for" in line:
+            elif "Updated" in line and "scores for" in line and "students" in line:
+                resit_match = re.search(r"Updated (\d+) scores for (\d+) students", line)
+                if resit_match:
+                    resit_updates = f" Resit: updated {resit_match.group(1)} scores for {resit_match.group(2)} students"
+                    break
+            elif "Processing resit results for" in line:
                 resit_info = " Resit processing completed"
                 break
         
-        if any(f"✅ {program_name} Examination Results Processing completed successfully" in line for line in output_lines):
+        if resit_updates:
+            return f"{program_name} Examination processing completed!{resit_updates}{upgrade_info}{upgrade_count}{carryover_info}"
+        elif any(f"{program_name} Examination Results Processing completed successfully" in line for line in output_lines):
             return f"{program_name} Examination processing completed successfully! Processed {processed_files} set(s).{upgrade_info}{upgrade_count}{carryover_info}{resit_info}"
-        elif any("✅ Processing complete" in line for line in output_lines):
+        elif any("Processing complete" in line for line in output_lines):
             return f"{program_name} Examination processing completed! Processed {processed_files} set(s).{upgrade_info}{upgrade_count}{carryover_info}{resit_info}"
         return f"Processed {processed_files} {program_name} examination set(s).{upgrade_info}{upgrade_count}{carryover_info}{resit_info}"
+    elif script_name == "integrated_carryover_processor":
+        resit_updates = ""
+        for line in output_lines:
+            if "Updated" in line and "scores for" in line and "students" in line:
+                resit_match = re.search(r"Updated (\d+) scores for (\d+) students", line)
+                if resit_match:
+                    resit_updates = f"Updated {resit_match.group(1)} scores for {resit_match.group(2)} students"
+                    break
+        if resit_updates:
+            return f"Carryover processing completed! {resit_updates}"
+        elif any("Carryover processing completed successfully" in line for line in output_lines):
+            return "Carryover processing completed successfully"
+        elif any("Processing resit results for" in line for line in output_lines):
+            return "Carryover processing completed but no scores updated"
+        return "Carryover processing completed"
     elif script_name == "utme":
         if any("Processing completed successfully" in line for line in output_lines):
             return f"PUTME processing completed successfully! Processed {processed_files} batch file(s)."
@@ -631,8 +687,8 @@ def get_success_message(script_name, processed_files, output_lines, selected_set
 
 def _get_script_path(script_name):
     script_path = os.path.join(SCRIPT_DIR, SCRIPT_MAP.get(script_name, ""))
-    logger.info(f"🔍 Script path for {script_name}: {script_path}")
-    if not os.path.isfile(script_path):
+    logger.info(f"Script path for {script_name}: {script_path}")
+    if not os.path.exists(script_path):
         logger.error(f"Script not found: {script_path}")
         raise FileNotFoundError(f"Script {script_name} not found at {script_path}")
     return script_path
@@ -661,7 +717,6 @@ def get_files_by_category():
         "jamb_results": [],
     }
 
-    # Search in program-specific CLEAN_RESULTS folders with semester segmentation
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
         if not os.path.exists(program_dir):
@@ -673,7 +728,6 @@ def get_files_by_category():
             if not os.path.exists(clean_dir):
                 continue
             
-            # Initialize set in category
             category = f"{program.lower()}_results"
             if set_name not in files_by_category[category]:
                 files_by_category[category][set_name] = []
@@ -687,17 +741,16 @@ def get_files_by_category():
                         relative_path = os.path.relpath(file_path, BASE_DIR)
                         folder = os.path.basename(os.path.dirname(file_path))
                         
-                        # Detect semester from filename
                         semester = "Unknown"
                         if "first" in file.lower() and "semester" in file.lower():
                             semester = "First Semester"
                         elif "second" in file.lower() and "semester" in file.lower():
                             semester = "Second Semester"
-                        elif "FIRST-YEAR-FIRST-SEMESTER" in file.upper():
+                        elif "FIRST-YEAR-First-SEMESTER" in file.upper():
                             semester = "First Year - First Semester"
                         elif "FIRST-YEAR-SECOND-SEMESTER" in file.upper():
                             semester = "First Year - Second Semester"
-                        elif "SECOND-YEAR-FIRST-SEMESTER" in file.upper():
+                        elif "SECOND-YEAR-First-SEMESTER" in file.upper():
                             semester = "Second Year - First Semester"
                         elif "SECOND-YEAR-SECOND-SEMESTER" in file.upper():
                             semester = "Second Year - Second Semester"
@@ -712,11 +765,10 @@ def get_files_by_category():
                             set_name=set_name
                         )
                         files_by_category[category][set_name].append(file_info)
-                        logger.info(f"✅ Categorized as {category}/{set_name}: {file}")
+                        logger.info(f"Categorized as {category}/{set_name}: {file}")
                     except Exception as e:
-                        logger.error(f"⚠️ Error processing file {file}: {e}")
+                        logger.error(f"Error processing file {file}: {e}")
 
-    # Search in other result CLEAN folders
     result_mappings = {
         "PUTME_RESULT/CLEAN_PUTME_RESULT": "putme_results",
         "CAOSCE_RESULT/CLEAN_CAOSCE_RESULT": "caosce_results",
@@ -745,16 +797,16 @@ def get_files_by_category():
                         modified=os.path.getmtime(file_path)
                     )
                     files_by_category[category].append(file_info)
-                    logger.info(f"✅ Categorized as {category}: {file}")
+                    logger.info(f"Categorized as {category}: {file}")
                 except Exception as e:
-                    logger.error(f"⚠️ Error processing file {file}: {e}")
+                    logger.error(f"Error processing file {file}: {e}")
 
     for category, files in files_by_category.items():
         if isinstance(files, dict):
             total_files = sum(len(files_in_set) for files_in_set in files.values())
-            logger.info(f"📊 {category}: {total_files} files across {len(files)} sets")
+            logger.info(f"{category}: {total_files} files across {len(files)} sets")
         else:
-            logger.info(f"📊 {category}: {len(files)} files")
+            logger.info(f"{category}: {len(files)} files")
     
     return files_by_category
 
@@ -775,32 +827,29 @@ def get_sets_and_folders():
         files: list
 
     sets = {}
-    logger.info(f"🔍 Scanning BASE_DIR: {BASE_DIR}")
+    logger.info(f"Scanning BASE_DIR: {BASE_DIR}")
 
-    # Scan program-specific sets
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
         if not os.path.exists(program_dir):
-            logger.warning(f"⚠️ Program directory not found: {program_dir}")
+            logger.warning(f"Program directory not found: {program_dir}")
             continue
-        logger.info(f"🔍 Scanning program: {program_dir}")
+        logger.info(f"Scanning program: {program_dir}")
         valid_sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
         for set_name in os.listdir(program_dir):
             set_path = os.path.join(program_dir, set_name)
             if not os.path.isdir(set_path) or set_name not in valid_sets:
-                logger.warning(f"⚠️ Skipping invalid set {set_name} for program {program}")
+                logger.warning(f"Skipping invalid set {set_name} for program {program}")
                 continue
-            logger.info(f"🔍 Scanning set: {set_path}")
+            logger.info(f"Scanning set: {set_path}")
             folders = []
             clean_results_path = os.path.join(set_path, "CLEAN_RESULTS")
             if os.path.exists(clean_results_path):
-                logger.info(f"🔍 Found CLEAN_RESULTS: {clean_results_path}")
+                logger.info(f"Found CLEAN_RESULTS: {clean_results_path}")
                 try:
-                    # Check for subdirectories in CLEAN_RESULTS
                     for item in os.listdir(clean_results_path):
                         item_path = os.path.join(clean_results_path, item)
                         if os.path.isdir(item_path):
-                            # This is a folder containing files
                             files = []
                             for file in os.listdir(item_path):
                                 if file.lower().endswith((".xlsx", ".csv", ".pdf", ".zip")):
@@ -813,20 +862,19 @@ def get_sets_and_folders():
                                             size=os.path.getsize(file_path),
                                             modified=os.path.getmtime(file_path)
                                         ))
-                                        logger.info(f"✅ Found file: {file} in folder {item}")
+                                        logger.info(f"Found file: {file} in folder {item}")
                                     except Exception as e:
-                                        logger.error(f"⚠️ Error processing file {file}: {e}")
+                                        logger.error(f"Error processing file {file}: {e}")
                             if files:
                                 folders.append(FolderInfo(name=item, files=files))
-                                logger.info(f"✅ Added folder {item} with {len(files)} files")
+                                logger.info(f"Added folder {item} with {len(files)} files")
                 except Exception as e:
-                    logger.error(f"⚠️ Error scanning {clean_results_path}: {e}")
+                    logger.error(f"Error scanning {clean_results_path}: {e}")
             if folders:
                 set_key = f"{program}_{set_name}"
                 sets[set_key] = folders
-                logger.info(f"✅ Added set {set_key} with {len(folders)} folders")
+                logger.info(f"Added set {set_key} with {len(folders)} folders")
 
-    # Scan other result types - FIXED MAPPINGS FOR INTERNAL_RESULT
     result_mappings = {
         "PUTME_RESULT": {
             "clean_dir": "CLEAN_PUTME_RESULT",
@@ -851,15 +899,14 @@ def get_sets_and_folders():
         base_dir_name = mapping["base_dir"]
         
         result_path = os.path.join(BASE_DIR, base_dir_name, clean_dir_name)
-        logger.info(f"🔍 Scanning {result_type} at: {result_path}")
+        logger.info(f"Scanning {result_type} at: {result_path}")
         
         if not os.path.exists(result_path):
-            logger.warning(f"⚠️ Directory not found: {result_path}")
+            logger.warning(f"Directory not found: {result_path}")
             continue
             
         folders = []
         try:
-            # First, check if there are direct files in the clean directory
             direct_files = []
             for file in os.listdir(result_path):
                 file_path = os.path.join(result_path, file)
@@ -872,57 +919,56 @@ def get_sets_and_folders():
                             size=os.path.getsize(file_path),
                             modified=os.path.getmtime(file_path)
                         ))
-                        logger.info(f"✅ Found direct file: {file} in {result_path}")
+                        logger.info(f"Found direct file: {file} in {result_path}")
                     except Exception as e:
-                        logger.error(f"⚠️ Error processing file {file}: {e}")
+                        logger.error(f"Error processing file {file}: {e}")
             
             if direct_files:
                 folders.append(FolderInfo(name="Results", files=direct_files))
-                logger.info(f"✅ Added direct files folder with {len(direct_files)} files")
+                logger.info(f"Added direct files folder with {len(direct_files)} files")
             
-            # Then check for subdirectories
             for folder in os.listdir(result_path):
                 folder_path = os.path.join(result_path, folder)
                 if not os.path.isdir(folder_path):
                     continue
                     
                 files = []
-                for file in os.listdir(folder_path):
-                    if not file.lower().endswith((".xlsx", ".csv", ".pdf", ".zip")):
-                        continue
-                    file_path = os.path.join(folder_path, file)
-                    try:
-                        relative_path = os.path.relpath(file_path, BASE_DIR)
-                        files.append(FileInfo(
-                            name=file,
-                            relative_path=relative_path,
-                            size=os.path.getsize(file_path),
-                            modified=os.path.getmtime(file_path)
-                        ))
-                        logger.info(f"✅ Found file: {file} in {folder_path}")
-                    except Exception as e:
-                        logger.error(f"⚠️ Error processing file {file}: {e}")
+                for root, _, filenames in os.walk(folder_path):
+                    for file in filenames:
+                        if not file.lower().endswith((".xlsx", ".csv", ".pdf", ".zip")):
+                            continue
+                        file_path = os.path.join(root, file)
+                        try:
+                            relative_path = os.path.relpath(file_path, BASE_DIR)
+                            files.append(FileInfo(
+                                name=file,
+                                relative_path=relative_path,
+                                size=os.path.getsize(file_path),
+                                modified=os.path.getmtime(file_path)
+                            ))
+                            logger.info(f"Found file: {file} in {folder_path}")
+                        except Exception as e:
+                            logger.error(f"Error processing file {file}: {e}")
                 if files:
                     folders.append(FolderInfo(name=folder, files=files))
-                    logger.info(f"✅ Added folder {folder} with {len(files)} files")
+                    logger.info(f"Added folder {folder} with {len(files)} files")
                     
         except Exception as e:
-            logger.error(f"⚠️ Error scanning {result_path}: {e}")
+            logger.error(f"Error scanning {result_path}: {e}")
             
         if folders:
             sets[result_type] = folders
-            logger.info(f"✅ Added result type {result_type} with {len(folders)} folders")
+            logger.info(f"Added result type {result_type} with {len(folders)} folders")
         else:
-            logger.info(f"ℹ️ No folders found for {result_type}")
+            logger.info(f"No folders found for {result_type}")
 
-    logger.info(f"📊 Total sets found: {len(sets)}")
+    logger.info(f"Total sets found: {len(sets)}")
     for set_name, folders in sets.items():
         total_files = sum(len(folder.files) for folder in folders)
-        logger.info(f"📁 {set_name}: {total_files} files in {len(folders)} folders")
+        logger.info(f"{set_name}: {total_files} files in {len(folders)} folders")
         
     return sets
 
-# NEW: Carryover and Resit Management Functions
 def get_carryover_records(program, set_name, semester_key=None):
     """Get carryover records for a specific program, set, and semester"""
     try:
@@ -930,16 +976,17 @@ def get_carryover_records(program, set_name, semester_key=None):
         if not os.path.exists(clean_dir):
             return []
         
-        # Look for the most recent timestamped folder
         timestamp_folders = [f for f in os.listdir(clean_dir) 
                            if f.startswith(f"{set_name}_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
         
         if not timestamp_folders:
+            logger.info(f"❌ No result folders found in: {clean_dir}")
             return []
         
         latest_folder = sorted(timestamp_folders)[-1]
         output_dir = os.path.join(clean_dir, latest_folder)
         carryover_dir = os.path.join(output_dir, "CARRYOVER_RECORDS")
+        logger.info(f"🔍 Checking for carryover records in: {carryover_dir}")
         
         if not os.path.exists(carryover_dir):
             return []
@@ -947,18 +994,16 @@ def get_carryover_records(program, set_name, semester_key=None):
         carryover_files = []
         for file in os.listdir(carryover_dir):
             if file.startswith("co_student_") and file.endswith(".json"):
-                # Extract semester from filename
                 file_semester = None
-                if "FIRST-YEAR-FIRST-SEMESTER" in file:
-                    file_semester = "ND-FIRST-YEAR-FIRST-SEMESTER"
+                if "FIRST-YEAR-First-SEMESTER" in file:
+                    file_semester = "ND-First-YEAR-First-SEMESTER"
                 elif "FIRST-YEAR-SECOND-SEMESTER" in file:
-                    file_semester = "ND-FIRST-YEAR-SECOND-SEMESTER"
-                elif "SECOND-YEAR-FIRST-SEMESTER" in file:
-                    file_semester = "ND-SECOND-YEAR-FIRST-SEMESTER"
+                    file_semester = "ND-First-YEAR-SECOND-SEMESTER"
+                elif "SECOND-YEAR-First-SEMESTER" in file:
+                    file_semester = "ND-SECOND-YEAR-First-SEMESTER"
                 elif "SECOND-YEAR-SECOND-SEMESTER" in file:
                     file_semester = "ND-SECOND-YEAR-SECOND-SEMESTER"
                 
-                # Filter by semester if specified
                 if semester_key and file_semester != semester_key:
                     continue
                     
@@ -1001,13 +1046,73 @@ def get_carryover_summary(program, set_name):
         summary['total_students'] += record['count']
         summary['total_courses'] += sum(len(student['failed_courses']) for student in record['data'])
     
-    # Find the most recent semester
     if summary['by_semester']:
         summary['recent_semester'] = max(summary['by_semester'].keys(), 
                                        key=lambda x: summary['by_semester'][x])
         summary['recent_count'] = summary['by_semester'][summary['recent_semester']]
     
     return summary
+
+def rename_carryover_files(carryover_output_dir, semester_key, resit_timestamp):
+    """Rename files in carryover output directory to include CARRYOVER prefix"""
+    renamed_files = []
+    
+    for root, dirs, files in os.walk(carryover_output_dir):
+        for file in files:
+            if file.lower().endswith(('.xlsx', '.csv', '.pdf')):
+                old_path = os.path.join(root, file)
+                
+                if file.startswith('CARRYOVER_'):
+                    renamed_files.append(old_path)
+                    continue
+                
+                file_extension = os.path.splitext(file)[1]
+                file_base = os.path.splitext(file)[0]
+                
+                new_filename = f"CARRYOVER_{semester_key}_{resit_timestamp}_{file_base}{file_extension}"
+                new_path = os.path.join(root, new_filename)
+                
+                try:
+                    os.rename(old_path, new_path)
+                    renamed_files.append(new_path)
+                    logger.info(f"Renamed carryover file: {file} → {new_filename}")
+                except Exception as e:
+                    logger.error(f"Failed to rename {file}: {e}")
+                    renamed_files.append(old_path)
+    
+    return renamed_files
+
+def debug_resit_processing_details(program_code, set_name, semester_key, resit_file_path, clean_dir):
+    """Debug function to provide detailed information about resit processing"""
+    debug_info = {
+        'program': program_code,
+        'set': set_name,
+        'semester': semester_key,
+        'resit_file': resit_file_path,
+        'resit_file_exists': os.path.exists(resit_file_path),
+        'clean_dir': clean_dir,
+        'clean_dir_exists': os.path.exists(clean_dir),
+        'timestamp_folders': [],
+        'carryover_records': []
+    }
+    
+    if os.path.exists(clean_dir):
+        debug_info['timestamp_folders'] = [f for f in os.listdir(clean_dir) 
+                                         if f.startswith(f"{set_name}_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
+    
+    latest_folder = sorted(debug_info['timestamp_folders'])[-1] if debug_info['timestamp_folders'] else None
+    if latest_folder:
+        output_dir = os.path.join(clean_dir, latest_folder)
+        carryover_dir = os.path.join(output_dir, "CARRYOVER_RECORDS")
+        if os.path.exists(carryover_dir):
+            debug_info['carryover_records'] = [f for f in os.listdir(carryover_dir) 
+                                             if f.startswith("co_student_") and semester_key in f and f.endswith('.json')]
+    
+    logger.info("RESIT PROCESSING DEBUG INFO:")
+    for key, value in debug_info.items():
+        logger.info(f"  {key}: {value}")
+    
+    return debug_info
 
 # Routes
 @app.route("/", methods=["GET"])
@@ -1018,7 +1123,7 @@ def index():
 def login():
     try:
         app.logger.info(f"Login route accessed - Method: {request.method}")
-        logger.info(f"🔍 Attempting to load template: {os.path.join(TEMPLATE_DIR, 'login.html')}")
+        logger.info(f"Attempting to load template: {os.path.join(TEMPLATE_DIR, 'login.html')}")
         if request.method == "POST":
             password = request.form.get("password")
             app.logger.info(f"Login attempt - password provided: {bool(password)}")
@@ -1039,26 +1144,25 @@ def login():
         )
     except TemplateNotFound as e:
         app.logger.error(f"Template not found: {e} at {TEMPLATE_DIR}")
-        logger.error(f"❌ Template error: {e} at {TEMPLATE_DIR}")
+        logger.error(f"Template error: {e} at {TEMPLATE_DIR}")
         return f"<h1>Template Error</h1><p>Template not found: login.html at {TEMPLATE_DIR}</p><p>Available templates: {os.listdir(TEMPLATE_DIR) if os.path.exists(TEMPLATE_DIR) else 'None'}</p>", 500
     except Exception as e:
         app.logger.error(f"Login error: {e}")
-        logger.error(f"❌ Login error: {e}")
+        logger.error(f"Login error: {e}")
         return f"<h1>Server Error</h1><p>{str(e)}</p>", 500
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
     try:
-        # Get carryover summaries for each program
         carryover_summaries = {}
         for program in ["ND", "BN", "BM"]:
             program_sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
+            carryover_summaries[program] = {}
             for set_name in program_sets:
                 summary = get_carryover_summary(program, set_name)
                 if summary['total_students'] > 0:
-                    key = f"{program}_{set_name}"
-                    carryover_summaries[key] = summary
+                    carryover_summaries[program][set_name] = summary
         
         return render_template(
             "dashboard.html",
@@ -1066,12 +1170,12 @@ def dashboard():
             department=DEPARTMENT,
             environment="Railway Production" if not is_local_environment() else "Local Development",
             logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
-            nd_sets=ND_SETS,
-            bn_sets=BN_SETS,
-            bm_sets=BM_SETS,
-            programs=PROGRAMS,
             carryover_summaries=carryover_summaries
         )
+    except TemplateNotFound as e:
+        logger.error(f"Dashboard template not found: {e}")
+        flash("Dashboard template not found.", "error")
+        return redirect(url_for("login"))
     except Exception as e:
         app.logger.error(f"Dashboard error: {e}")
         flash(f"Error loading dashboard: {str(e)}", "error")
@@ -1116,7 +1220,8 @@ def debug_paths():
             bm_sets=BM_SETS,
             programs=PROGRAMS
         )
-    except TemplateNotFound:
+    except TemplateNotFound as e:
+        logger.error(f"Debug paths template not found: {e}")
         flash("Debug paths template not found.", "error")
         return redirect(url_for("dashboard"))
     except Exception as e:
@@ -1161,12 +1266,15 @@ def upload_center():
                 programs=PROGRAMS
             )
         return redirect(url_for("dashboard"))
+    except TemplateNotFound as e:
+        logger.error(f"Upload center template not found: {e}")
+        flash("Upload center template not found.", "error")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         app.logger.error(f"Upload center error: {e}")
         flash(f"Error loading upload center: {str(e)}", "error")
         return redirect(url_for("dashboard"))
 
-# NEW ROUTE: Handle uploads from the upload center
 @app.route("/handle_upload", methods=["POST"])
 @login_required
 def handle_upload():
@@ -1183,7 +1291,6 @@ def handle_upload():
             flash("Please select at least one file to upload.", "error")
             return redirect(url_for("upload_center"))
         
-        # Map program to script_name for directory structure
         program_map = {
             "nd": ("exam_processor_nd", "ND"),
             "bn": ("exam_processor_bn", "BN"), 
@@ -1196,7 +1303,6 @@ def handle_upload():
             
         script_name, program_code = program_map[program]
         
-        # Get the set name based on program
         set_name = None
         if program == "nd":
             set_name = request.form.get("nd_set")
@@ -1209,11 +1315,9 @@ def handle_upload():
             flash(f"Please select a {program.upper()} set.", "error")
             return redirect(url_for("upload_center"))
         
-        # Get the target directory
         raw_dir = get_raw_directory(script_name, program_code, set_name)
-        logger.info(f"🔍 Uploading to directory: {raw_dir}")
+        logger.info(f"Uploading to directory: {raw_dir}")
         
-        # Create directory if it doesn't exist
         os.makedirs(raw_dir, exist_ok=True)
         
         saved_files = []
@@ -1224,36 +1328,31 @@ def handle_upload():
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(raw_dir, filename)
                 
-                # Save the file
                 file.save(file_path)
                 saved_files.append(filename)
-                logger.info(f"✅ Saved file: {file_path}")
+                logger.info(f"Saved file: {file_path}")
                 
-                # Handle ZIP files - extract them
                 if filename.lower().endswith(".zip"):
                     try:
                         with zipfile.ZipFile(file_path, "r") as zip_ref:
                             zip_ref.extractall(raw_dir)
-                        # Optionally remove the zip file after extraction
-                        # os.remove(file_path)
-                        logger.info(f"📦 Extracted ZIP file: {filename}")
+                        logger.info(f"Extracted ZIP file: {filename}")
                         saved_files.append(f"{filename} (extracted)")
                     except zipfile.BadZipFile:
-                        logger.error(f"❌ Invalid ZIP file: {filename}")
+                        logger.error(f"Invalid ZIP file: {filename}")
                         skipped_files.append(f"{filename} (invalid ZIP)")
                     except Exception as e:
-                        logger.error(f"❌ Error extracting ZIP {filename}: {e}")
+                        logger.error(f"Error extracting ZIP {filename}: {e}")
                         skipped_files.append(f"{filename} (extraction error)")
             else:
                 skipped_files.append(file.filename if file.filename else "unknown file")
         
-        # Prepare success message
         if saved_files:
-            success_msg = f"✅ Successfully uploaded {len(saved_files)} file(s) to {program_code}/{set_name}/RAW_RESULTS"
+            success_msg = f"Successfully uploaded {len(saved_files)} file(s) to {program_code}/{set_name}/RAW_RESULTS"
             if skipped_files:
                 success_msg += f" (Skipped {len(skipped_files)} invalid files)"
             flash(success_msg, "success")
-            logger.info(f"✅ Upload completed: {success_msg}")
+            logger.info(f"Upload completed: {success_msg}")
         else:
             flash("No valid files were uploaded. Please check file formats.", "error")
         
@@ -1266,67 +1365,69 @@ def handle_upload():
         app.logger.error(f"Upload error: {e}")
         flash(f"Upload failed: {str(e)}", "error")
         return redirect(url_for("upload_center"))
-        
-# NEW ROUTE: Handle resit file uploads for carryover processing
+
 @app.route("/handle_resit_upload", methods=["POST"])
 @login_required
 def handle_resit_upload():
     """Handle dynamic set selection and multiple semesters"""
     try:
-        print("🔄 CARRYOVER UPLOAD: Route called")
+        logger.info("CARRYOVER UPLOAD: Route called")
         
-        # Get form data
         program = request.form.get("program", "nd")
         set_name = request.form.get("nd_set") or request.form.get("bn_set") or request.form.get("bm_set") or "unknown"
-        selected_semesters = request.form.getlist("selected_semesters")  # This is now a list
+        selected_semesters = request.form.getlist("selected_semesters")
         resit_file = request.files.get("resit_file")
         
-        print(f"📥 Received - Program: {program}, Set: {set_name}, Semesters: {selected_semesters}, File: {resit_file.filename if resit_file else 'None'}")
+        logger.info(f"Received - Program: {program}, Set: {set_name}, Semesters: {selected_semesters}, File: {resit_file.filename if resit_file else 'None'}")
         
-        # Validate inputs
         if not resit_file or resit_file.filename == '':
-            flash("❌ Please select a file", "error")
+            flash("Please select a file", "error")
             return redirect(url_for("upload_center"))
         
         if not program or program == "":
-            flash("❌ Please select a program", "error")
+            flash("Please select a program", "error")
             return redirect(url_for("upload_center"))
         
         if set_name == "unknown" or not set_name:
-            flash("❌ Please select a set", "error")
+            flash("Please select a set", "error")
             return redirect(url_for("upload_center"))
         
         if not selected_semesters:
-            flash("❌ Please select at least one semester", "error")
+            flash("Please select at least one semester", "error")
             return redirect(url_for("upload_center"))
         
-        # Map program to directory
         program_map = {"nd": "ND", "bn": "BN", "bm": "BM"}
         program_code = program_map.get(program, "ND")
         
-        # Create target directory
         raw_dir = os.path.join(BASE_DIR, program_code, set_name, "RAW_RESULTS", "CARRYOVER")
         os.makedirs(raw_dir, exist_ok=True)
-        print(f"📁 Target directory: {raw_dir}")
+        logger.info(f"Target directory: {raw_dir}")
         
-        # Save file
         filename = secure_filename(resit_file.filename)
         file_path = os.path.join(raw_dir, filename)
         resit_file.save(file_path)
         
-        print(f"✅ File saved: {file_path}")
+        logger.info(f"File saved: {file_path}")
         
-        # Create success message with semesters
+        # Fix 3: Verify file was saved correctly
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            logger.info(f"✅ Resit file saved successfully: {file_path} ({file_size} bytes)")
+        else:
+            logger.error(f"❌ Resit file was not saved: {file_path}")
+            flash("Failed to save resit file", "error")
+            return redirect(url_for("upload_center"))
+        
         semester_display = ", ".join(selected_semesters)
-        flash(f"✅ Successfully uploaded carryover file to {program_code}/{set_name}/RAW_RESULTS/CARRYOVER for semesters: {semester_display}", "success")
+        flash(f"Successfully uploaded carryover file to {program_code}/{set_name}/RAW_RESULTS/CARRYOVER for semesters: {semester_display}", "success")
         
         return redirect(url_for("upload_center"))
         
     except Exception as e:
-        print(f"❌ ERROR in handle_resit_upload: {str(e)}")
+        logger.error(f"ERROR in handle_resit_upload: {str(e)}")
         import traceback
-        print(f"🔍 Stack trace: {traceback.format_exc()}")
-        flash(f"❌ Upload failed: {str(e)}", "error")
+        logger.error(f"Stack trace: {traceback.format_exc()}")
+        flash(f"Upload failed: {str(e)}", "error")
         return redirect(url_for("upload_center"))
 
 @app.route("/download_center")
@@ -1351,6 +1452,10 @@ def download_center():
             bm_sets=BM_SETS,
             programs=PROGRAMS
         )
+    except TemplateNotFound as e:
+        logger.error(f"Download center template not found: {e}")
+        flash("Download center template not found.", "error")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         app.logger.error(f"Download center error: {e}")
         flash(f"Error loading download center: {str(e)}", "error")
@@ -1362,7 +1467,6 @@ def file_browser():
     try:
         sets = get_sets_and_folders()
         
-        # Extract set names for each program
         nd_sets = []
         bn_sets = []
         bm_sets = []
@@ -1378,7 +1482,6 @@ def file_browser():
         app.logger.info(f"File browser - ND sets: {nd_sets}, BN sets: {bn_sets}, BM sets: {bm_sets}")
         app.logger.info(f"File browser - Total sets: {len(sets)}")
         
-        # Debug: Log the structure of sets
         for set_key, folders in sets.items():
             total_files = sum(len(folder.files) for folder in folders)
             app.logger.info(f"Set '{set_key}': {total_files} files across {len(folders)} folders")
@@ -1395,22 +1498,24 @@ def file_browser():
             bm_sets=bm_sets,
             programs=PROGRAMS,
             BASE_DIR=BASE_DIR,
-            processed_dir=BASE_DIR  # Add this for debug info
+            processed_dir=BASE_DIR
         )
+    except TemplateNotFound as e:
+        logger.error(f"File browser template not found: {e}")
+        flash("File browser template not found.", "error")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         app.logger.error(f"File browser error: {e}")
         flash(f"Error loading file browser: {str(e)}", "error")
         return redirect(url_for("dashboard"))
 
-# NEW ROUTE: Carryover Management Dashboard
-@app.route("/carryover_management")
+@app.route("/carryover")
 @login_required
-def carryover_management():
+def carryover():
     """Carryover student management dashboard"""
     try:
         carryover_data = {}
         
-        # Get carryover records for all programs and sets
         for program in ["ND", "BN", "BM"]:
             program_sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
             carryover_data[program] = {}
@@ -1436,117 +1541,292 @@ def carryover_management():
             bm_sets=BM_SETS,
             programs=PROGRAMS
         )
+    except TemplateNotFound as e:
+        logger.error(f"Carryover management template not found: {e}")
+        flash("Carryover management template not found.", "error")
+        return redirect(url_for("dashboard"))
     except Exception as e:
         app.logger.error(f"Carryover management error: {e}")
         flash(f"Error loading carryover management: {str(e)}", "error")
         return redirect(url_for("dashboard"))
 
-# NEW ROUTE: Process Resit Results
 @app.route("/process_resit", methods=["POST"])
 @login_required
 def process_resit():
-    """Process resit results for carryover students"""
+    """Process resit results for carryover students with proper output file naming"""
     try:
-        program = request.form.get("resit_program")
+        logger.info("ENHANCED RESIT PROCESSING: Route accessed")
+        
+        program = request.form.get("resit_program", "nd")
         set_name = request.form.get("resit_set")
         semester_key = request.form.get("resit_semester")
-        resit_file_path = request.form.get("resit_file_path")
+        resit_file = request.files.get("resit_file")
+        
+        logger.info(f"Form data - Program: {program}, Set: {set_name}, Semester: {semester_key}, File: {resit_file.filename if resit_file else 'None'}")
         
         if not program or not set_name or not semester_key:
+            logger.error("Missing required form fields")
             flash("Please select program, set, and semester for resit processing.", "error")
-            return redirect(url_for("carryover_management"))
+            return redirect(url_for("carryover"))
         
-        # Find the resit file
-        resit_dir = os.path.join(BASE_DIR, program, set_name, "RESIT_RESULTS", semester_key)
-        if not os.path.exists(resit_dir):
-            flash(f"Resit directory not found: {resit_dir}", "error")
-            return redirect(url_for("carryover_management"))
+        if not resit_file or resit_file.filename == '':
+            logger.error("No resit file uploaded")
+            flash("Please select a resit file", "error")
+            return redirect(url_for("carryover"))
         
-        resit_files = [f for f in os.listdir(resit_dir) if f.lower().endswith(('.xlsx', '.xls'))]
-        if not resit_files:
-            flash(f"No resit files found in {resit_dir}", "error")
-            return redirect(url_for("carryover_management"))
+        program_map = {"nd": "ND", "bn": "BN", "bm": "BM"}
+        program_code = program_map.get(program.lower(), "ND")
         
-        # Use the first resit file found
-        resit_file = resit_files[0]
-        resit_file_path = os.path.join(resit_dir, resit_file)
+        resit_dir = os.path.join(BASE_DIR, program_code, set_name, "RAW_RESULTS", "CARRYOVER")
+        os.makedirs(resit_dir, exist_ok=True)
+        logger.info(f"Resit directory: {resit_dir}")
         
-        # Find the clean results directory
-        clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
+        filename = secure_filename(resit_file.filename)
+        resit_file_path = os.path.join(resit_dir, filename)
+        resit_file.save(resit_file_path)
+        logger.info(f"Saved resit file: {resit_file_path}")
+        
+        clean_dir = os.path.join(BASE_DIR, program_code, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
-            flash(f"Clean results directory not found: {clean_dir}", "error")
-            return redirect(url_for("carryover_management"))
+            logger.error(f"Clean directory not found: {clean_dir}")
+            flash(f"Clean results directory not found: {clean_dir}. Please process regular results first.", "error")
+            return redirect(url_for("carryover"))
         
-        # Find the most recent timestamped folder
         timestamp_folders = [f for f in os.listdir(clean_dir) 
-                           if f.startswith(f"{set_name}_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
+                          if f.startswith(f"{set_name}_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
         
         if not timestamp_folders:
-            flash(f"No result folders found in {clean_dir}", "error")
-            return redirect(url_for("carryover_management"))
+            logger.error(f"No result folders found in {clean_dir}")
+            flash(f"No result folders found in {clean_dir}. Please process regular results first.", "error")
+            return redirect(url_for("carryover"))
         
         latest_folder = sorted(timestamp_folders)[-1]
-        output_dir = os.path.join(clean_dir, latest_folder)
+        base_output_dir = os.path.join(clean_dir, latest_folder)
+        logger.info(f"Using latest result folder: {base_output_dir}")
         
-        # Set up environment for resit processing
+        # FIX 1: Use consistent timestamp format - match what the script actually uses
+        resit_timestamp = datetime.now().strftime("%d-%m-%Y_%H%M%S")  # Keep original format that script uses
+        carryover_output_dir = os.path.join(clean_dir, f"CARRYOVER_{semester_key}_{resit_timestamp}")
+        os.makedirs(carryover_output_dir, exist_ok=True)
+        logger.info(f"📁 Created CARRYOVER output directory: {carryover_output_dir}")
+        
+        debug_resit_processing_details(program_code, set_name, semester_key, resit_file_path, clean_dir)
+        
         env = os.environ.copy()
         env["BASE_DIR"] = BASE_DIR
+        env["WEB_MODE"] = "true"
         env["PROCESS_RESIT"] = "true"
         env["RESIT_FILE_PATH"] = resit_file_path
         env["SELECTED_SET"] = set_name
         env["SELECTED_SEMESTERS"] = semester_key
-        env["PASS_THRESHOLD"] = "50.0"  # Default pass threshold
+        env["PASS_THRESHOLD"] = "50.0"
+        env["GENERATE_PDF"] = "true"
+        env["TRACK_WITHDRAWN"] = "true"
+        env["RESIT_OUTPUT_DIR"] = carryover_output_dir
         
-        # Run the exam processor script for resit processing
-        script_name = f"exam_processor_{program.lower()}"
+        script_name = "integrated_carryover_processor"
         script_path = _get_script_path(script_name)
+        logger.info(f"Running carryover processor: {script_path}")
         
-        logger.info(f"🔄 Processing resit results for {program}/{set_name}/{semester_key}")
-        logger.info(f"📁 Resit file: {resit_file_path}")
-        logger.info(f"📁 Output directory: {output_dir}")
+        try:
+            result = subprocess.run(
+                [sys.executable, script_path],
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=600,
+            )
+        except subprocess.TimeoutExpired:
+            logger.error("Carryover processing timed out after 600 seconds")
+            flash("Carryover processing timed out after 10 minutes.", "error")
+            return redirect(url_for("carryover"))
         
-        result = subprocess.run(
-            [sys.executable, script_path],
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=600,
-        )
-        
-        logger.info("=== RESIT PROCESSING STDOUT ===")
+        logger.info("=== CARRYOVER PROCESSOR STDOUT ===")
         for line in result.stdout.splitlines():
-            logger.info(line)
-        logger.info("=== RESIT PROCESSING STDERR ===")
+            logger.info(f"STDOUT: {line}")
+        
+        logger.info("=== CARRYOVER PROCESSOR STDERR ===")
         for line in result.stderr.splitlines():
-            logger.info(line)
-            
+            logger.error(f"STDERR: {line}")
+        
         output_lines = result.stdout.splitlines()
         
-        if result.returncode == 0:
-            if any("✅ Updated" in line and "scores for" in line and "students" in line for line in output_lines):
-                flash(f"✅ Resit processing completed successfully for {program}/{set_name}/{semester_key}", "success")
-            else:
-                flash(f"ℹ️ Resit processing completed but no scores were updated for {program}/{set_name}/{semester_key}", "info")
-        else:
-            flash(f"❌ Resit processing failed for {program}/{set_name}/{semester_key}: {result.stderr}", "error")
+        # FIX 2: Check if files were actually generated despite script error
+        files_generated = False
+        for line in output_lines:
+            if "Individual student PDF written:" in line or "Generated PDF for" in line:
+                files_generated = True
+                break
         
-        return redirect(url_for("carryover_management"))
+        generated_files = []
+        if files_generated:
+            generated_files = rename_carryover_files(carryover_output_dir, semester_key, resit_timestamp)
+            logger.info(f"Generated {len(generated_files)} files with CARRYOVER prefix")
+        
+        # FIX 3: Look for actual generated files instead of expected files
+        actual_generated_files = []
+        if os.path.exists(carryover_output_dir):
+            for root, dirs, files in os.walk(carryover_output_dir):
+                for file in files:
+                    if file.lower().endswith(('.xlsx', '.csv', '.pdf')):
+                        actual_generated_files.append(os.path.join(root, file))
+        
+        logger.info(f"Actual generated files found: {len(actual_generated_files)}")
+        
+        zip_created = False
+        if actual_generated_files:
+            zip_filename = f"CARRYOVER_{semester_key}_{resit_timestamp}.zip"
+            zip_path = os.path.join(clean_dir, zip_filename)
+            try:
+                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_f:
+                    for file_path in actual_generated_files:
+                        arcname = os.path.basename(file_path)
+                        zip_f.write(file_path, arcname)
+                
+                if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
+                    zip_created = True
+                    logger.info(f"Created carryover ZIP: {zip_path}")
+                else:
+                    logger.warning(f"ZIP file created but appears empty: {zip_path}")
+            except Exception as e:
+                logger.error(f"Failed to create carryover ZIP: {e}")
+        
+        # FIX 4: Handle script errors more gracefully - check if files were generated despite error
+        score_updates = 0
+        students_updated = 0
+        resit_processed = False
+        
+        for line in output_lines:
+            if "Updated" in line and "scores for" in line and "students" in line:
+                # Try multiple patterns to extract the numbers
+                patterns = [
+                    r"Updated (\d+) scores for (\d+) students",
+                    r"Updated (\d+) scores for (\d+) student",
+                    r"(\d+) scores.*?(\d+) students"
+                ]
+                for pattern in patterns:
+                    match = re.search(pattern, line)
+                    if match:
+                        try:
+                            score_updates = int(match.group(1))
+                            students_updated = int(match.group(2))
+                            resit_processed = True
+                            logger.info(f"Found score updates: {score_updates} scores for {students_updated} students")
+                            break
+                        except (ValueError, IndexError):
+                            continue
+                if resit_processed:
+                    break
+            elif "Processing resit results for" in line:
+                resit_processed = True
+                logger.info("Resit processing started")
+            elif "ERROR" in line.upper() and "TypeError" not in line:
+                logger.error(f"Error in processing: {line}")
+        
+        # FIX 5: Check if processing was successful based on file generation, not just return code
+        processing_successful = files_generated and resit_processed
+        
+        if processing_successful or files_generated:
+            if score_updates > 0:
+                message = f"Resit processing completed! Updated {score_updates} scores for {students_updated} students in {program_code}/{set_name}/{semester_key}"
+                if zip_created:
+                    message += f" Zipped results: {zip_filename}"
+                flash(message, "success")
+                logger.info(f"SUCCESS: {message}")
+            elif resit_processed:
+                message = f"Resit processing completed but no scores were updated. This could mean: 1) No matching carryover records found, 2) Resit file doesn't match carryover students, or 3) All resit scores were below pass threshold for {program_code}/{set_name}/{semester_key}"
+                if zip_created:
+                    message += f" Zipped results: {zip_filename}"
+                flash(message, "info")
+                logger.info(f"INFO: {message}")
+                
+                logger.info("TROUBLESHOOTING SUGGESTIONS:")
+                logger.info("1. Check if carryover records exist for this semester")
+                logger.info("2. Verify exam numbers match between resit file and mastersheet")
+                logger.info("3. Check if resit scores are actually passing (≥ 50)")
+                logger.info("4. Verify original scores were actually failing (< 50)")
+                logger.info("5. Check course name matching between files")
+            else:
+                message = f"Resit files generated for {program_code}/{set_name}/{semester_key} but no resit operations were performed"
+                if zip_created:
+                    message += f" Zipped results: {zip_filename}"
+                flash(message, "warning")
+                logger.warning(f"WARNING: {message}")
+        else:
+            error_msg = f"Resit processing failed for {program_code}/{set_name}/{semester_key}: {result.stderr}"
+            flash(error_msg, "error")
+            logger.error(f"ERROR: {error_msg}")
+        
+        return redirect(url_for("carryover"))
         
     except Exception as e:
-        app.logger.error(f"Resit processing error: {e}")
+        logger.error(f"RESIT PROCESSING ERROR: {str(e)}", exc_info=True)
         flash(f"Resit processing failed: {str(e)}", "error")
-        return redirect(url_for("carryover_management"))
+        return redirect(url_for("carryover"))
 
-# FIXED: Enhanced run_script function with better file detection and status reporting
-@app.route("/run/<script_name>", methods=["GET", "POST"])
+@app.route("/debug_resit_files/<program>/<set_name>")
+@login_required
+def debug_resit_files(program, set_name):
+    """Debug route to check generated resit files"""
+    try:
+        clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
+        if not os.path.exists(clean_dir):
+            return jsonify({'error': f"Clean directory not found: {clean_dir}"})
+        
+        resit_folders = [f for f in os.listdir(clean_dir) 
+                        if f.startswith("RESIT_") and os.path.isdir(os.path.join(clean_dir, f))]
+        
+        debug_info = {
+            'clean_dir': clean_dir,
+            'resit_folders': [],
+            'resit_zips': []
+        }
+        
+        for folder in resit_folders:
+            folder_path = os.path.join(clean_dir, folder)
+            files = []
+            for root, dirs, filenames in os.walk(folder_path):
+                for file in filenames:
+                    if file.lower().endswith(('.xlsx', '.csv', '.pdf')):
+                        files.append({
+                            'name': file,
+                            'path': os.path.relpath(os.path.join(root, file), clean_dir),
+                            'size': os.path.getsize(os.path.join(root, file))
+                        })
+            debug_info['resit_folders'].append({
+                'name': folder,
+                'files': files
+            })
+        
+        zip_files = [f for f in os.listdir(clean_dir) 
+                    if f.startswith("RESIT_") and f.endswith('.zip')]
+        
+        for zip_file in zip_files:
+            zip_path = os.path.join(clean_dir, zip_file)
+            debug_info['resit_zips'].append({
+                'name': zip_file,
+                'size': os.path.getsize(zip_path),
+                'path': zip_path
+            })
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route("/run_script/<script_name>", methods=["GET", "POST"])
 @login_required
 def run_script(script_name):
     try:
+        processing_type = request.form.get("processing_type", "regular")
+        if processing_type == "carryover":
+            script_name = "integrated_carryover_processor"
+
         if script_name not in SCRIPT_MAP:
             flash("Invalid script requested.", "error")
             return redirect(url_for("dashboard"))
             
-        program = script_name.split("_")[-1].upper() if script_name.startswith("exam_processor") else None
+        program = script_name.split("_")[-1].upper() if script_name.startswith("exam_processor") or script_name == "integrated_carryover_processor" else None
         script_desc = {
             "utme": "PUTME Examination Results",
             "caosce": "CAOSCE Examination Results",
@@ -1555,31 +1835,32 @@ def run_script(script_name):
             "exam_processor_nd": "ND Examination Results Processing",
             "exam_processor_bn": "Basic Nursing Examination Results Processing",
             "exam_processor_bm": "Basic Midwifery Examination Results Processing",
+            "integrated_carryover_processor": "Carryover & Resit Processing",
         }.get(script_name, "Script")
         
         script_path = _get_script_path(script_name)
         
-        # Get selected set for exam processors
         selected_set = None
-        if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
-            selected_set = request.form.get(
-                "selected_set" if script_name == "exam_processor_nd" else
-                "nursing_set" if script_name == "exam_processor_bn" else
-                "midwifery_set", "all"
-            )
-            logger.info(f"🔍 Selected set for {script_name}: {selected_set}")
+        if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
+            if processing_type == "carryover":
+                selected_set = request.form.get("carryover_set", "all")
+            else:
+                selected_set = request.form.get(
+                    "selected_set" if script_name == "exam_processor_nd" or script_name == "integrated_carryover_processor" else
+                    "nursing_set" if script_name == "exam_processor_bn" else
+                    "midwifery_set", "all"
+                )
+            logger.info(f"Selected set for {script_name}: {selected_set}")
         
-        # Get the correct input directory based on script and selected set
+        # FIXED: Use the corrected get_input_directory function
         input_dir = get_input_directory(script_name, program, selected_set)
-        logger.info(f"🔍 Final input directory for {script_name}: {input_dir}")
+        logger.info(f"Final input directory for {script_name}: {input_dir}")
         
-        # FIXED: Better file checking with detailed status reporting
         if not check_input_files(input_dir, script_name, selected_set):
-            # For exam processors, provide more specific guidance with file listing
-            if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+            if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
                 status_info = get_exam_processor_status(program, selected_set)
                 
-                error_msg = f"❌ Cannot process {script_desc}: "
+                error_msg = f"Cannot process {script_desc}: "
                 issues = []
                 
                 if not status_info['course_file']:
@@ -1591,8 +1872,8 @@ def run_script(script_name):
                 if issues:
                     error_msg += " and ".join(issues)
                     
-                    # Add specific file details
                     if selected_set and selected_set != "all":
+                        # FIXED: Use correct path structure without PROCESSOR
                         expected_path = os.path.join(BASE_DIR, program, selected_set, "RAW_RESULTS")
                         error_msg += f". Please upload Excel files to: {expected_path}"
                     else:
@@ -1600,9 +1881,9 @@ def run_script(script_name):
                     
                     flash(error_msg, "error")
                 else:
-                    flash(f"❌ Unexpected error: No files found for {script_desc}", "error")
+                    flash(f"Unexpected error: No files found for {script_desc}", "error")
             else:
-                flash(f"❌ No valid input files found in {input_dir} for {script_desc}.", "error")
+                flash(f"No valid input files found in {input_dir} for {script_desc}.", "error")
             return redirect(url_for("dashboard"))
             
         if request.method == "GET":
@@ -1614,9 +1895,8 @@ def run_script(script_name):
             }
             template = template_map.get(script_name)
             if template:
-                # FIXED: Get detailed status information for templates
                 status_info = {}
-                if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+                if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
                     status_info = get_exam_processor_status(program)
                 
                 return render_template(
@@ -1630,10 +1910,14 @@ def run_script(script_name):
                     nd_sets=ND_SETS,
                     bn_sets=BN_SETS,
                     bm_sets=BM_SETS,
-                    status_info=status_info  # FIXED: Pass status info to template
+                    status_info=status_info
                 )
                 
         if request.method == "POST":
+            env = os.environ.copy()
+            
+            is_carryover_processing = processing_type == "carryover"
+            
             if script_name == "utme":
                 convert_value = request.form.get("convert_value", "").strip()
                 convert_column = request.form.get("convert_column", "n")
@@ -1647,6 +1931,7 @@ def run_script(script_name):
                     capture_output=True,
                     check=True,
                     timeout=300,
+                    env=env
                 )
                 output_lines = result.stdout.splitlines()
                 processed_files = count_processed_files(output_lines, script_name)
@@ -1657,37 +1942,80 @@ def run_script(script_name):
                     flash(f"No files processed for {script_desc}. Check input files in {input_dir}.", "error")
                 return redirect(url_for("dashboard"))
                 
-            elif script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
-                selected_set = request.form.get(
-                    "selected_set" if script_name == "exam_processor_nd" else
-                    "nursing_set" if script_name == "exam_processor_bn" else
-                    "midwifery_set", "all"
-                )
+            elif script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
+                if is_carryover_processing:
+                    selected_set = request.form.get("carryover_set", "all")
+                    selected_semesters = request.form.get("carryover_semester", "")
+                    env["SELECTED_SEMESTERS"] = selected_semesters
+                else:
+                    selected_set = request.form.get(
+                        "selected_set" if script_name == "exam_processor_nd" or script_name == "integrated_carryover_processor" else
+                        "nursing_set" if script_name == "exam_processor_bn" else
+                        "midwifery_set", "all"
+                    )
+                    selected_semesters = request.form.getlist('selected_semesters')
+                    if not selected_semesters or 'all' in selected_semesters:
+                        selected_semesters = ['all']
+                    env["SELECTED_SEMESTERS"] = ','.join(selected_semesters)
+                
                 pass_threshold = request.form.get("pass_threshold", "50.0")
                 upgrade_threshold = request.form.get("upgrade_threshold", "0")
                 generate_pdf = "generate_pdf" in request.form
                 track_withdrawn = "track_withdrawn" in request.form
                 
-                # Get selected semesters for ND processor
-                selected_semesters = request.form.getlist('selected_semesters')
-                if not selected_semesters or 'all' in selected_semesters:
-                    selected_semesters = ['all']
+                selected_semesters = []
+                if is_carryover_processing:
+                    carryover_semester = request.form.get('carryover_semester')
+                    if carryover_semester:
+                        selected_semesters = [carryover_semester]
+                        logger.info(f"CARRYOVER PROCESSING: Single semester selected: {carryover_semester}")
+                    else:
+                        flash("Please select a semester for carryover processing.", "error")
+                        return redirect(url_for("dashboard"))
+                else:
+                    selected_semesters = request.form.getlist('selected_semesters')
+                    if not selected_semesters or 'all' in selected_semesters:
+                        selected_semesters = ['all']
                 
-                env = os.environ.copy()
                 env["BASE_DIR"] = BASE_DIR
                 env["SELECTED_SET"] = selected_set
                 env["SELECTED_SEMESTERS"] = ','.join(selected_semesters)
                 env["PASS_THRESHOLD"] = pass_threshold
+                
+                if is_carryover_processing:
+                    env["PROCESS_RESIT"] = "true"
+                    resit_file = request.files.get('carryover_file')
+                    if resit_file and resit_file.filename:
+                        if "ND-" in selected_set:
+                            program = "ND"
+                        elif "SET4" in selected_set:
+                            program = "BN"
+                        else:
+                            program = "BM"
+                        
+                        carryover_dir = os.path.join(BASE_DIR, program, selected_set, "RAW_RESULTS", "CARRYOVER")
+                        os.makedirs(carryover_dir, exist_ok=True)
+                        filename = secure_filename(resit_file.filename)
+                        resit_path = os.path.join(carryover_dir, filename)
+                        resit_file.save(resit_path)
+                        env["RESIT_FILE_PATH"] = resit_path
+                        logger.info(f"Resit file saved: {resit_path}")
+                    else:
+                        flash("Please upload a resit file for carryover processing.", "error")
+                        return redirect(url_for("dashboard"))
+                
                 if upgrade_threshold and upgrade_threshold.strip() and upgrade_threshold != "0":
                     env["UPGRADE_THRESHOLD"] = upgrade_threshold.strip()
                 env["GENERATE_PDF"] = str(generate_pdf)
                 env["TRACK_WITHDRAWN"] = str(track_withdrawn)
                 
-                logger.info(f"🚀 Running {script_name} with environment:")
+                logger.info(f"Running {script_name} with environment:")
                 logger.info(f"  BASE_DIR: {env['BASE_DIR']}")
                 logger.info(f"  SELECTED_SET: {env['SELECTED_SET']}")
                 logger.info(f"  SELECTED_SEMESTERS: {env['SELECTED_SEMESTERS']}")
                 logger.info(f"  PASS_THRESHOLD: {env['PASS_THRESHOLD']}")
+                logger.info(f"  PROCESS_RESIT: {env.get('PROCESS_RESIT', 'False')}")
+                logger.info(f"  RESIT_FILE_PATH: {env.get('RESIT_FILE_PATH', 'Not set')}")
                 logger.info(f"  UPGRADE_THRESHOLD: {env.get('UPGRADE_THRESHOLD', 'Not set')}")
                 
                 result = subprocess.run(
@@ -1715,18 +2043,15 @@ def run_script(script_name):
                     else:
                         flash(f"{script_desc} completed but no files were processed.", "warning")
                     
-                    # FIXED: Enhanced ZIP creation with better error handling and file verification
                     clean_dir = get_clean_directory(script_name, program, selected_set)
                     if os.path.exists(clean_dir):
-                        # Look for timestamped result folders
                         result_dirs = [d for d in os.listdir(clean_dir) 
                                      if d.startswith(f"{selected_set}_RESULT-") and os.path.isdir(os.path.join(clean_dir, d))]
                         
                         if result_dirs:
-                            latest = sorted(result_dirs)[-1]  # Get the most recent
+                            latest = sorted(result_dirs)[-1]
                             folder_path = os.path.join(clean_dir, latest)
                             
-                            # Verify the folder has actual files before creating ZIP
                             all_files = []
                             for root, dirs, files in os.walk(folder_path):
                                 for file in files:
@@ -1740,35 +2065,33 @@ def run_script(script_name):
                                 try:
                                     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_f:
                                         for file_path in all_files:
-                                            # Use relative path within the ZIP
                                             arcname = os.path.relpath(file_path, folder_path)
                                             zip_f.write(file_path, arcname)
                                     
-                                    # Verify the ZIP was created successfully
-                                    if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:  # At least 100 bytes
-                                        flash(f"📦 Zipped results ready: {zip_filename} ({len(all_files)} files)", "success")
-                                        logger.info(f"✅ Successfully created ZIP: {zip_path} with {len(all_files)} files")
+                                    if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
+                                        flash(f"Zipped results ready: {zip_filename} ({len(all_files)} files)", "success")
+                                        logger.info(f"Successfully created ZIP: {zip_path} with {len(all_files)} files")
                                     else:
-                                        logger.warning(f"⚠️ ZIP file created but appears empty: {zip_path}")
-                                        flash(f"⚠️ ZIP created but appears empty for {selected_set}", "warning")
+                                        logger.warning(f"ZIP file created but appears empty: {zip_path}")
+                                        flash(f"ZIP created but appears empty for {selected_set}", "warning")
                                         
                                 except Exception as e:
-                                    logger.error(f"❌ Failed to create ZIP: {e}")
+                                    logger.error(f"Failed to create ZIP: {e}")
                                     flash(f"Failed to create ZIP for {selected_set}: {str(e)}", "error")
                             else:
-                                logger.warning(f"⚠️ No files found to zip in: {folder_path}")
+                                logger.warning(f"No files found to zip in: {folder_path}")
                                 flash(f"No output files generated for {selected_set}", "warning")
                 else:
                     flash(f"Script failed: {result.stderr or 'Unknown error'}", "error")
                 return redirect(url_for("dashboard"))
                 
-        # Default processing for other scripts
         result = subprocess.run(
             [sys.executable, script_path],
             text=True,
             capture_output=True,
             check=True,
             timeout=300,
+            env=env
         )
         output_lines = result.stdout.splitlines()
         processed_files = count_processed_files(output_lines, script_name)
@@ -1792,11 +2115,11 @@ def run_script(script_name):
 @login_required
 def upload_files(script_name):
     try:
-        if script_name not in ["utme", "caosce", "clean", "split", "exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+        if script_name not in SCRIPT_MAP:
             flash("Invalid script requested.", "error")
             return redirect(url_for("upload_center"))
             
-        program = script_name.split("_")[-1].upper() if script_name.startswith("exam_processor") else None
+        program = script_name.split("_")[-1].upper() if script_name.startswith("exam_processor") or script_name == "integrated_carryover_processor" else None
         script_desc = {
             "utme": "PUTME Results",
             "caosce": "CAOSCE Results",
@@ -1805,6 +2128,7 @@ def upload_files(script_name):
             "exam_processor_nd": "ND Examinations",
             "exam_processor_bn": "Basic Nursing",
             "exam_processor_bm": "Basic Midwifery",
+            "integrated_carryover_processor": "Carryover & Resit Files",
         }.get(script_name, "Files")
         
         files = request.files.getlist("files")
@@ -1812,18 +2136,19 @@ def upload_files(script_name):
         course_files = request.files.getlist("course_files") if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"] else []
         set_name = request.form.get("nd_set") or request.form.get("nursing_set") or request.form.get("midwifery_set")
         
-        # Save to appropriate RAW directory
         if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"] and set_name:
             raw_dir = get_raw_directory(script_name, program, set_name)
-            logger.info(f"🔍 Uploading to exam processor raw directory: {raw_dir}")
+            logger.info(f"Uploading to exam processor raw directory: {raw_dir}")
+        elif script_name == "integrated_carryover_processor" and set_name:
+            raw_dir = os.path.join(BASE_DIR, program, set_name, "RAW_RESULTS", "CARRYOVER")
+            logger.info(f"Uploading to carryover raw directory: {raw_dir}")
         else:
             raw_dir = get_raw_directory(script_name)
-            logger.info(f"🔍 Uploading to other script raw directory: {raw_dir}")
+            logger.info(f"Uploading to other script raw directory: {raw_dir}")
         
         os.makedirs(raw_dir, exist_ok=True)
         saved_files = []
         
-        # Handle course files separately for exam processors
         if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"] and course_files:
             course_dir = os.path.join(BASE_DIR, program, f"{program}-COURSES")
             os.makedirs(course_dir, exist_ok=True)
@@ -1833,9 +2158,8 @@ def upload_files(script_name):
                     file_path = os.path.join(course_dir, filename)
                     file.save(file_path)
                     saved_files.append(f"course: {filename}")
-                    logger.info(f"✅ Saved course file: {file_path}")
+                    logger.info(f"Saved course file: {file_path}")
         
-        # Handle regular files
         for file in files + candidate_files:
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
@@ -1848,13 +2172,13 @@ def upload_files(script_name):
                         with zipfile.ZipFile(file_path, "r") as z:
                             z.extractall(raw_dir)
                         os.remove(file_path)
-                        flash(f"📦 Extracted ZIP: {filename}", "success")
+                        flash(f"Extracted ZIP: {filename}", "success")
                     except zipfile.BadZipFile:
-                        flash(f"❌ Invalid ZIP file: {filename}", "error")
+                        flash(f"Invalid ZIP file: {filename}", "error")
                         return redirect(url_for("upload_center"))
                         
         if saved_files:
-            flash(f"✅ Uploaded files to {raw_dir}: {', '.join(saved_files)}", "success")
+            flash(f"Uploaded files to {raw_dir}: {', '.join(saved_files)}", "success")
         else:
             flash("No valid files uploaded.", "error")
             return redirect(url_for("upload_center"))
@@ -1872,7 +2196,6 @@ def upload_files(script_name):
 def download(filename):
     try:
         safe_name = os.path.basename(filename)
-        # Search in BASE_DIR for the file
         for root, _, files in os.walk(BASE_DIR):
             if safe_name in files:
                 return send_from_directory(root, safe_name, as_attachment=True)
@@ -1886,44 +2209,29 @@ def download(filename):
 @app.route("/download_file/<path:filename>")
 @login_required
 def download_file(filename):
-    try:
-        safe_name = os.path.basename(filename)
-        # Search in BASE_DIR for the file
-        for root, _, files in os.walk(BASE_DIR):
-            if safe_name in files:
-                return send_from_directory(root, safe_name, as_attachment=True)
-        flash(f"File '{safe_name}' not found.", "error")
-        return redirect(url_for("download_center"))
-    except Exception as e:
-        app.logger.error(f"Download error: {e}")
-        flash(f"Download failed: {str(e)}", "error")
-        return redirect(url_for("download_center"))
+    return download(filename)
 
 @app.route("/download_zip/<set_name>")
 @login_required
 def download_zip(set_name):
     try:
-        # Find the set's CLEAN_RESULTS directory
         zip_path = None
         for program in ["ND", "BN", "BM"]:
             sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
             if set_name in sets:
                 clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
                 if os.path.exists(clean_dir):
-                    # Look for ZIP files in the clean directory
                     zip_files = [f for f in os.listdir(clean_dir) 
                                if f.startswith(f"{set_name}_RESULT-") and f.endswith('.zip')]
                     
                     if zip_files:
-                        # Get the most recent ZIP file
                         latest_zip = sorted(zip_files)[-1]
                         zip_path = os.path.join(clean_dir, latest_zip)
                         break
         
         if zip_path and os.path.exists(zip_path):
-            # Verify the ZIP file has reasonable size
             file_size = os.path.getsize(zip_path)
-            if file_size > 100:  # At least 100 bytes
+            if file_size > 100:
                 return send_file(zip_path, as_attachment=True)
             else:
                 flash(f"ZIP file for '{set_name}' is empty or corrupted.", "error")
@@ -1940,11 +2248,9 @@ def download_zip(set_name):
 @login_required
 def delete(filename):
     try:
-        # Only protect critical system directories
         critical_dirs = [SCRIPT_DIR, TEMPLATE_DIR, STATIC_DIR, PROJECT_ROOT]
         
         file_path = None
-        # Search for file in BASE_DIR
         for root, _, files in os.walk(BASE_DIR):
             if os.path.basename(filename) in files:
                 candidate = os.path.join(root, os.path.basename(filename))
@@ -1953,7 +2259,6 @@ def delete(filename):
                     break
         
         if not file_path:
-            # Check if filename is a directory
             for root, dirs, _ in os.walk(BASE_DIR):
                 if os.path.basename(filename) in dirs:
                     candidate = os.path.join(root, os.path.basename(filename))
@@ -1963,42 +2268,39 @@ def delete(filename):
         
         if not file_path:
             flash(f"Path '{filename}' not found.", "error")
-            logger.warning(f"⚠️ Deletion failed: Path not found - {filename}")
+            logger.warning(f"Deletion failed: Path not found - {filename}")
             return redirect(request.referrer or url_for("file_browser"))
         
-        # Check if path is critical
         abs_file_path = os.path.abspath(file_path)
         for critical_dir in critical_dirs:
             abs_critical_dir = os.path.abspath(critical_dir)
             if (abs_file_path == abs_critical_dir or 
                 os.path.dirname(abs_file_path) == abs_critical_dir):
                 flash(f"Cannot delete critical system path: {filename}", "error")
-                logger.warning(f"⚠️ Deletion blocked: Attempted to delete critical system path - {filename}")
+                logger.warning(f"Deletion blocked: Attempted to delete critical system path - {filename}")
                 return redirect(request.referrer or url_for("file_browser"))
         
-        # Confirm deletion
         if request.form.get("confirm") != "true":
             flash(f"Deletion of '{filename}' requires confirmation.", "warning")
-            logger.info(f"🛑 Deletion of {filename} requires confirmation")
+            logger.info(f"Deletion of {filename} requires confirmation")
             return redirect(request.referrer or url_for("file_browser"))
         
-        # Perform deletion
         if os.path.isfile(file_path):
             os.remove(file_path)
             flash(f"File '{filename}' deleted successfully.", "success")
-            logger.info(f"✅ Deleted file: {file_path}")
+            logger.info(f"Deleted file: {file_path}")
         elif os.path.isdir(file_path):
             shutil.rmtree(file_path, ignore_errors=True)
             flash(f"Folder '{filename}' deleted successfully.", "success")
-            logger.info(f"✅ Deleted folder: {file_path}")
+            logger.info(f"Deleted folder: {file_path}")
         else:
             flash(f"Path '{filename}' does not exist.", "error")
-            logger.warning(f"⚠️ Deletion failed: Path does not exist - {file_path}")
+            logger.warning(f"Deletion failed: Path does not exist - {file_path}")
         
         return redirect(request.referrer or url_for("file_browser"))
     except Exception as e:
         app.logger.error(f"Delete error: {e}")
-        logger.error(f"❌ Delete error for {filename}: {e}")
+        logger.error(f"Delete error for {filename}: {e}")
         flash(f"Failed to delete '{filename}': {str(e)}", "error")
         return redirect(request.referrer or url_for("file_browser"))
 
@@ -2014,8 +2316,15 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("login"))
 
+@app.route("/run_script/integrated_carryover_processor", methods=["GET"])
+@login_required
+def handle_invalid_carryover_access():
+    """Handle GET requests to integrated_carryover_processor with redirect and flash message"""
+    flash("This endpoint requires a POST request. Please use the carryover form.", "error")
+    return redirect(url_for("carryover"))
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     mode = "local" if is_local_environment() else "cloud"
-    logger.info(f"🚀 Starting Flask app in {mode.upper()} mode on port {port}...")
+    logger.info(f"Starting Flask app in {mode.upper()} mode on port {port}...")
     app.run(host="0.0.0.0", port=port, debug=True)
