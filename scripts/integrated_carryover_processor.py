@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-integrated_carryover_processor.py - FIXED VERSION WITH PROGRAM-SPECIFIC SCANNING
-Only scans the selected program directory, not all programs.
+integrated_carryover_processor.py - FIXED VERSION WITH ALL-SEMESTER GPA TRACKING
+Enhanced to track GPA for all semesters, not just second year second semester.
 """
 
 import os
@@ -765,21 +765,22 @@ def get_matching_sheet(xl, target_key):
     print(f"📖 Available sheets: {xl.sheet_names}")
     return None
 
+# ENHANCED: GPA Loading for ALL semesters
 def load_previous_gpas(mastersheet_path, current_semester_key):
-    """Load previous GPA data from mastersheet for CGPA calculation."""
+    """Load previous GPA data from mastersheet for CGPA calculation - ENHANCED FOR ALL SEMESTERS."""
     all_student_data = {}
-    current_year, current_semester_num, _, _, _, current_semester_name = get_semester_display_info(current_semester_key)
-
-    # Define all previous semesters based on current semester
-    semesters_to_load = []
     current_standard = standardize_semester_key(current_semester_key)
-    if current_standard == "ND-First-YEAR-SECOND-SEMESTER":
-        semesters_to_load = ["ND-FIRST-YEAR-FIRST-SEMESTER"]
-    elif current_standard == "ND-SECOND-YEAR-First-SEMESTER":
-        semesters_to_load = ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER"]
-    elif current_standard == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        semesters_to_load = ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER", 
-                            "ND-SECOND-YEAR-FIRST-SEMESTER"]
+    
+    # Define all semesters based on current semester
+    all_semesters = {
+        "ND-First-YEAR-First-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER"],
+        "ND-First-YEAR-SECOND-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER"],
+        "ND-SECOND-YEAR-First-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER"],
+        "ND-SECOND-YEAR-SECOND-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER", "ND-SECOND-YEAR-FIRST-SEMESTER"]
+    }
+    
+    semesters_to_load = all_semesters.get(current_standard, [])
+    print(f"📊 Loading previous GPAs for {current_standard}: {semesters_to_load}")
 
     if not os.path.exists(mastersheet_path):
         print(f"❌ Mastersheet not found: {mastersheet_path}")
@@ -801,42 +802,70 @@ def load_previous_gpas(mastersheet_path, current_semester_key):
             
             print(f"📖 Reading sheet '{sheet_name}' for semester {semester}")
             df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
+            
+            # If header row 5 doesn't work, try row 0
+            if df.empty or len(df.columns) < 3:
+                df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=0)
+                print(f"🔄 Using header row 0 for sheet '{sheet_name}'")
+            
             exam_col = find_exam_number_column(df)
             gpa_col = None
             credit_col = None
             
+            # Find GPA and credit columns with flexible matching
             for col in df.columns:
                 col_str = str(col).upper()
                 if 'GPA' in col_str and 'CGPA' not in col_str:
                     gpa_col = col
-                if 'CU PASSED' in col_str:
+                if 'CU PASSED' in col_str or 'CREDIT' in col_str or 'UNIT' in col_str:
                     credit_col = col
+            
+            print(f"🔍 Columns found - Exam: {exam_col}, GPA: {gpa_col}, Credits: {credit_col}")
             
             if exam_col and gpa_col:
                 for idx, row in df.iterrows():
-                    exam_no = str(row[exam_col]).strip()
-                    gpa = row[gpa_col]
-                    credits = int(row[credit_col]) if credit_col and pd.notna(row[credit_col]) else 30
-                    
-                    if pd.notna(gpa) and pd.notna(exam_no) and exam_no != 'nan' and str(exam_no) != 'nan':
-                        try:
-                            if exam_no not in all_student_data:
-                                all_student_data[exam_no] = {'gpas': [], 'credits': [], 'semesters': []}
-                            all_student_data[exam_no]['gpas'].append(float(gpa))
-                            all_student_data[exam_no]['credits'].append(credits)
-                            all_student_data[exam_no]['semesters'].append(semester)
-                            print(f"📊 Loaded GPA for {exam_no}: {gpa} with {credits} credits from {semester}")
-                        except (ValueError, TypeError) as e:
-                            print(f"⚠️ Error processing GPA for {exam_no}: {e}")
+                    try:
+                        exam_no = str(row[exam_col]).strip()
+                        if pd.isna(exam_no) or exam_no in ['', 'NAN', 'NONE']:
                             continue
+                            
+                        gpa_value = row[gpa_col]
+                        if pd.isna(gpa_value):
+                            continue
+                            
+                        # Get credits passed - default to 30 if not found
+                        credits = 30
+                        if credit_col and credit_col in row and pd.notna(row[credit_col]):
+                            try:
+                                credits = int(float(row[credit_col]))
+                            except (ValueError, TypeError):
+                                credits = 30
+                        
+                        if exam_no not in all_student_data:
+                            all_student_data[exam_no] = {'gpas': [], 'credits': [], 'semesters': []}
+                        
+                        all_student_data[exam_no]['gpas'].append(float(gpa_value))
+                        all_student_data[exam_no]['credits'].append(credits)
+                        all_student_data[exam_no]['semesters'].append(semester)
+                        
+                        if idx < 3:  # Log first few for debugging
+                            print(f"📊 Loaded GPA for {exam_no}: {gpa_value} with {credits} credits from {semester}")
+                            
+                    except (ValueError, TypeError) as e:
+                        print(f"⚠️ Error processing row {idx} for {semester}: {e}")
+                        continue
+            else:
+                print(f"⚠️ Missing required columns in {sheet_name}: exam_col={exam_col}, gpa_col={gpa_col}")
+                
         except Exception as e:
             print(f"⚠️ Could not load data from {semester}: {e}")
+            traceback.print_exc()
     
     print(f"📊 Loaded cumulative data for {len(all_student_data)} students")
     return all_student_data
 
 def calculate_cgpa(student_data, current_gpa, current_credits):
-    """Calculate Cumulative GPA - FIXED VERSION."""
+    """Calculate Cumulative GPA - ENHANCED FOR ALL SEMESTERS."""
     if not student_data or not student_data.get('gpas'):
         print(f"⚠️ No previous GPA data, using current GPA: {current_gpa}")
         return current_gpa
@@ -865,6 +894,19 @@ def calculate_cgpa(student_data, current_gpa, current_credits):
         print(f"⚠️ No credits, returning current GPA: {current_gpa}")
         return current_gpa
 
+def get_previous_semesters_for_display(current_semester_key):
+    """Get list of previous semesters for GPA display in mastersheet."""
+    current_standard = standardize_semester_key(current_semester_key)
+    
+    semester_mapping = {
+        "ND-First-YEAR-First-SEMESTER": [],
+        "ND-First-YEAR-SECOND-SEMESTER": ["Semester 1"],
+        "ND-SECOND-YEAR-First-SEMESTER": ["Semester 1", "Semester 2"], 
+        "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"]
+    }
+    
+    return semester_mapping.get(current_standard, [])
+
 def extract_semester_from_filename(filename):
     """Extract semester from filename using comprehensive pattern matching - FIXED."""
     filename_upper = filename.upper()
@@ -884,9 +926,16 @@ def extract_semester_from_filename(filename):
     semester_patterns = {
         "ND-First-YEAR-First-SEMESTER": [
             "FIRST.YEAR.FIRST.SEMESTER", "FIRST-YEAR-FIRST-SEMESTER",
-            # ... (keep existing patterns)
         ],
-        # ... (keep all existing pattern mappings)
+        "ND-First-YEAR-SECOND-SEMESTER": [
+            "FIRST.YEAR.SECOND.SEMESTER", "FIRST-YEAR-SECOND-SEMESTER",
+        ],
+        "ND-SECOND-YEAR-First-SEMESTER": [
+            "SECOND.YEAR.FIRST.SEMESTER", "SECOND-YEAR-FIRST-SEMESTER",
+        ],
+        "ND-SECOND-YEAR-SECOND-SEMESTER": [
+            "SECOND.YEAR.SECOND.SEMESTER", "SECOND-YEAR-SECOND-SEMESTER",
+        ]
     }
     
     for semester_key, patterns in semester_patterns.items():
@@ -1115,7 +1164,7 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
         
         print(f"📝 Exam columns - Resit: '{resit_exam_col}', Mastersheet: '{mastersheet_exam_col}'")
         
-        # Load previous GPAs for CGPA calculation
+        # Load previous GPAs for CGPA calculation - ENHANCED FOR ALL SEMESTERS
         cgpa_data = load_previous_gpas(temp_mastersheet_path, semester_key)
         
         # Create carryover mastersheet data structure
@@ -1154,7 +1203,7 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                 'CURRENT_CREDITS': current_credits
             }
             
-            # Calculate CGPA properly
+            # Calculate CGPA properly - ENHANCED FOR ALL SEMESTERS
             if exam_no in cgpa_data:
                 student_record['CURRENT_CGPA'] = calculate_cgpa(
                     cgpa_data[exam_no], 
@@ -1164,12 +1213,14 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
             else:
                 student_record['CURRENT_CGPA'] = student_record['CURRENT_GPA']
             
-            # Add previous GPAs (Semester 1, 2, 3 for Semester 4)
+            # Add previous GPAs for ALL semesters (not just Semester 4)
             if exam_no in cgpa_data:
                 student_gpa_data = cgpa_data[exam_no]
                 for i, prev_semester in enumerate(student_gpa_data['semesters']):
-                    sem_num = get_semester_display_info(prev_semester)[5]  # Get "Semester X"
-                    student_record[f'GPA_{sem_num}'] = student_gpa_data['gpas'][i]
+                    # Get semester display name (Semester 1, Semester 2, etc.)
+                    sem_display_name = get_semester_display_info(prev_semester)[5]
+                    student_record[f'GPA_{sem_display_name}'] = student_gpa_data['gpas'][i]
+                    print(f"📊 Stored GPA for {exam_no}: {sem_display_name} = {student_gpa_data['gpas'][i]}")
             
             # Process each course in resit file
             for col in resit_df.columns:
@@ -1257,7 +1308,7 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
             print("✅ Cleaned up temporary files")
 
 def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data, course_titles, course_units, course_code_to_title, course_code_to_unit):
-    """Generate the CARRYOVER_mastersheet with enhanced formatting, course titles, and credit units."""
+    """Generate the CARRYOVER_mastersheet with enhanced GPA tracking for ALL semesters."""
     
     # Create workbook
     wb = Workbook()
@@ -1275,52 +1326,61 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
         except Exception as e:
             print(f"⚠️ Could not add logo: {e}")
     
-    # Title and headers - UPDATED with RESIT and 2025/2026
-    current_year = 2025  # Hardcoded as requested
+    # Title and headers - UPDATED with dynamic GPA columns
+    current_year = 2025
     next_year = 2026
-    year, sem_num, level, sem_display, set_code, sem_name = get_semester_display_info(semester_key)
+    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
     
     # Calculate total columns needed for merging
     all_courses = set()
     for student in carryover_data:
         all_courses.update(student['RESIT_COURSES'].keys())
     
-    # Build headers structure to calculate total columns
+    # Get previous semesters for GPA display - DYNAMIC FOR ALL SEMESTERS
+    previous_semesters = get_previous_semesters_for_display(semester_key)
+    
+    # Build headers structure with dynamic GPA columns
     headers = ['S/N', 'EXAM NUMBER', 'NAME']
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        headers.extend(['GPA Semester 1', 'GPA Semester 2', 'GPA Semester 3'])
+    
+    # Add previous GPA columns dynamically
+    for prev_sem in previous_semesters:
+        headers.append(f'GPA {prev_sem}')
     
     course_headers = []
     for course in sorted(all_courses):
         course_headers.extend([f'{course}', f'{course}_RESIT'])
     
     headers.extend(course_headers)
-    headers.extend(['GPA Semester 4', 'CGPA', 'REMARKS'])
+    headers.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
     
     total_columns = len(headers)
     last_column = get_column_letter(total_columns)
     
-    # CENTRALIZED TITLE ROWS - merged across all columns
-    ws.merge_cells(f'A3:{last_column}3')  # Merge across all columns
+    # CENTRALIZED TITLE ROWS
+    ws.merge_cells(f'A3:{last_column}3')
     title_cell = ws['A3']
     title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
     title_cell.font = Font(bold=True, size=14)
     title_cell.alignment = Alignment(horizontal='center', vertical='center')
     
-    ws.merge_cells(f'A4:{last_column}4')  # Merge across all columns
+    ws.merge_cells(f'A4:{last_column}4')
     subtitle_cell = ws['A4']
     subtitle_cell.value = f"RESIT - {current_year}/{next_year} SESSION NATIONAL DIPLOMA {level} {sem_display} EXAMINATIONS RESULT — October 28, 2025"
     subtitle_cell.font = Font(bold=True, size=12)
     subtitle_cell.alignment = Alignment(horizontal='center', vertical='center')
     
     print(f"🔍 Courses found in resit data: {sorted(all_courses)}")
+    print(f"📊 GPA columns for {semester_key}: Previous={previous_semesters}, Current={current_semester_name}")
+    
+    # Build headers structure with course titles, codes, and credit units
+    print(f"🔍 Courses found in resit data: {sorted(all_courses)}")
     
     # Build headers structure with course titles, codes, and credit units
     headers = ['S/N', 'EXAM NUMBER', 'NAME']
     
-    # Add previous GPA columns (Semester 1, 2, 3 for Semester 4)
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        headers.extend(['GPA Semester 1', 'GPA Semester 2', 'GPA Semester 3'])
+    # Add previous GPA columns dynamically
+    for prev_sem in previous_semesters:
+        headers.append(f'GPA {prev_sem}')
     
     # Add course columns with titles, codes, and credit units
     course_headers = []
@@ -1342,14 +1402,14 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
         course_headers.extend([f'{course}', f'{course}_RESIT'])
     
     headers.extend(course_headers)
-    headers.extend(['GPA Semester 4', 'CGPA', 'REMARKS'])
+    headers.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
     
     # Write course titles row (row 5) with counterclockwise orientation
     title_row = [''] * 3  # S/N, EXAM NUMBER, NAME
     
     # Add previous GPA placeholders
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        title_row.extend(['', '', ''])  # GPA Semester 1, 2, 3
+    for prev_sem in previous_semesters:
+        title_row.extend([''])  # GPA placeholders
     
     # Add course titles with counterclockwise orientation
     for course in sorted(all_courses):
@@ -1358,7 +1418,7 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             course_title = course_title[:27] + "..."
         title_row.extend([course_title, course_title])  # Use title for both original and resit columns
     
-    title_row.extend(['', '', ''])  # GPA Semester 4, CGPA, REMARKS
+    title_row.extend(['', '', ''])  # GPA Current, CGPA, REMARKS
     
     ws.append(title_row)  # This is row 5
     
@@ -1366,15 +1426,15 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     credit_row = [''] * 3  # S/N, EXAM NUMBER, NAME
     
     # Add previous GPA placeholders
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        credit_row.extend(['', '', ''])  # GPA Semester 1, 2, 3
+    for prev_sem in previous_semesters:
+        credit_row.extend([''])  # GPA placeholders
     
     # Add credit units for each course
     for course in sorted(all_courses):
         credit_unit = course_unit_mapping[course]
         credit_row.extend([f'CU: {credit_unit}', f'CU: {credit_unit}'])  # Credit unit for both original and resit columns
     
-    credit_row.extend(['', '', ''])  # GPA Semester 4, CGPA, REMARKS
+    credit_row.extend(['', '', ''])  # GPA Current, CGPA, REMARKS
     
     ws.append(credit_row)  # This is row 6
     
@@ -1382,14 +1442,14 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     code_row = ['S/N', 'EXAM NUMBER', 'NAME']
     
     # Add previous GPA headers
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        code_row.extend(['GPA Semester 1', 'GPA Semester 2', 'GPA Semester 3'])
+    for prev_sem in previous_semesters:
+        code_row.append(f'GPA {prev_sem}')
     
     # Add course codes
     for course in sorted(all_courses):
         code_row.extend([f'{course}', f'{course}_RESIT'])
     
-    code_row.extend(['GPA Semester 4', 'CGPA', 'REMARKS'])
+    code_row.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
     
     ws.append(code_row)  # This is row 7
     
@@ -1409,8 +1469,8 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     
     # Apply colors to course columns in all header rows (5, 6, 7)
     start_col = 4  # Start after S/N, EXAM NUMBER, NAME
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        start_col += 3  # Skip GPA columns
+    if previous_semesters:  # Skip GPA columns if they exist
+        start_col += len(previous_semesters)
     
     color_index = 0
     for course in sorted(all_courses):
@@ -1450,19 +1510,20 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             )
         
         # Style GPA columns if they exist
-        if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-            for col in range(4, 7):  # GPA Semester 1, 2, 3
-                cell = ws.cell(row=row, column=col)
-                cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-                cell.font = Font(color="FFFFFF", bold=True)
-                cell.alignment = Alignment(horizontal='center', vertical='center')
-                cell.border = Border(
-                    left=Side(style='thin'), right=Side(style='thin'),
-                    top=Side(style='thin'), bottom=Side(style='thin')
-                )
+        gpa_col = 4
+        for prev_sem in previous_semesters:
+            cell = ws.cell(row=row, column=gpa_col)
+            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.font = Font(color="FFFFFF", bold=True)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = Border(
+                left=Side(style='thin'), right=Side(style='thin'),
+                top=Side(style='thin'), bottom=Side(style='thin')
+            )
+            gpa_col += 1
         
         # Style final GPA columns
-        for col in range(len(headers)-2, len(headers)+1):  # GPA Semester 4, CGPA, REMARKS
+        for col in range(len(headers)-2, len(headers)+1):  # GPA Current, CGPA, REMARKS
             cell = ws.cell(row=row, column=col)
             cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
             cell.font = Font(color="FFFFFF", bold=True)
@@ -1478,8 +1539,8 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     
     # Apply colors to data rows for course columns
     start_col = 4  # Reset start column
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        start_col += 3  # Skip GPA columns
+    if previous_semesters:  # Skip GPA columns if they exist
+        start_col += len(previous_semesters)
     
     for student in carryover_data:
         exam_no = student['EXAM NUMBER']
@@ -1489,13 +1550,12 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
         ws.cell(row=row_idx, column=2, value=student['EXAM NUMBER'])
         ws.cell(row=row_idx, column=3, value=student['NAME'])
         
-        # Previous GPAs
+        # Previous GPAs - DYNAMIC FOR ALL SEMESTERS
         gpa_col = 4
-        if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
-            for sem_num in ['Semester 1', 'Semester 2', 'Semester 3']:
-                gpa_value = student.get(f'GPA_{sem_num}', '')
-                ws.cell(row=row_idx, column=gpa_col, value=gpa_value)
-                gpa_col += 1
+        for prev_sem in previous_semesters:
+            gpa_value = student.get(f'GPA_{prev_sem}', '')
+            ws.cell(row=row_idx, column=gpa_col, value=gpa_value)
+            gpa_col += 1
         
         # Course scores - APPLY COLORS TO DATA ROWS
         course_col = gpa_col
@@ -1666,10 +1726,10 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             adjusted_width = 18
         elif col_idx == 3:  # NAME
             adjusted_width = 35  # Generous space for full names
-        elif col_idx >= 4 and col_idx <= (4 + (3 if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER" else 0)):
+        elif col_idx >= 4 and col_idx <= (4 + len(previous_semesters) - 1):
             # GPA columns
             adjusted_width = 15
-        elif col_idx >= len(headers) - 2:  # GPA Semester 4, CGPA, REMARKS
+        elif col_idx >= len(headers) - 2:  # GPA Current, CGPA, REMARKS
             adjusted_width = 15
         else:
             # Course columns - ensure they're wide enough for content
@@ -1688,9 +1748,9 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     
     # Color code GPA columns in data area for better distinction
     gpa_fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")  # Light purple
-    if semester_key == "ND-SECOND-YEAR-SECOND-SEMESTER":
+    if previous_semesters:
         for row in range(8, row_idx):  # CHANGED: Starting from row 8
-            for col in range(4, 7):  # GPA Semester 1, 2, 3 columns
+            for col in range(4, 4 + len(previous_semesters)):  # Previous GPA columns
                 cell = ws.cell(row=row, column=col)
                 if cell.fill.start_color.index == '00000000':
                     cell.fill = gpa_fill
@@ -1698,7 +1758,7 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     # Color code final GPA columns in data area
     final_gpa_fill = PatternFill(start_color="E0FFFF", end_color="E0FFFF", fill_type="solid")  # Light cyan
     for row in range(8, row_idx):  # CHANGED: Starting from row 8
-        for col in range(len(headers)-2, len(headers)+1):  # GPA Semester 4, CGPA, REMARKS
+        for col in range(len(headers)-2, len(headers)+1):  # GPA Current, CGPA, REMARKS
             cell = ws.cell(row=row, column=col)
             if cell.fill.start_color.index == '00000000':
                 cell.fill = final_gpa_fill
@@ -1750,7 +1810,7 @@ def generate_individual_reports(carryover_data, output_dir, semester_key, set_na
         report_data.append(["Name:", student['NAME']])
         report_data.append([])
         
-        # Previous GPAs
+        # Previous GPAs - ENHANCED FOR ALL SEMESTERS
         report_data.append(["PREVIOUS GPAs"])
         for key in sorted([k for k in student.keys() if k.startswith('GPA_')]):
             semester = key.replace('GPA_', '')

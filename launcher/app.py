@@ -1,4 +1,4 @@
-# app.py (Fully Fixed Version)
+# app.py (Fully Fixed Version with All-Semester GPA Tracking)
 import os
 import subprocess
 import re
@@ -148,6 +148,20 @@ def standardize_semester_key(semester_key):
     # If no match, return original
     logger.warning(f"Could not standardize semester key: {semester_key}")
     return semester_key
+
+# NEW: Helper function for GPA tracking across all semesters
+def get_previous_semesters_for_display(current_semester_key):
+    """Get list of previous semesters for GPA display in mastersheet."""
+    current_standard = standardize_semester_key(current_semester_key)
+    
+    semester_mapping = {
+        "ND-First-YEAR-First-SEMESTER": [],
+        "ND-First-YEAR-SECOND-SEMESTER": ["Semester 1"],
+        "ND-SECOND-YEAR-First-SEMESTER": ["Semester 1", "Semester 2"], 
+        "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"]
+    }
+    
+    return semester_mapping.get(current_standard, [])
 
 # Jinja2 filters
 def datetimeformat(timestamp):
