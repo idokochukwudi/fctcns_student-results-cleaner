@@ -506,6 +506,63 @@
             font-size: 1.1em;
         }
 
+        .carryover-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--danger);
+            margin-top: 15px;
+        }
+
+        .carryover-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .carryover-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
+            border: 2px solid #ffe3e3;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .carryover-card:hover {
+            border-color: var(--danger);
+            transform: translateY(-3px);
+            background: white;
+        }
+
+        .carryover-card h4 {
+            color: var(--danger);
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .carryover-stats {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--danger);
+            margin-bottom: 5px;
+        }
+
+        .carryover-card p {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 12px;
+        }
+
+        .no-carryover {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
         .footer {
             background: linear-gradient(135deg, var(--dark) 0%, #1a252f 100%);
             color: white;
@@ -633,6 +690,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .carryover-grid {
+                grid-template-columns: 1fr;
+            }
+
             .footer-content {
                 grid-template-columns: 1fr;
             }
@@ -671,6 +732,14 @@
                 <a href="{{ url_for('file_browser') }}">
                     <span class="nav-icon">📁</span>
                     <span>File Browser</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Student Management</div>
+                <a href="{{ url_for('carryover') }}">
+                    <span class="nav-icon">📚</span>
+                    <span>Carryover Students</span>
                 </a>
             </div>
 
@@ -771,6 +840,31 @@
                         </a>
                     </div>
                 </div>
+            </div>
+
+            <div class="carryover-section">
+                <h2>📚 Carryover Students Overview</h2>
+                <p>Summary of students with carryover courses across programs</p>
+                {% if carryover_summaries|length > 0 %}
+                    <div class="carryover-grid">
+                        {% for program, sets in carryover_summaries.items() %}
+                            {% for set_name, summary in sets.items() %}
+                                <div class="carryover-card">
+                                    <h4>{{ program }} - {{ set_name }}</h4>
+                                    <div class="carryover-stats">{{ summary.total_students }}</div>
+                                    <p>Students with carryovers</p>
+                                    <p>Total courses: {{ summary.total_courses }}</p>
+                                    <a href="{{ url_for('carryover') }}" class="btn btn-primary" style="width: 100%;">Manage Carryovers</a>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-carryover">
+                        <p>No carryover students found across all programs.</p>
+                        <p>Process results to generate carryover records.</p>
+                    </div>
+                {% endif %}
             </div>
 
             <div class="file-management-section">

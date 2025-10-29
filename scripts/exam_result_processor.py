@@ -2,7 +2,7 @@
 """
 exam_result_processor.py
 Complete script with integrated carryover student management.
-FIXED VERSION - Fixed 'env' variable reference issue and improved error handling
+FIXED VERSION - Regular carryover file generation without enhanced formatting
 """
 
 from openpyxl.cell import MergedCell
@@ -407,7 +407,7 @@ def find_best_course_match(column_name, course_map):
     return best_match
 
 # ----------------------------
-# Carryover Management Functions
+# Carryover Management Functions - UPDATED: No enhanced formatting
 # ----------------------------
 
 def initialize_carryover_tracker():
@@ -471,6 +471,7 @@ def identify_carryover_students(mastersheet_df, semester_key, set_name, pass_thr
 def save_carryover_records(carryover_students, output_dir, set_name, semester_key):
     """
     Save carryover student records to the clean results folder.
+    UPDATED: SIMPLE Excel structure WITHOUT enhanced formatting
     """
     if not carryover_students:
         print("ℹ️ No carryover students to save")
@@ -487,7 +488,7 @@ def save_carryover_records(carryover_students, output_dir, set_name, semester_ke
     # Save as Excel
     excel_file = os.path.join(carryover_dir, f"{filename}.xlsx")
     
-    # Prepare data for Excel
+    # Prepare data for Excel - simple structure without enhanced formatting
     records_data = []
     for student in carryover_students:
         for course in student['failed_courses']:
@@ -508,13 +509,44 @@ def save_carryover_records(carryover_students, output_dir, set_name, semester_ke
         df = pd.DataFrame(records_data)
         df.to_excel(excel_file, index=False)
         print(f"✅ Carryover records saved: {excel_file}")
+        
+        # UPDATED: NO enhanced formatting - keep it simple for regular processing
+        try:
+            # Just add basic header formatting without logo or title
+            wb = load_workbook(excel_file)
+            ws = wb.active
+            
+            # Simple header formatting only
+            header_row = ws[1]
+            for cell in header_row:
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+            
+            # Auto-adjust column widths for readability
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 30)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            wb.save(excel_file)
+            print("✅ Added basic formatting to carryover Excel file")
+            
+        except Exception as e:
+            print(f"⚠️ Could not add basic formatting to carryover file: {e}")
     
     # Save as JSON for easy processing
     json_file = os.path.join(carryover_dir, f"{filename}.json")
     with open(json_file, 'w') as f:
         json.dump(carryover_students, f, indent=2)
     
-    print(f"📁 Carryover records saved in: {carryover_dir}")
+    print(f"📁 Regular carryover records saved in: {carryover_dir}")
     return carryover_dir
 
 def check_existing_carryover_files(raw_dir, set_name, semester_key):
@@ -1075,7 +1107,7 @@ def get_grade(score):
         return 'F'
 
 def get_grade_point(score):
-    """Convert score to grade point for GPA calculation."""
+    """Convert score to grade point for GPA calculation - NIGERIAN 5.0 SCALE."""
     try:
         score = float(score)
         if score >= 70:

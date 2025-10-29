@@ -82,14 +82,14 @@
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
         <h2>FCTCNS</h2>
         <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
-        <a href="{{ url_for('list_downloads') }}" class="active">📥 Download Files</a>
-        <a href="{{ url_for('file_explorer') }}">📁 File Explorer</a>
-        <a href="{{ url_for('upload_files', script_name='exam_processor') }}">📤 Upload ND Files</a>
+        <a href="{{ url_for('download_center') }}" class="active">📥 Download Files</a>
+        <a href="{{ url_for('file_browser') }}">📁 File Explorer</a>
+        <a href="{{ url_for('upload_files', script_name='exam_processor_nd') }}">📤 Upload ND Files</a>
         <a href="{{ url_for('run_script', script_name='utme') }}">🎓 PUTME Processor</a>
         <a href="{{ url_for('run_script', script_name='caosce') }}">📊 CAOSCE Processor</a>
         <a href="{{ url_for('run_script', script_name='clean') }}">📝 Internal Exams</a>
         <a href="{{ url_for('run_script', script_name='split') }}">👥 JAMB Database</a>
-        <a href="{{ url_for('run_script', script_name='exam_processor') }}">🎯 ND Exam Processor</a>
+        <a href="{{ url_for('run_script', script_name='exam_processor_nd') }}">🎯 ND Exam Processor</a>
         <a href="{{ url_for('logout') }}">🚪 Logout</a>
     </div>
 
@@ -119,7 +119,7 @@
                 <h3>📤 Need to upload files first?</h3>
                 <p>Upload examination files for processing:</p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
-                    <a href="{{ url_for('upload_files', script_name='exam_processor') }}" class="btn btn-success">Upload ND Files</a>
+                    <a href="{{ url_for('upload_files', script_name='exam_processor_nd') }}" class="btn btn-success">Upload ND Files</a>
                     <a href="{{ url_for('upload_files', script_name='utme') }}" class="btn btn-primary">Upload PUTME</a>
                     <a href="{{ url_for('upload_files', script_name='clean') }}" class="btn btn-primary">Upload Internal</a>
                     <a href="{{ url_for('upload_files', script_name='caosce') }}" class="btn btn-primary">Upload CAOSCE</a>
@@ -145,8 +145,8 @@
                         📭 No processed files found.<br>
                         <small>Process some examination results first to see files here.</small>
                         <div style="margin-top: 20px;">
-                            <a href="{{ url_for('run_script', script_name='exam_processor') }}" class="btn btn-primary">Process ND Exams</a>
-                            <a href="{{ url_for('upload_files', script_name='exam_processor') }}" class="btn btn-success">Upload Files First</a>
+                            <a href="{{ url_for('run_script', script_name='exam_processor_nd') }}" class="btn btn-primary">Process ND Exams</a>
+                            <a href="{{ url_for('upload_files', script_name='exam_processor_nd') }}" class="btn btn-success">Upload Files First</a>
                         </div>
                     </div>
                 {% endif %}
