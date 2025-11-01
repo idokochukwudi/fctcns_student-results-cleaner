@@ -1,4 +1,5 @@
-# app.py (Fully Fixed Version with All-Semester GPA Tracking)
+# app.py (Fully Fixed Version with All-Semester GPA Tracking and UTME Fix)
+# app.py (Fully Fixed Version with All-Semester GPA Tracking and UTME Fix)
 import os
 import subprocess
 import re
@@ -106,19 +107,19 @@ def standardize_semester_key(semester_key):
     # Define canonical mappings
     canonical_mappings = {
         # First Year First Semester variants
-        ("FIRST", "YEAR", "FIRST", "SEMESTER"): "ND-First-YEAR-First-SEMESTER",
-        ("1ST", "YEAR", "1ST", "SEMESTER"): "ND-First-YEAR-First-SEMESTER",
-        ("YEAR", "1", "SEMESTER", "1"): "ND-First-YEAR-First-SEMESTER",
+        ("FIRST", "YEAR", "FIRST", "SEMESTER"): "ND-FIRST-YEAR-FIRST-SEMESTER",
+        ("1ST", "YEAR", "1ST", "SEMESTER"): "ND-FIRST-YEAR-FIRST-SEMESTER",
+        ("YEAR", "1", "SEMESTER", "1"): "ND-FIRST-YEAR-FIRST-SEMESTER",
         
         # First Year Second Semester variants
-        ("FIRST", "YEAR", "SECOND", "SEMESTER"): "ND-First-YEAR-SECOND-SEMESTER",
-        ("1ST", "YEAR", "2ND", "SEMESTER"): "ND-First-YEAR-SECOND-SEMESTER",
-        ("YEAR", "1", "SEMESTER", "2"): "ND-First-YEAR-SECOND-SEMESTER",
+        ("FIRST", "YEAR", "SECOND", "SEMESTER"): "ND-FIRST-YEAR-SECOND-SEMESTER",
+        ("1ST", "YEAR", "2ND", "SEMESTER"): "ND-FIRST-YEAR-SECOND-SEMESTER",
+        ("YEAR", "1", "SEMESTER", "2"): "ND-FIRST-YEAR-SECOND-SEMESTER",
         
         # Second Year First Semester variants
-        ("SECOND", "YEAR", "FIRST", "SEMESTER"): "ND-SECOND-YEAR-First-SEMESTER",
-        ("2ND", "YEAR", "1ST", "SEMESTER"): "ND-SECOND-YEAR-First-SEMESTER",
-        ("YEAR", "2", "SEMESTER", "1"): "ND-SECOND-YEAR-First-SEMESTER",
+        ("SECOND", "YEAR", "FIRST", "SEMESTER"): "ND-SECOND-YEAR-FIRST-SEMESTER",
+        ("2ND", "YEAR", "1ST", "SEMESTER"): "ND-SECOND-YEAR-FIRST-SEMESTER",
+        ("YEAR", "2", "SEMESTER", "1"): "ND-SECOND-YEAR-FIRST-SEMESTER",
         
         # Second Year Second Semester variants
         ("SECOND", "YEAR", "SECOND", "SEMESTER"): "ND-SECOND-YEAR-SECOND-SEMESTER",
@@ -137,11 +138,11 @@ def standardize_semester_key(semester_key):
     for pattern_idx, pattern in enumerate(patterns):
         if re.search(pattern, key_upper):
             if pattern_idx == 0:
-                return "ND-First-YEAR-First-SEMESTER"
+                return "ND-FIRST-YEAR-FIRST-SEMESTER"
             elif pattern_idx == 1:
-                return "ND-First-YEAR-SECOND-SEMESTER"
+                return "ND-FIRST-YEAR-SECOND-SEMESTER"
             elif pattern_idx == 2:
-                return "ND-SECOND-YEAR-First-SEMESTER"
+                return "ND-SECOND-YEAR-FIRST-SEMESTER"
             elif pattern_idx == 3:
                 return "ND-SECOND-YEAR-SECOND-SEMESTER"
     
@@ -155,9 +156,9 @@ def get_previous_semesters_for_display(current_semester_key):
     current_standard = standardize_semester_key(current_semester_key)
     
     semester_mapping = {
-        "ND-First-YEAR-First-SEMESTER": [],
-        "ND-First-YEAR-SECOND-SEMESTER": ["Semester 1"],
-        "ND-SECOND-YEAR-First-SEMESTER": ["Semester 1", "Semester 2"], 
+        "ND-FIRST-YEAR-FIRST-SEMESTER": [],
+        "ND-FIRST-YEAR-SECOND-SEMESTER": ["Semester 1"],
+        "ND-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"], 
         "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"]
     }
     
@@ -256,7 +257,7 @@ SCRIPT_MAP = {
     "exam_processor_nd": "exam_result_processor.py",
     "exam_processor_bn": "exam_processor_bn.py",
     "exam_processor_bm": "exam_processor_bm.py",
-    "integrated_carryover_processor": "integrated_carryover_processor.py",  # FIXED: Correct script
+    "integrated_carryover_processor": "integrated_carryover_processor.py"  # FIXED: Removed extra parenthesis
 }
 
 # Success indicators - Update for integrated_carryover_processor
@@ -334,6 +335,8 @@ SUCCESS_INDICATORS = {
 }
 
 ALLOWED_EXTENSIONS = {"xlsx", "xls", "csv", "zip", "pdf"}
+
+# ... rest of your code continues unchanged ...
 
 # Helper Functions
 def allowed_file(filename):
@@ -551,7 +554,7 @@ def check_internal_exam_files(input_dir):
     ]
     
     # Use whichever method gives us more files
-    final_files = list(set(all_files + pattern_files))
+    final_files = list(set(all_files + [os.path.join(input_dir, f) for f in pattern_files]))
     
     logger.info(f"Internal exam files found in {input_dir}: {len(final_files)} files")
     
@@ -1208,21 +1211,21 @@ def extract_semester_from_filename(filename):
     
     # Fallback to comprehensive pattern mapping
     semester_patterns = {
-        "ND-First-YEAR-First-SEMESTER": [
+        "ND-FIRST-YEAR-FIRST-SEMESTER": [
             "FIRST.YEAR.FIRST.SEMESTER", "FIRST-YEAR-FIRST-SEMESTER", "FIRST_YEAR_FIRST_SEMESTER",
             "1ST.YEAR.1ST.SEMESTER", "1ST-YEAR-1ST-SEMESTER", "1ST_YEAR_1ST_SEMESTER",
             "YEAR1.SEMESTER1", "YEAR-1-SEMESTER-1", "YEAR_1_SEMESTER_1",
             "FIRST.SEMESTER.FIRST.YEAR", "1ST.SEMESTER.1ST.YEAR",
             "ND-FIRST-YEAR-FIRST-SEMESTER", "ND-1ST-YEAR-1ST-SEMESTER"
         ],
-        "ND-First-YEAR-SECOND-SEMESTER": [
+        "ND-FIRST-YEAR-SECOND-SEMESTER": [
             "FIRST.YEAR.SECOND.SEMESTER", "FIRST-YEAR-SECOND-SEMESTER", "FIRST_YEAR_SECOND_SEMESTER",
             "1ST.YEAR.2ND.SEMESTER", "1ST-YEAR-2ND-SEMESTER", "1ST_YEAR_2ND_SEMESTER",
             "YEAR1.SEMESTER2", "YEAR-1-SEMESTER-2", "YEAR_1_SEMESTER_2",
             "SECOND.SEMESTER.FIRST.YEAR", "2ND.SEMESTER.1ST.YEAR",
             "ND-FIRST-YEAR-SECOND-SEMESTER", "ND-1ST-YEAR-2ND-SEMESTER"
         ],
-        "ND-SECOND-YEAR-First-SEMESTER": [
+        "ND-SECOND-YEAR-FIRST-SEMESTER": [
             "SECOND.YEAR.FIRST.SEMESTER", "SECOND-YEAR-FIRST-SEMESTER", "SECOND_YEAR_FIRST_SEMESTER",
             "2ND.YEAR.1ST.SEMESTER", "2ND-YEAR-1ST-SEMESTER", "2ND_YEAR_1ST_SEMESTER",
             "YEAR2.SEMESTER1", "YEAR-2-SEMESTER-1", "YEAR_2_SEMESTER_1",
@@ -1240,7 +1243,7 @@ def extract_semester_from_filename(filename):
     
     for semester_key, patterns in semester_patterns.items():
         for pattern in patterns:
-            flexible_pattern = pattern.replace('.', '[._\\- ]?')
+            flexible_pattern = pattern.replace('.', '[ ._ -]?')
             if re.search(flexible_pattern, filename_upper, re.IGNORECASE):
                 logger.info(f"✅ Matched semester '{semester_key}' for filename: {filename}")
                 return semester_key
@@ -1354,13 +1357,16 @@ def debug_resit_processing_details(program_code, set_name, semester_key, resit_f
     
     return debug_info
 
+# ============================================================================
+# FIXED: cleanup_scattered_files function - UPDATED VERSION
+# ============================================================================
 def cleanup_scattered_files(clean_dir, zip_filename):
     """Remove all scattered files and folders after successful zipping"""
     try:
         # Remove any result directories
         for item in os.listdir(clean_dir):
             item_path = os.path.join(clean_dir, item)
-            if os.path.isdir(item_path) and (item.startswith(f"{item.split('_')[0]}_RESULT-") or "RESULT" in item):
+            if os.path.isdir(item_path) and (item.startswith("UTME_RESULT-") or "RESULT" in item):
                 shutil.rmtree(item_path)
                 logger.info(f"Removed scattered folder: {item_path}")
             
@@ -1454,17 +1460,17 @@ def get_available_semesters(result_path):
             
             # Comprehensive semester detection patterns
             semester_patterns = {
-                "ND-First-YEAR-First-SEMESTER": [
+                "ND-FIRST-YEAR-FIRST-SEMESTER": [
                     "FIRST.YEAR.FIRST.SEMESTER", "FIRST-YEAR-FIRST-SEMESTER", "FIRST_YEAR_FIRST_SEMESTER",
                     "1ST.YEAR.1ST.SEMESTER", "1ST-YEAR-1ST-SEMESTER", "1ST_YEAR_1ST_SEMESTER",
                     "YEAR1.SEMESTER1", "YEAR-1-SEMESTER-1", "YEAR_1_SEMESTER_1"
                 ],
-                "ND-First-YEAR-SECOND-SEMESTER": [
+                "ND-FIRST-YEAR-SECOND-SEMESTER": [
                     "FIRST.YEAR.SECOND.SEMESTER", "FIRST-YEAR-SECOND-SEMESTER", "FIRST_YEAR_SECOND_SEMESTER",
                     "1ST.YEAR.2ND.SEMESTER", "1ST-YEAR-2ND-SEMESTER", "1ST_YEAR_2ND_SEMESTER",
                     "YEAR1.SEMESTER2", "YEAR-1-SEMESTER-2", "YEAR_1_SEMESTER_2"
                 ],
-                "ND-SECOND-YEAR-First-SEMESTER": [
+                "ND-SECOND-YEAR-FIRST-SEMESTER": [
                     "SECOND.YEAR.FIRST.SEMESTER", "SECOND-YEAR-FIRST-SEMESTER", "SECOND_YEAR_FIRST_SEMESTER",
                     "2ND.YEAR.1ST.SEMESTER", "2ND-YEAR-1ST-SEMESTER", "2ND_YEAR_1ST_SEMESTER",
                     "YEAR2.SEMESTER1", "YEAR-2-SEMESTER-1", "YEAR_2_SEMESTER_1"
@@ -1478,7 +1484,7 @@ def get_available_semesters(result_path):
             
             for semester, patterns in semester_patterns.items():
                 for pattern in patterns:
-                    flexible_pattern = pattern.replace('.', '[._\\- ]?')
+                    flexible_pattern = pattern.replace('.', '[ ._ -]?')
                     if re.search(flexible_pattern, item_upper, re.IGNORECASE):
                         return semester
             
@@ -2474,42 +2480,102 @@ def run_script(script_name):
             is_carryover_processing = processing_type == "carryover"
             
             if script_name == "utme":
+                # ============================================================================
+                # FIXED: UTME Section - Updated version with proper zipping and cleanup
+                # ============================================================================
                 clean_dir = get_clean_directory(script_name)
                 before_files = set(os.listdir(clean_dir)) if os.path.exists(clean_dir) else set()
+                
                 convert_value = request.form.get("convert_value", "").strip()
-                convert_column = request.form.get("convert_column", "n")
-                cmd = ["python3", script_path]
+                cmd = [sys.executable, script_path, "--non-interactive"]
                 if convert_value:
-                    cmd.extend(["--non-interactive", "--converted-score-max", convert_value])
+                    cmd.extend(["--converted-score-max", convert_value])
+                
                 result = subprocess.run(
                     cmd,
-                    input=f"{convert_column}\n",
                     text=True,
                     capture_output=True,
-                    check=True,
                     timeout=300,
                     env=env
                 )
+
                 output_lines = result.stdout.splitlines()
+                error_lines = result.stderr.splitlines()
+
+                # Log always
+                logger.info("=== SCRIPT STDOUT ===")
+                for line in output_lines:
+                    logger.info(line)
+                logger.info("=== SCRIPT STDERR ===")
+                for line in error_lines:
+                    logger.info(line)
+
+                if result.returncode != 0:
+                    error_msg = "Script failed. Check logs for details."
+                    if error_lines:
+                        error_msg += f" Error: {error_lines[-1]}"  # Last error line
+                    flash(error_msg, "error")
+                    app.logger.error(f"Script {script_name} failed with output: {result.stdout}")
+                    app.logger.error(f"Script {script_name} stderr: {result.stderr}")
+                    return redirect(url_for("dashboard"))
+                
                 processed_files = count_processed_files(output_lines, script_name)
                 success_msg = get_success_message(script_name, processed_files, output_lines)
+                
                 if success_msg:
                     flash(success_msg, "success")
                 else:
                     flash(f"No files processed for {script_desc}. Check input files in {input_dir}.", "error")
+                
                 if result.returncode == 0:
-                    after_files = set(os.listdir(clean_dir))
-                    new_files = after_files - before_files
-                    if new_files:
-                        zip_filename = f"utme_processed_{datetime.now().strftime('%d%m%Y_%H%M%S')}.zip"
-                        zip_path = os.path.join(clean_dir, zip_filename)
-                        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_f:
-                            for file in new_files:
-                                file_path = os.path.join(clean_dir, file)
-                                zip_f.write(file_path, file)
-                        # Clean up scattered files
-                        cleanup_scattered_files(clean_dir, zip_filename)
-                        flash(f"Zipped results ready: {zip_filename}", "success")
+                    # Find the timestamped result folder
+                    result_folders = [f for f in os.listdir(clean_dir) 
+                                     if f.startswith("UTME_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
+                    
+                    if result_folders:
+                        latest_folder = sorted(result_folders)[-1]
+                        folder_path = os.path.join(clean_dir, latest_folder)
+                        
+                        # Collect all files from the result folder
+                        all_files = []
+                        for root, dirs, files in os.walk(folder_path):
+                            for file in files:
+                                if file.lower().endswith(('.xlsx', '.csv', '.pdf')):
+                                    all_files.append(os.path.join(root, file))
+                        
+                        if all_files:
+                            zip_filename = f"utme_processed_{datetime.now().strftime('%d%m%Y_%H%M%S')}.zip"
+                            zip_path = os.path.join(clean_dir, zip_filename)
+                            
+                            try:
+                                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_f:
+                                    for file_path in all_files:
+                                        # Create archive path relative to result folder
+                                        arcname = os.path.relpath(file_path, folder_path)
+                                        zip_f.write(file_path, arcname)
+                                        logger.info(f"Added to ZIP: {arcname}")
+                                
+                                # Verify ZIP file
+                                if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
+                                    flash(f"Zipped results ready: {zip_filename} ({len(all_files)} files)", "success")
+                                    logger.info(f"Created ZIP: {zip_path} with {len(all_files)} files")
+                                    
+                                    # Clean up scattered files
+                                    cleanup_scattered_files(clean_dir, zip_filename)
+                                else:
+                                    logger.error(f"ZIP file is empty or too small: {zip_path}")
+                                    flash(f"Warning: ZIP file created but may be empty", "warning")
+                                    
+                            except Exception as e:
+                                logger.error(f"Failed to create ZIP: {e}")
+                                flash(f"Failed to create ZIP file: {str(e)}", "error")
+                        else:
+                            logger.warning(f"No result files found in {folder_path}")
+                            flash("Processing completed but no result files were generated", "warning")
+                    else:
+                        logger.warning(f"No result folder found in {clean_dir}")
+                        flash("Processing completed but result folder not found", "warning")
+                
                 return redirect(url_for("dashboard"))
                 
             elif script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "integrated_carryover_processor"]:
@@ -2595,14 +2661,26 @@ def run_script(script_name):
                     timeout=600,
                 )
                 
+                output_lines = result.stdout.splitlines()
+                error_lines = result.stderr.splitlines()
+
+                # Log always
                 logger.info("=== SCRIPT STDOUT ===")
-                for line in result.stdout.splitlines():
+                for line in output_lines:
                     logger.info(line)
                 logger.info("=== SCRIPT STDERR ===")
-                for line in result.stderr.splitlines():
+                for line in error_lines:
                     logger.info(line)
-                    
-                output_lines = result.stdout.splitlines()
+
+                if result.returncode != 0:
+                    error_msg = "Script failed. Check logs for details."
+                    if error_lines:
+                        error_msg += f" Error: {error_lines[-1]}"  # Last error line
+                    flash(error_msg, "error")
+                    app.logger.error(f"Script {script_name} failed with output: {result.stdout}")
+                    app.logger.error(f"Script {script_name} stderr: {result.stderr}")
+                    return redirect(url_for("dashboard"))
+                
                 processed_files = count_processed_files(output_lines, script_name, selected_set)
                 success_msg = get_success_message(script_name, processed_files, output_lines, selected_set)
                 
@@ -2684,6 +2762,25 @@ def run_script(script_name):
                 )
                 
                 output_lines = result.stdout.splitlines()
+                error_lines = result.stderr.splitlines()
+
+                # Log always
+                logger.info("=== SCRIPT STDOUT ===")
+                for line in output_lines:
+                    logger.info(line)
+                logger.info("=== SCRIPT STDERR ===")
+                for line in error_lines:
+                    logger.info(line)
+
+                if result.returncode != 0:
+                    error_msg = "Script failed. Check logs for details."
+                    if error_lines:
+                        error_msg += f" Error: {error_lines[-1]}"  # Last error line
+                    flash(error_msg, "error")
+                    app.logger.error(f"Script {script_name} failed with output: {result.stdout}")
+                    app.logger.error(f"Script {script_name} stderr: {result.stderr}")
+                    return redirect(url_for("dashboard"))
+                
                 processed_files = count_processed_files(output_lines, script_name)
                 success_msg = get_success_message(script_name, processed_files, output_lines)
                 

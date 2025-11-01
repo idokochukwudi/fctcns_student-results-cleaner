@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-integrated_carryover_processor.py - COMPLETE FIXED VERSION
-Fixed Issues:
-1. Typo on line 262: .ast(str) -> .astype(str) 
-2. Enhanced course code normalization for better matching
-3. Added comprehensive debug logging
-4. Improved course title/unit lookup with fallback strategies
+integrated_carryover_processor_bn.py - BASIC NURSING CARRYOVER PROCESSOR
+Enhanced to track GPA for all BN semesters with comprehensive carryover management.
+Refactored from ND version for Basic Nursing program.
 """
 
 import os
@@ -25,34 +22,14 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 def standardize_semester_key(semester_key):
-    """Standardize semester key to canonical format for all programs."""
+    """Standardize BN semester key to canonical format."""
     if not semester_key:
         return None
     
     key_upper = semester_key.upper()
     
-    # Define canonical mappings for all programs
+    # Define canonical mappings for BN
     canonical_mappings = {
-        # ND First Year First Semester variants
-        ("FIRST", "YEAR", "FIRST", "SEMESTER"): "ND-FIRST-YEAR-FIRST-SEMESTER",
-        ("1ST", "YEAR", "1ST", "SEMESTER"): "ND-FIRST-YEAR-FIRST-SEMESTER",
-        ("YEAR", "1", "SEMESTER", "1"): "ND-FIRST-YEAR-FIRST-SEMESTER",
-        
-        # ND First Year Second Semester variants
-        ("FIRST", "YEAR", "SECOND", "SEMESTER"): "ND-FIRST-YEAR-SECOND-SEMESTER",
-        ("1ST", "YEAR", "2ND", "SEMESTER"): "ND-FIRST-YEAR-SECOND-SEMESTER",
-        ("YEAR", "1", "SEMESTER", "2"): "ND-FIRST-YEAR-SECOND-SEMESTER",
-        
-        # ND Second Year First Semester variants
-        ("SECOND", "YEAR", "FIRST", "SEMESTER"): "ND-SECOND-YEAR-FIRST-SEMESTER",
-        ("2ND", "YEAR", "1ST", "SEMESTER"): "ND-SECOND-YEAR-FIRST-SEMESTER",
-        ("YEAR", "2", "SEMESTER", "1"): "ND-SECOND-YEAR-FIRST-SEMESTER",
-        
-        # ND Second Year Second Semester variants
-        ("SECOND", "YEAR", "SECOND", "SEMESTER"): "ND-SECOND-YEAR-SECOND-SEMESTER",
-        ("2ND", "YEAR", "2ND", "SEMESTER"): "ND-SECOND-YEAR-SECOND-SEMESTER",
-        ("YEAR", "2", "SEMESTER", "2"): "ND-SECOND-YEAR-SECOND-SEMESTER",
-
         # BN First Year First Semester variants
         ("BN", "FIRST", "YEAR", "FIRST", "SEMESTER"): "BN-FIRST-YEAR-FIRST-SEMESTER",
         ("BN", "1ST", "YEAR", "1ST", "SEMESTER"): "BN-FIRST-YEAR-FIRST-SEMESTER",
@@ -84,14 +61,8 @@ def standardize_semester_key(semester_key):
         ("BN", "YEAR", "3", "SEMESTER", "2"): "BN-THIRD-YEAR-SECOND-SEMESTER",
     }
     
-    # Extract key components using regex for all programs
+    # Extract key components using regex for BN
     patterns = [
-        # ND patterns
-        r'(FIRST|1ST|YEAR.?1).*?(FIRST|1ST|SEMESTER.?1)',
-        r'(FIRST|1ST|YEAR.?1).*?(SECOND|2ND|SEMESTER.?2)',
-        r'(SECOND|2ND|YEAR.?2).*?(FIRST|1ST|SEMESTER.?1)',
-        r'(SECOND|2ND|YEAR.?2).*?(SECOND|2ND|SEMESTER.?2)',
-        # BN patterns
         r'(BN[-_]?(?:FIRST|1ST|YEAR.?1).*?(FIRST|1ST|SEMESTER.?1))',
         r'(BN[-_]?(?:FIRST|1ST|YEAR.?1).*?(SECOND|2ND|SEMESTER.?2))',
         r'(BN[-_]?(?:SECOND|2ND|YEAR.?2).*?(FIRST|1ST|SEMESTER.?1))',
@@ -103,44 +74,26 @@ def standardize_semester_key(semester_key):
     for pattern_idx, pattern in enumerate(patterns):
         if re.search(pattern, key_upper):
             if pattern_idx == 0:
-                return "ND-FIRST-YEAR-FIRST-SEMESTER"
-            elif pattern_idx == 1:
-                return "ND-FIRST-YEAR-SECOND-SEMESTER"
-            elif pattern_idx == 2:
-                return "ND-SECOND-YEAR-FIRST-SEMESTER"
-            elif pattern_idx == 3:
-                return "ND-SECOND-YEAR-SECOND-SEMESTER"
-            elif pattern_idx == 4:
                 return "BN-FIRST-YEAR-FIRST-SEMESTER"
-            elif pattern_idx == 5:
+            elif pattern_idx == 1:
                 return "BN-FIRST-YEAR-SECOND-SEMESTER"
-            elif pattern_idx == 6:
+            elif pattern_idx == 2:
                 return "BN-SECOND-YEAR-FIRST-SEMESTER"
-            elif pattern_idx == 7:
+            elif pattern_idx == 3:
                 return "BN-SECOND-YEAR-SECOND-SEMESTER"
-            elif pattern_idx == 8:
+            elif pattern_idx == 4:
                 return "BN-THIRD-YEAR-FIRST-SEMESTER"
-            elif pattern_idx == 9:
+            elif pattern_idx == 5:
                 return "BN-THIRD-YEAR-SECOND-SEMESTER"
     
     # If no match, return original
-    print(f"Could not standardize semester key: {semester_key}")
+    print(f"Could not standardize BN semester key: {semester_key}")
     return semester_key
 
 def get_previous_semester(semester_key):
-    """Get the previous semester key for carryover for all programs."""
+    """Get the previous semester key for BN carryover."""
     standardized = standardize_semester_key(semester_key)
-    
-    # ND semesters
-    if standardized == "ND-FIRST-YEAR-SECOND-SEMESTER":
-        return "ND-FIRST-YEAR-FIRST-SEMESTER"
-    elif standardized == "ND-SECOND-YEAR-FIRST-SEMESTER":
-        return "ND-FIRST-YEAR-SECOND-SEMESTER"
-    elif standardized == "ND-SECOND-YEAR-SECOND-SEMESTER":
-        return "ND-SECOND-YEAR-FIRST-SEMESTER"
-    
-    # BN semesters
-    elif standardized == "BN-FIRST-YEAR-SECOND-SEMESTER":
+    if standardized == "BN-FIRST-YEAR-SECOND-SEMESTER":
         return "BN-FIRST-YEAR-FIRST-SEMESTER"
     elif standardized == "BN-SECOND-YEAR-FIRST-SEMESTER":
         return "BN-FIRST-YEAR-SECOND-SEMESTER"
@@ -154,10 +107,10 @@ def get_previous_semester(semester_key):
         return None  # No previous for first semester
 
 # ----------------------------
-# Configuration
+# BN Configuration
 # ----------------------------
 def get_base_directory():
-    """Get base directory - ENHANCED VERSION."""
+    """Get base directory - ENHANCED VERSION FOR BN."""
     # First try environment variable
     if os.getenv('BASE_DIR'):
         base_dir = os.getenv('BASE_DIR')
@@ -204,45 +157,97 @@ def find_exam_number_column(df):
                 return col
     return None
 
-# Course Data Loading for different programs
-def load_course_data(program):
-    """Load course data for the specified program."""
-    if program == "BN":
-        return load_bn_course_data()
-    else:  # ND, BM, etc.
-        return load_nd_course_data()
+# NEW: Enhanced debugging function for BN course matching
+def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_unit):
+    """Debug function to specifically check why BN course codes aren't matching."""
+    print(f"\n🔍 DEBUGGING BN COURSE MATCHING")
+    print("=" * 50)
+    
+    # Read resit file to see what course codes we have
+    resit_df = pd.read_excel(resit_file_path, header=0)
+    resit_exam_col = find_exam_number_column(resit_df)
+    
+    # Get all course codes from resit file (excluding exam number and name columns)
+    resit_courses = []
+    for col in resit_df.columns:
+        if col != resit_exam_col and col != 'NAME' and not 'Unnamed' in str(col):
+            resit_courses.append(col)
+    
+    print(f"📋 BN Course codes from resit file: {resit_courses}")
+    print(f"📊 Total courses in BN resit file: {len(resit_courses)}")
+    
+    # Check each resit course against course file
+    for course in resit_courses:
+        print(f"\n🔍 Checking BN course: '{course}'")
+        original_code = str(course).strip()
+        
+        # Generate the same variants as in find_course_title
+        variants = [
+            original_code.upper().strip(),
+            original_code.strip(),
+            original_code.upper(),
+            original_code,
+            original_code.upper().replace(' ', ''),
+            original_code.replace(' ', ''),
+            re.sub(r'\s+', '', original_code.upper()),
+            re.sub(r'\s+', '', original_code),
+            re.sub(r'[^a-zA-Z0-9]', '', original_code.upper()),
+            re.sub(r'[^a-zA-Z0-9]', '', original_code),
+            original_code.upper().replace('-', ''),
+            original_code.upper().replace('_', ''),
+            original_code.replace('-', '').replace('_', ''),
+            original_code.lower(),
+            original_code.title(),
+        ]
+        
+        # Remove duplicates
+        variants = list(dict.fromkeys([v for v in variants if v and v != 'NAN']))
+        
+        print(f"   Trying variants: {variants}")
+        
+        found = False
+        for variant in variants:
+            if variant in course_code_to_title:
+                title = course_code_to_title[variant]
+                unit = course_code_to_unit.get(variant, 0)
+                print(f"   ✅ FOUND: '{variant}' -> '{title}' (CU: {unit})")
+                found = True
+                break
+        
+        if not found:
+            print(f"   ❌ NOT FOUND: No match for '{course}'")
+            # Show some similar keys that exist
+            similar_keys = [k for k in course_code_to_title.keys() if course.upper()[:3] in k.upper()]
+            if similar_keys:
+                print(f"   💡 Similar keys in BN course file: {similar_keys[:5]}")
+            else:
+                print(f"   💡 Available keys sample: {list(course_code_to_title.keys())[:10]}")
 
-def load_nd_course_data():
-    """Load ND course data from course-code-creditUnit.xlsx."""
-    possible_course_files = [
-        os.path.join(BASE_DIR, "EXAMS_INTERNAL", "ND", "ND-COURSES", "course-code-creditUnit.xlsx"),
-        os.path.join(BASE_DIR, "ND", "ND-COURSES", "course-code-creditUnit.xlsx"),
-        os.path.join(BASE_DIR, "EXAMS_INTERNAL", "ND-COURSES", "course-code-creditUnit.xlsx"),
-        os.path.join(BASE_DIR, "course-code-creditUnit.xlsx"),
+# NEW: Function to find alternative BN course files
+def find_alternative_course_files():
+    """Look for alternative BN course files in case the main one is wrong."""
+    base_dirs = [
+        os.path.join(BASE_DIR, "EXAMS_INTERNAL", "BN", "BN-COURSES"),
+        os.path.join(BASE_DIR, "BN", "BN-COURSES"),
+        os.path.join(BASE_DIR, "COURSES"),
+        os.path.join(BASE_DIR, "EXAMS_INTERNAL"),
     ]
     
-    course_file = None
-    for possible_file in possible_course_files:
-        if os.path.exists(possible_file):
-            course_file = possible_file
-            print(f"✅ Found ND course file: {course_file}")
-            break
+    course_files = []
+    for base_dir in base_dirs:
+        if os.path.exists(base_dir):
+            for file in os.listdir(base_dir):
+                if 'course' in file.lower() and file.endswith(('.xlsx', '.xls')):
+                    full_path = os.path.join(base_dir, file)
+                    course_files.append(full_path)
+                    print(f"📁 Found BN course file: {full_path}")
     
-    if not course_file:
-        print(f"❌ Main ND course file not found in standard locations")
-        alternative_files = find_alternative_course_files("ND")
-        if alternative_files:
-            course_file = alternative_files[0]
-            print(f"🔄 Using alternative ND course file: {course_file}")
-        else:
-            print("❌ No ND course files found anywhere!")
-            return {}, {}, {}, {}
-    
-    print(f"📚 Loading ND course data from: {course_file}")
-    return _load_course_data_from_file(course_file)
+    return course_files
 
+# ENHANCED: BN Course Data Loading with multiple file support
 def load_bn_course_data():
-    """Load BN course data from N-course-code-creditUnit.xlsx."""
+    """Load BN course data from N-course-code-creditUnit.xlsx with enhanced matching and multiple file support."""
+    # Try multiple possible BN course file locations
     possible_course_files = [
         os.path.join(BASE_DIR, "EXAMS_INTERNAL", "BN", "BN-COURSES", "N-course-code-creditUnit.xlsx"),
         os.path.join(BASE_DIR, "BN", "BN-COURSES", "N-course-code-creditUnit.xlsx"),
@@ -257,9 +262,10 @@ def load_bn_course_data():
             print(f"✅ Found BN course file: {course_file}")
             break
     
+    # If main file doesn't exist, try alternative files
     if not course_file:
         print(f"❌ Main BN course file not found in standard locations")
-        alternative_files = find_alternative_course_files("BN")
+        alternative_files = find_alternative_course_files()
         if alternative_files:
             course_file = alternative_files[0]
             print(f"🔄 Using alternative BN course file: {course_file}")
@@ -268,10 +274,7 @@ def load_bn_course_data():
             return {}, {}, {}, {}
     
     print(f"📚 Loading BN course data from: {course_file}")
-    return _load_course_data_from_file(course_file)
-
-def _load_course_data_from_file(course_file):
-    """Generic function to load course data from Excel file - FIXED VERSION."""
+    
     try:
         xl = pd.ExcelFile(course_file)
         semester_course_titles = {}
@@ -283,12 +286,17 @@ def _load_course_data_from_file(course_file):
         
         for sheet in xl.sheet_names:
             sheet_standard = standardize_semester_key(sheet)
-            print(f"📖 Reading sheet: {sheet} (standardized: {sheet_standard})")
+            print(f"📖 Reading BN sheet: {sheet} (standardized: {sheet_standard})")
             try:
                 df = pd.read_excel(course_file, sheet_name=sheet, engine='openpyxl', header=0)
                 
+                # Print raw columns for debugging
+                print(f"🔍 Raw columns in BN sheet '{sheet}': {list(df.columns)}")
+                
                 # Convert columns to string and clean
                 df.columns = [str(c).strip().upper() for c in df.columns]
+                
+                print(f"🔍 Cleaned columns in BN sheet '{sheet}': {list(df.columns)}")
                 
                 # Look for course code, title, and credit unit columns with flexible matching
                 code_col = None
@@ -307,41 +315,41 @@ def _load_course_data_from_file(course_file):
                 print(f"🔍 Detected columns - Code: {code_col}, Title: {title_col}, Unit: {unit_col}")
                 
                 if not all([code_col, title_col, unit_col]):
-                    print(f"⚠️ Sheet '{sheet}' missing required columns - found: code={code_col}, title={title_col}, unit={unit_col}")
+                    print(f"⚠️ BN Sheet '{sheet}' missing required columns - found: code={code_col}, title={title_col}, unit={unit_col}")
                     # Try to use first three columns as fallback
                     if len(df.columns) >= 3:
                         code_col, title_col, unit_col = df.columns[0], df.columns[1], df.columns[2]
                         print(f"🔄 Using fallback columns: {code_col}, {title_col}, {unit_col}")
                     else:
-                        print(f"❌ Sheet '{sheet}' doesn't have enough columns - skipped")
+                        print(f"❌ BN Sheet '{sheet}' doesn't have enough columns - skipped")
                         continue
                 
                 # Clean the data
                 df_clean = df.dropna(subset=[code_col]).copy()
                 if df_clean.empty:
-                    print(f"⚠️ Sheet '{sheet}' has no data after cleaning - skipped")
+                    print(f"⚠️ BN Sheet '{sheet}' has no data after cleaning - skipped")
                     continue
                 
                 # Convert credit units to numeric, handling errors
                 df_clean[unit_col] = pd.to_numeric(df_clean[unit_col], errors='coerce')
                 df_clean = df_clean.dropna(subset=[unit_col])
                 
-                # FIXED: Remove rows with "TOTAL" in course code (typo fixed: .ast -> .astype)
+                # Remove rows with "TOTAL" in course code
                 df_clean = df_clean[~df_clean[code_col].astype(str).str.contains('TOTAL', case=False, na=False)]
                 
                 if df_clean.empty:
-                    print(f"⚠️ Sheet '{sheet}' has no valid rows after cleaning - skipped")
+                    print(f"⚠️ BN Sheet '{sheet}' has no valid rows after cleaning - skipped")
                     continue
                 
                 codes = df_clean[code_col].astype(str).str.strip().tolist()
                 titles = df_clean[title_col].astype(str).str.strip().tolist()
                 units = df_clean[unit_col].astype(float).tolist()
 
-                print(f"📋 Found {len(codes)} courses in {sheet}:")
+                print(f"📋 Found {len(codes)} BN courses in {sheet}:")
                 for i, (code, title, unit) in enumerate(zip(codes[:5], titles[:5], units[:5])):
                     print(f"   - '{code}': '{title}' (CU: {unit})")
 
-                # Create mapping dictionaries with ENHANCED normalization strategies
+                # Create mapping dictionaries with multiple normalization strategies
                 sheet_titles = {}
                 sheet_units = {}
                 
@@ -349,55 +357,27 @@ def _load_course_data_from_file(course_file):
                     if not code or code.upper() in ['NAN', 'NONE', '']:
                         continue
                     
-                    # ENHANCED: Create comprehensive normalization variants for robust matching
+                    # Create multiple normalization variants for robust matching
                     variants = [
-                        # Basic variants
+                        # Original variations
                         code.upper().strip(),
                         code.strip(),
-                        code.upper(),
-                        code.lower(),
-                        code.title(),
-                        
-                        # Space removal variants
-                        code.upper().replace(' ', ''),
-                        code.replace(' ', ''),
-                        re.sub(r'\s+', '', code.upper()),
-                        re.sub(r'\s+', '', code),
-                        
-                        # Special character removal (keep only alphanumeric)
+                        # Remove all spaces and special characters
                         re.sub(r'[^a-zA-Z0-9]', '', code.upper()),
                         re.sub(r'[^a-zA-Z0-9]', '', code),
-                        
-                        # Dash and underscore variants
-                        code.upper().replace('-', ''),
-                        code.upper().replace('_', ''),
+                        # Common formatting variations
+                        code.upper().replace(' ', ''),
+                        code.replace(' ', ''),
+                        # Handle case variations
+                        code.lower(),
+                        code.upper(),
+                        # Additional variants for edge cases
+                        code.upper().replace('-', '').replace('_', ''),
                         code.replace('-', '').replace('_', ''),
-                        code.upper().replace('-', '').replace('_', '').replace(' ', ''),
-                        
-                        # WITH common prefixes (for matching with prefix)
-                        f"NUR{code.upper()}",
-                        f"NUR{code.upper().replace(' ', '')}",
-                        f"NUR{re.sub(r'[^a-zA-Z0-9]', '', code.upper())}",
-                        f"NSC{code.upper()}",
-                        f"NSC{code.upper().replace(' ', '')}",
-                        f"NSC{re.sub(r'[^a-zA-Z0-9]', '', code.upper())}",
-                        
-                        # WITHOUT common prefixes (for matching without prefix)
-                        code.upper().replace('NUR', '').strip(),
-                        code.upper().replace('NSC', '').strip(),
-                        re.sub(r'^(NUR|NSC)', '', code.upper()).strip(),
-                        re.sub(r'^(NUR|NSC)', '', code.upper()).replace(' ', '').strip(),
-                        
-                        # Number-focused variants (for codes like "101", "201")
-                        re.sub(r'[^0-9]', '', code),
-                        
-                        # Common variations with dots
-                        code.upper().replace('.', ''),
-                        code.replace('.', ''),
                     ]
                     
                     # Remove duplicates while preserving order
-                    variants = list(dict.fromkeys([v for v in variants if v and v not in ['NAN', 'NONE', '']]))
+                    variants = list(dict.fromkeys([v for v in variants if v]))
                     
                     # Add all variants to mappings
                     for variant in variants:
@@ -410,15 +390,15 @@ def _load_course_data_from_file(course_file):
                 semester_credit_units[sheet_standard] = sheet_units
                 
             except Exception as e:
-                print(f"❌ Error processing sheet '{sheet}': {e}")
+                print(f"❌ Error processing BN sheet '{sheet}': {e}")
                 traceback.print_exc()
                 continue
         
-        print(f"✅ Loaded course data for sheets: {list(semester_course_titles.keys())}")
-        print(f"📊 Total course mappings: {len(course_code_to_title)}")
+        print(f"✅ Loaded BN course data for sheets: {list(semester_course_titles.keys())}")
+        print(f"📊 Total BN course mappings: {len(course_code_to_title)}")
         
-        # Debug: Show some course mappings
-        print("🔍 Sample course mappings:")
+        # Debug: Show some BN course mappings
+        print("🔍 Sample BN course mappings:")
         sample_items = list(course_code_to_title.items())[:15]
         for code, title in sample_items:
             unit = course_code_to_unit.get(code, 0)
@@ -427,135 +407,25 @@ def _load_course_data_from_file(course_file):
         return semester_course_titles, semester_credit_units, course_code_to_title, course_code_to_unit
         
     except Exception as e:
-        print(f"❌ Error loading course data: {e}")
+        print(f"❌ Error loading BN course data: {e}")
         traceback.print_exc()
         return {}, {}, {}, {}
 
-def find_alternative_course_files(program):
-    """Look for alternative course files for the specified program."""
-    if program == "BN":
-        base_dirs = [
-            os.path.join(BASE_DIR, "EXAMS_INTERNAL", "BN", "BN-COURSES"),
-            os.path.join(BASE_DIR, "BN", "BN-COURSES"),
-            os.path.join(BASE_DIR, "COURSES"),
-            os.path.join(BASE_DIR, "EXAMS_INTERNAL"),
-        ]
-    else:  # ND, BM
-        base_dirs = [
-            os.path.join(BASE_DIR, "EXAMS_INTERNAL", "ND", "ND-COURSES"),
-            os.path.join(BASE_DIR, "ND", "ND-COURSES"),
-            os.path.join(BASE_DIR, "COURSES"),
-            os.path.join(BASE_DIR, "EXAMS_INTERNAL"),
-        ]
-    
-    course_files = []
-    for base_dir in base_dirs:
-        if os.path.exists(base_dir):
-            for file in os.listdir(base_dir):
-                if 'course' in file.lower() and file.endswith(('.xlsx', '.xls')):
-                    full_path = os.path.join(base_dir, file)
-                    course_files.append(full_path)
-                    print(f"📁 Found {program} course file: {full_path}")
-    
-    return course_files
-
-def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_unit, program):
-    """Debug function to check why course codes aren't matching - ENHANCED."""
-    print(f"\n🔍 DEBUGGING {program} COURSE MATCHING")
-    print("=" * 50)
-    
-    # Read resit file to see what course codes we have
-    resit_df = pd.read_excel(resit_file_path, header=0)
-    resit_exam_col = find_exam_number_column(resit_df)
-    
-    # Get all course codes from resit file
-    resit_courses = []
-    for col in resit_df.columns:
-        if col != resit_exam_col and col != 'NAME' and not 'Unnamed' in str(col):
-            resit_courses.append(col)
-    
-    print(f"📋 {program} Course codes from resit file: {resit_courses}")
-    print(f"📊 Total courses in {program} resit file: {len(resit_courses)}")
-    
-    # Check each resit course against course file
-    for course in resit_courses:
-        print(f"\n🔍 Checking {program} course: '{course}'")
-        original_code = str(course).strip()
-        
-        # Generate ENHANCED variants for matching
-        variants = [
-            original_code.upper().strip(),
-            original_code.strip(),
-            original_code.upper(),
-            original_code,
-            original_code.lower(),
-            original_code.title(),
-            original_code.upper().replace(' ', ''),
-            original_code.replace(' ', ''),
-            re.sub(r'\s+', '', original_code.upper()),
-            re.sub(r'\s+', '', original_code),
-            re.sub(r'[^a-zA-Z0-9]', '', original_code.upper()),
-            re.sub(r'[^a-zA-Z0-9]', '', original_code),
-            original_code.upper().replace('-', ''),
-            original_code.upper().replace('_', ''),
-            original_code.replace('-', '').replace('_', ''),
-            original_code.upper().replace('-', '').replace('_', '').replace(' ', ''),
-            f"NUR{original_code.upper()}",
-            f"NUR{original_code.upper().replace(' ', '')}",
-            f"NSC{original_code.upper()}",
-            f"NSC{original_code.upper().replace(' ', '')}",
-            original_code.upper().replace('NUR', '').strip(),
-            original_code.upper().replace('NSC', '').strip(),
-            re.sub(r'^(NUR|NSC)', '', original_code.upper()).strip(),
-            re.sub(r'[^0-9]', '', original_code),
-            original_code.upper().replace('.', ''),
-            original_code.replace('.', ''),
-        ]
-        
-        # Remove duplicates
-        variants = list(dict.fromkeys([v for v in variants if v and v != 'NAN']))
-        
-        print(f"   Generated {len(variants)} variants to try")
-        
-        found = False
-        for variant in variants:
-            if variant in course_code_to_title:
-                title = course_code_to_title[variant]
-                unit = course_code_to_unit.get(variant, 0)
-                print(f"   ✅ FOUND: '{variant}' -> '{title}' (CU: {unit})")
-                found = True
-                break
-        
-        if not found:
-            print(f"   ❌ NOT FOUND: No match for '{course}'")
-            # Show some similar keys from course file
-            similar_keys = []
-            # Check for partial matches
-            for key in list(course_code_to_title.keys())[:50]:  # Check first 50 keys
-                if any(part in key.upper() for part in original_code.upper().split() if len(part) > 2):
-                    similar_keys.append(key)
-            
-            if similar_keys:
-                print(f"   💡 Similar keys found: {similar_keys[:5]}")
-            else:
-                print(f"   💡 Sample available keys: {list(course_code_to_title.keys())[:10]}")
-
+# FIX 2: Enhanced BN Course Matching Functions
 def find_course_title(course_code, course_titles_dict, course_code_to_title):
-    """Robust function to find course title with comprehensive matching strategies - ENHANCED."""
+    """Robust function to find BN course title with comprehensive matching strategies."""
     if not course_code or str(course_code).upper() in ['NAN', 'NONE', '']:
-        return str(course_code) if course_code else "Unknown Course"
+        return str(course_code) if course_code else "Unknown BN Course"
     
     original_code = str(course_code).strip()
     
-    # Generate ENHANCED comprehensive matching variants
+    # Generate comprehensive matching variants
     variants = [
         # Basic normalizations
         original_code.upper().strip(),
         original_code.strip(),
         original_code.upper(),
         original_code,
-        original_code.lower(),
-        original_code.title(),
         
         # Space handling variations
         original_code.upper().replace(' ', ''),
@@ -571,28 +441,10 @@ def find_course_title(course_code, course_titles_dict, course_code_to_title):
         original_code.upper().replace('-', ''),
         original_code.upper().replace('_', ''),
         original_code.replace('-', '').replace('_', ''),
-        original_code.upper().replace('-', '').replace('_', '').replace(' ', ''),
         
-        # WITH common prefixes
-        f"NUR{original_code.upper()}",
-        f"NUR{original_code.upper().replace(' ', '')}",
-        f"NUR{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
-        f"NSC{original_code.upper()}",
-        f"NSC{original_code.upper().replace(' ', '')}",
-        f"NSC{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
-        
-        # WITHOUT common prefixes
-        original_code.upper().replace('NUR', '').strip(),
-        original_code.upper().replace('NSC', '').strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).replace(' ', '').strip(),
-        
-        # Number-focused variants
-        re.sub(r'[^0-9]', '', original_code),
-        
-        # Dot removal
-        original_code.upper().replace('.', ''),
-        original_code.replace('.', ''),
+        # Case variations
+        original_code.lower(),
+        original_code.title(),
     ]
     
     # Remove duplicates
@@ -603,35 +455,30 @@ def find_course_title(course_code, course_titles_dict, course_code_to_title):
         # Try course_titles_dict first (semester-specific)
         if variant in course_titles_dict:
             title = course_titles_dict[variant]
-            print(f"✅ Found title for '{original_code}' using variant '{variant}': '{title}'")
             return title
         
         # Try global course_code_to_title
         if variant in course_code_to_title:
             title = course_code_to_title[variant]
-            print(f"✅ Found title for '{original_code}' using global variant '{variant}': '{title}'")
             return title
     
     # If no match found, log and return descriptive original code
-    print(f"⚠️ Could not find course title for: '{original_code}'")
-    print(f"   Tried {len(variants)} variants without success")
-    return f"{original_code} (Title Not Found)"
+    print(f"⚠️ Could not find BN course title for: '{original_code}'")
+    return f"{original_code} (BN Title Not Found)"
 
 def find_credit_unit(course_code, credit_units_dict, course_code_to_unit):
-    """Robust function to find credit unit with comprehensive matching strategies - ENHANCED."""
+    """Robust function to find BN credit unit with comprehensive matching strategies."""
     if not course_code or str(course_code).upper() in ['NAN', 'NONE', '']:
         return 0
     
     original_code = str(course_code).strip()
     
-    # Generate the same ENHANCED variants as title matching
+    # Generate the same variants as title matching
     variants = [
         original_code.upper().strip(),
         original_code.strip(),
         original_code.upper(),
         original_code,
-        original_code.lower(),
-        original_code.title(),
         original_code.upper().replace(' ', ''),
         original_code.replace(' ', ''),
         re.sub(r'\s+', '', original_code.upper()),
@@ -641,20 +488,8 @@ def find_credit_unit(course_code, credit_units_dict, course_code_to_unit):
         original_code.upper().replace('-', ''),
         original_code.upper().replace('_', ''),
         original_code.replace('-', '').replace('_', ''),
-        original_code.upper().replace('-', '').replace('_', '').replace(' ', ''),
-        f"NUR{original_code.upper()}",
-        f"NUR{original_code.upper().replace(' ', '')}",
-        f"NUR{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
-        f"NSC{original_code.upper()}",
-        f"NSC{original_code.upper().replace(' ', '')}",
-        f"NSC{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
-        original_code.upper().replace('NUR', '').strip(),
-        original_code.upper().replace('NSC', '').strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).replace(' ', '').strip(),
-        re.sub(r'[^0-9]', '', original_code),
-        original_code.upper().replace('.', ''),
-        original_code.replace('.', ''),
+        original_code.lower(),
+        original_code.title(),
     ]
     
     # Remove duplicates
@@ -670,39 +505,233 @@ def find_credit_unit(course_code, credit_units_dict, course_code_to_unit):
             unit = course_code_to_unit[variant]
             return unit
     
-    print(f"⚠️ Could not find credit unit for: '{original_code}', defaulting to 2")
-    return 2  # Default credit unit
+    print(f"⚠️ Could not find BN credit unit for: '{original_code}'")
+    return 0
 
-def get_semester_display_info(semester_key, program):
-    """Get display information for a semester key based on program."""
-    semester_lower = semester_key.lower()
+def debug_course_file_structure():
+    """Debug function to check the actual structure of the BN course file."""
+    course_file = os.path.join(BASE_DIR, "EXAMS_INTERNAL", "BN", "BN-COURSES", "N-course-code-creditUnit.xlsx")
+    print(f"\n🔍 DEBUGGING BN COURSE FILE: {course_file}")
     
-    if program == "BN":
-        if 'first-year-first-semester' in semester_lower:
-            return 1, 1, "YEAR ONE", "FIRST SEMESTER", "BN1", "Semester 1"
-        elif 'first-year-second-semester' in semester_lower:
-            return 1, 2, "YEAR ONE", "SECOND SEMESTER", "BN1", "Semester 2"
-        elif 'second-year-first-semester' in semester_lower:
-            return 2, 1, "YEAR TWO", "FIRST SEMESTER", "BN2", "Semester 3"
-        elif 'second-year-second-semester' in semester_lower:
-            return 2, 2, "YEAR TWO", "SECOND SEMESTER", "BN2", "Semester 4"
-        elif 'third-year-first-semester' in semester_lower:
-            return 3, 1, "YEAR THREE", "FIRST SEMESTER", "BN3", "Semester 5"
-        elif 'third-year-second-semester' in semester_lower:
-            return 3, 2, "YEAR THREE", "SECOND SEMESTER", "BN3", "Semester 6"
+    if not os.path.exists(course_file):
+        print("❌ BN course file not found!")
+        # Try alternative files
+        alternative_files = find_alternative_course_files()
+        if alternative_files:
+            course_file = alternative_files[0]
+            print(f"🔄 Using alternative BN course file: {course_file}")
         else:
-            return 1, 1, "YEAR ONE", "FIRST SEMESTER", "BN1", "Semester 1"
-    else:  # ND, BM
-        if 'first-year-first-semester' in semester_lower:
-            return 1, 1, "YEAR ONE", "FIRST SEMESTER", "NDI", "Semester 1"
-        elif 'first-year-second-semester' in semester_lower:
-            return 1, 2, "YEAR ONE", "SECOND SEMESTER", "NDI", "Semester 2"
-        elif 'second-year-first-semester' in semester_lower:
-            return 2, 1, "YEAR TWO", "FIRST SEMESTER", "NDII", "Semester 3"
-        elif 'second-year-second-semester' in semester_lower:
-            return 2, 2, "YEAR TWO", "SECOND SEMESTER", "NDII", "Semester 4"
+            print("❌ No BN course files found anywhere!")
+            return
+    
+    try:
+        xl = pd.ExcelFile(course_file)
+        print(f"📖 Sheets in BN course file: {xl.sheet_names}")
+        
+        for sheet_name in xl.sheet_names:
+            print(f"\n📄 BN Sheet: {sheet_name}")
+            df = pd.read_excel(course_file, sheet_name=sheet_name)
+            print(f"   Shape: {df.shape}")
+            print(f"   Columns: {list(df.columns)}")
+            
+            # Show first few rows
+            for i in range(min(3, len(df))):
+                row = df.iloc[i]
+                print(f"   Row {i}: {dict(row)}")
+                
+    except Exception as e:
+        print(f"❌ Error reading BN course file: {e}")
+
+def extract_mastersheet_from_zip(zip_path, semester_key):
+    """Extract mastersheet from ZIP file and return temporary file path."""
+    try:
+        print(f"📦 Looking for BN mastersheet in ZIP: {zip_path}")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # List all files in ZIP for debugging
+            all_files = zip_ref.namelist()
+            print(f"📁 Files in ZIP: {all_files}")
+            
+            # Look for mastersheet files in the ZIP
+            mastersheet_files = [f for f in all_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
+            
+            if not mastersheet_files:
+                print(f"❌ No BN mastersheet found in ZIP")
+                return None, None
+            
+            # Use the first mastersheet found
+            mastersheet_name = mastersheet_files[0]
+            print(f"✅ Found BN mastersheet: {mastersheet_name}")
+            
+            # Extract to temporary file
+            temp_dir = tempfile.mkdtemp()
+            temp_mastersheet_path = os.path.join(temp_dir, f"mastersheet_{semester_key}.xlsx")
+            
+            with open(temp_mastersheet_path, 'wb') as f:
+                f.write(zip_ref.read(mastersheet_name))
+            
+            print(f"✅ Extracted BN mastersheet to: {temp_mastersheet_path}")
+            return temp_mastersheet_path, temp_dir
+            
+    except Exception as e:
+        print(f"❌ Error extracting BN mastersheet from ZIP: {e}")
+        traceback.print_exc()
+        return None, None
+
+def find_latest_zip_file(clean_dir):
+    """Find the latest ZIP file in BN clean results directory - IMPROVED VERSION."""
+    print(f"🔍 Looking for BN ZIP files in: {clean_dir}")
+    
+    if not os.path.exists(clean_dir):
+        print(f"❌ BN clean directory doesn't exist: {clean_dir}")
+        return None
+    
+    # List all files in directory
+    all_files = os.listdir(clean_dir)
+    print(f"📁 Files in BN clean directory: {all_files}")
+    
+    # Look for ZIP files but EXCLUDE carryover ZIPs and include only regular result ZIPs
+    zip_files = []
+    for f in all_files:
+        if f.lower().endswith('.zip'):
+            # EXCLUDE carryover files
+            if 'carryover' in f.lower():
+                print(f"⚠️ Skipping BN carryover ZIP: {f}")
+                continue
+            
+            # INCLUDE regular result files (like SET47_RESULT-*.zip)
+            if any(pattern in f for pattern in ['_RESULT-', 'RESULT_', 'RESULT-']):
+                zip_files.append(f)
+                print(f"✅ Found BN regular results ZIP: {f}")
+            else:
+                print(f"ℹ️ Found other BN ZIP (not a result file): {f}")
+    
+    if not zip_files:
+        print(f"❌ No BN regular results ZIP files found (excluding carryover files)")
+        print(f"💡 Looking for any BN ZIP file that might contain mastersheet...")
+        
+        # Fallback: look for any ZIP that might contain mastersheet
+        fallback_zips = [f for f in all_files if f.lower().endswith('.zip') and 'carryover' not in f.lower()]
+        if fallback_zips:
+            print(f"⚠️ Using fallback BN ZIP files: {fallback_zips}")
+            zip_files = fallback_zips
         else:
-            return 1, 1, "YEAR ONE", "FIRST SEMESTER", "NDI", "Semester 1"
+            print(f"❌ No BN ZIP files found at all in {clean_dir}")
+            return None
+    
+    print(f"✅ Final BN ZIP files to consider: {zip_files}")
+    
+    # Sort by modification time and return the latest
+    zip_files_with_path = [os.path.join(clean_dir, f) for f in zip_files]
+    latest_zip = sorted(zip_files_with_path, key=os.path.getmtime, reverse=True)[0]
+    
+    print(f"🎯 Using latest BN ZIP: {latest_zip}")
+    return latest_zip
+
+def find_latest_result_folder(clean_dir, set_name):
+    """Find the latest BN result folder in clean results directory."""
+    print(f"🔍 Looking for BN result folders in: {clean_dir}")
+    
+    if not os.path.exists(clean_dir):
+        print(f"❌ BN clean directory doesn't exist: {clean_dir}")
+        return None
+    
+    # List all items in directory
+    all_items = os.listdir(clean_dir)
+    print(f"📁 Items in BN clean directory: {all_items}")
+    
+    # Look for BN result folders (assuming pattern like "{set_name}_RESULT-{timestamp}")
+    result_folders = [f for f in all_items if os.path.isdir(os.path.join(clean_dir, f)) and f.startswith(f"{set_name}_RESULT-")]
+    
+    if not result_folders:
+        print(f"❌ No BN result folders found")
+        return None
+    
+    print(f"✅ Found BN result folders: {result_folders}")
+    
+    # Sort by modification time and return the latest
+    folders_with_path = [os.path.join(clean_dir, f) for f in result_folders]
+    latest_folder = sorted(folders_with_path, key=os.path.getmtime, reverse=True)[0]
+    
+    print(f"🎯 Using latest BN result folder: {latest_folder}")
+    return latest_folder
+
+def find_latest_mastersheet_source(clean_dir, set_name):
+    """Find the latest source for BN mastersheet: prefer ZIP, fallback to folder - IMPROVED."""
+    print(f"🔍 Looking for BN mastersheet source in: {clean_dir}")
+    
+    if not os.path.exists(clean_dir):
+        print(f"❌ BN clean directory doesn't exist: {clean_dir}")
+        return None, None
+    
+    # First try to find ZIP file
+    zip_path = find_latest_zip_file(clean_dir)
+    if zip_path:
+        print(f"✅ Using BN ZIP source: {zip_path}")
+        # Verify ZIP contains mastersheet
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_files = zip_ref.namelist()
+                mastersheet_files = [f for f in zip_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
+                if mastersheet_files:
+                    print(f"✅ BN ZIP contains mastersheet files: {mastersheet_files}")
+                    return zip_path, 'zip'
+                else:
+                    print(f"⚠️ BN ZIP found but no mastersheet inside: {zip_path}")
+        except Exception as e:
+            print(f"⚠️ Error checking BN ZIP contents: {e}")
+    
+    # Fallback to folder
+    folder_path = find_latest_result_folder(clean_dir, set_name)
+    if folder_path:
+        print(f"✅ Using BN folder source: {folder_path}")
+        return folder_path, 'folder'
+    
+    print(f"❌ No valid BN ZIP files or result folders found in {clean_dir}")
+    print(f"📁 Available files: {os.listdir(clean_dir) if os.path.exists(clean_dir) else 'Directory not found'}")
+    return None, None
+
+def get_mastersheet_path(source_path, source_type, semester_key):
+    """Get BN mastersheet path based on source type (zip or folder)."""
+    temp_dir = None
+    if source_type == 'zip':
+        temp_mastersheet_path, temp_dir = extract_mastersheet_from_zip(source_path, semester_key)
+        if not temp_mastersheet_path:
+            print("❌ Failed to extract BN mastersheet from ZIP")
+            return None, None
+    elif source_type == 'folder':
+        # Look for mastersheet in the folder
+        all_files = os.listdir(source_path)
+        mastersheet_files = [f for f in all_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
+        
+        if not mastersheet_files:
+            print(f"❌ No BN mastersheet found in folder {source_path}")
+            return None, None
+        
+        mastersheet_name = mastersheet_files[0]
+        temp_mastersheet_path = os.path.join(source_path, mastersheet_name)
+        print(f"✅ Found BN mastersheet in folder: {temp_mastersheet_path}")
+    else:
+        return None, None
+    
+    return temp_mastersheet_path, temp_dir
+
+def get_semester_display_info(semester_key):
+    """Get display information for a BN semester key."""
+    semester_lower = semester_key.lower()
+    if 'first-year-first-semester' in semester_lower:
+        return 1, 1, "YEAR ONE", "FIRST SEMESTER", "BN1", "Semester 1"
+    elif 'first-year-second-semester' in semester_lower:
+        return 1, 2, "YEAR ONE", "SECOND SEMESTER", "BN1", "Semester 2"
+    elif 'second-year-first-semester' in semester_lower:
+        return 2, 1, "YEAR TWO", "FIRST SEMESTER", "BN2", "Semester 3"
+    elif 'second-year-second-semester' in semester_lower:
+        return 2, 2, "YEAR TWO", "SECOND SEMESTER", "BN2", "Semester 4"
+    elif 'third-year-first-semester' in semester_lower:
+        return 3, 1, "YEAR THREE", "FIRST SEMESTER", "BN3", "Semester 5"
+    elif 'third-year-second-semester' in semester_lower:
+        return 3, 2, "YEAR THREE", "SECOND SEMESTER", "BN3", "Semester 6"
+    else:
+        return 1, 1, "YEAR ONE", "FIRST SEMESTER", "BN1", "Semester 1"
 
 def get_grade_point(score):
     """Determine grade point based on score - NIGERIAN 5.0 SCALE."""
@@ -717,161 +746,10 @@ def get_grade_point(score):
     except (ValueError, TypeError):
         return 0.0
 
-def extract_mastersheet_from_zip(zip_path, semester_key):
-    """Extract mastersheet from ZIP file and return temporary file path."""
-    try:
-        print(f"📦 Looking for mastersheet in ZIP: {zip_path}")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            all_files = zip_ref.namelist()
-            print(f"📁 Files in ZIP: {all_files}")
-            
-            mastersheet_files = [f for f in all_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
-            
-            if not mastersheet_files:
-                print(f"❌ No mastersheet found in ZIP")
-                return None, None
-            
-            mastersheet_name = mastersheet_files[0]
-            print(f"✅ Found mastersheet: {mastersheet_name}")
-            
-            temp_dir = tempfile.mkdtemp()
-            temp_mastersheet_path = os.path.join(temp_dir, f"mastersheet_{semester_key}.xlsx")
-            
-            with open(temp_mastersheet_path, 'wb') as f:
-                f.write(zip_ref.read(mastersheet_name))
-            
-            print(f"✅ Extracted mastersheet to: {temp_mastersheet_path}")
-            return temp_mastersheet_path, temp_dir
-            
-    except Exception as e:
-        print(f"❌ Error extracting mastersheet from ZIP: {e}")
-        traceback.print_exc()
-        return None, None
-
-def find_latest_zip_file(clean_dir, program):
-    """Find the latest ZIP file in clean results directory."""
-    print(f"🔍 Looking for {program} ZIP files in: {clean_dir}")
-    
-    if not os.path.exists(clean_dir):
-        print(f"❌ {program} clean directory doesn't exist: {clean_dir}")
-        return None
-    
-    all_files = os.listdir(clean_dir)
-    
-    zip_files = []
-    for f in all_files:
-        if f.lower().endswith('.zip'):
-            if 'carryover' in f.lower():
-                print(f"⚠️ Skipping {program} carryover ZIP: {f}")
-                continue
-            
-            if any(pattern in f for pattern in ['_RESULT-', 'RESULT_', 'RESULT-']):
-                zip_files.append(f)
-                print(f"✅ Found {program} regular results ZIP: {f}")
-            else:
-                print(f"ℹ️ Found other {program} ZIP (not a result file): {f}")
-    
-    if not zip_files:
-        print(f"❌ No {program} regular results ZIP files found (excluding carryover files)")
-        fallback_zips = [f for f in all_files if f.lower().endswith('.zip') and 'carryover' not in f.lower()]
-        if fallback_zips:
-            print(f"⚠️ Using fallback {program} ZIP files: {fallback_zips}")
-            zip_files = fallback_zips
-        else:
-            print(f"❌ No {program} ZIP files found at all in {clean_dir}")
-            return None
-    
-    print(f"✅ Final {program} ZIP files to consider: {zip_files}")
-    
-    zip_files_with_path = [os.path.join(clean_dir, f) for f in zip_files]
-    latest_zip = sorted(zip_files_with_path, key=os.path.getmtime, reverse=True)[0]
-    
-    print(f"🎯 Using latest {program} ZIP: {latest_zip}")
-    return latest_zip
-
-def find_latest_result_folder(clean_dir, set_name, program):
-    """Find the latest result folder in clean results directory."""
-    print(f"🔍 Looking for {program} result folders in: {clean_dir}")
-    
-    if not os.path.exists(clean_dir):
-        print(f"❌ {program} clean directory doesn't exist: {clean_dir}")
-        return None
-    
-    all_items = os.listdir(clean_dir)
-    
-    result_folders = [f for f in all_items if os.path.isdir(os.path.join(clean_dir, f)) and f.startswith(f"{set_name}_RESULT-")]
-    
-    if not result_folders:
-        print(f"❌ No {program} result folders found")
-        return None
-    
-    print(f"✅ Found {program} result folders: {result_folders}")
-    
-    folders_with_path = [os.path.join(clean_dir, f) for f in result_folders]
-    latest_folder = sorted(folders_with_path, key=os.path.getmtime, reverse=True)[0]
-    
-    print(f"🎯 Using latest {program} result folder: {latest_folder}")
-    return latest_folder
-
-def find_latest_mastersheet_source(clean_dir, set_name, program):
-    """Find the latest source for mastersheet: prefer ZIP, fallback to folder."""
-    print(f"🔍 Looking for {program} mastersheet source in: {clean_dir}")
-    
-    if not os.path.exists(clean_dir):
-        print(f"❌ {program} clean directory doesn't exist: {clean_dir}")
-        return None, None
-    
-    zip_path = find_latest_zip_file(clean_dir, program)
-    if zip_path:
-        print(f"✅ Using {program} ZIP source: {zip_path}")
-        try:
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_files = zip_ref.namelist()
-                mastersheet_files = [f for f in zip_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
-                if mastersheet_files:
-                    print(f"✅ {program} ZIP contains mastersheet files: {mastersheet_files}")
-                    return zip_path, 'zip'
-                else:
-                    print(f"⚠️ {program} ZIP found but no mastersheet inside: {zip_path}")
-        except Exception as e:
-            print(f"⚠️ Error checking {program} ZIP contents: {e}")
-    
-    folder_path = find_latest_result_folder(clean_dir, set_name, program)
-    if folder_path:
-        print(f"✅ Using {program} folder source: {folder_path}")
-        return folder_path, 'folder'
-    
-    print(f"❌ No valid {program} ZIP files or result folders found in {clean_dir}")
-    return None, None
-
-def get_mastersheet_path(source_path, source_type, semester_key):
-    """Get mastersheet path based on source type (zip or folder)."""
-    temp_dir = None
-    if source_type == 'zip':
-        temp_mastersheet_path, temp_dir = extract_mastersheet_from_zip(source_path, semester_key)
-        if not temp_mastersheet_path:
-            print("❌ Failed to extract mastersheet from ZIP")
-            return None, None
-    elif source_type == 'folder':
-        all_files = os.listdir(source_path)
-        mastersheet_files = [f for f in all_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
-        
-        if not mastersheet_files:
-            print(f"❌ No mastersheet found in folder {source_path}")
-            return None, None
-        
-        mastersheet_name = mastersheet_files[0]
-        temp_mastersheet_path = os.path.join(source_path, mastersheet_name)
-        print(f"✅ Found mastersheet in folder: {temp_mastersheet_path}")
-    else:
-        return None, None
-    
-    return temp_mastersheet_path, temp_dir
-
 def get_matching_sheet(xl, target_key):
-    """Find matching sheet name with variants."""
+    """Find matching BN sheet name with variants - FIXED."""
     target_upper = target_key.upper().replace('-', ' ').replace('_', ' ').replace('.', ' ')
-    target_upper = ' '.join(target_upper.split())
+    target_upper = ' '.join(target_upper.split())  # Normalize spaces
     
     possible_keys = [
         target_key,
@@ -897,76 +775,73 @@ def get_matching_sheet(xl, target_key):
         target_upper.replace('SEMESTER', 'SEM'),
     ]
     
+    # Remove duplicates
     possible_keys = list(set([k for k in possible_keys if k]))
     
-    print(f"🔍 Trying sheet variants for '{target_key}': {possible_keys}")
+    print(f"🔍 Trying BN sheet variants for '{target_key}': {possible_keys}")
     
     for sheet in xl.sheet_names:
         sheet_normalized = sheet.upper().replace('-', ' ').replace('_', ' ').replace('.', ' ')
         sheet_normalized = ' '.join(sheet_normalized.split())
         
         if any(p == sheet or p in sheet or p == sheet_normalized or p in sheet_normalized for p in possible_keys):
-            print(f"✅ Found matching sheet: '{sheet}' for '{target_key}'")
+            print(f"✅ Found matching BN sheet: '{sheet}' for '{target_key}'")
             return sheet
     
-    print(f"❌ No matching sheet found for '{target_key}'")
-    print(f"📖 Available sheets: {xl.sheet_names}")
+    print(f"❌ No matching BN sheet found for '{target_key}'")
+    print(f"📖 Available BN sheets: {xl.sheet_names}")
     return None
 
-def load_previous_gpas(mastersheet_path, current_semester_key, program):
-    """Load previous GPA data from mastersheet for CGPA calculation."""
+# ENHANCED: GPA Loading for ALL BN semesters
+def load_previous_gpas(mastersheet_path, current_semester_key):
+    """Load previous GPA data from BN mastersheet for CGPA calculation - ENHANCED FOR ALL SEMESTERS."""
     all_student_data = {}
     current_standard = standardize_semester_key(current_semester_key)
     
-    if program == "BN":
-        all_semesters = {
-            "BN-FIRST-YEAR-FIRST-SEMESTER": [],
-            "BN-FIRST-YEAR-SECOND-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER"],
-            "BN-SECOND-YEAR-FIRST-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER"],
-            "BN-SECOND-YEAR-SECOND-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER", "BN-SECOND-YEAR-FIRST-SEMESTER"],
-            "BN-THIRD-YEAR-FIRST-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER", "BN-SECOND-YEAR-FIRST-SEMESTER", "BN-SECOND-YEAR-SECOND-SEMESTER"],
-            "BN-THIRD-YEAR-SECOND-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER", "BN-SECOND-YEAR-FIRST-SEMESTER", "BN-SECOND-YEAR-SECOND-SEMESTER", "BN-THIRD-YEAR-FIRST-SEMESTER"]
-        }
-    else:
-        all_semesters = {
-            "ND-FIRST-YEAR-FIRST-SEMESTER": [],
-            "ND-FIRST-YEAR-SECOND-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER"],
-            "ND-SECOND-YEAR-FIRST-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER"],
-            "ND-SECOND-YEAR-SECOND-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER", "ND-SECOND-YEAR-FIRST-SEMESTER"]
-        }
+    # Define all BN semesters based on current semester
+    all_semesters = {
+        "BN-FIRST-YEAR-FIRST-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER"],
+        "BN-FIRST-YEAR-SECOND-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER"],
+        "BN-SECOND-YEAR-FIRST-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER"],
+        "BN-SECOND-YEAR-SECOND-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER", "BN-SECOND-YEAR-FIRST-SEMESTER"],
+        "BN-THIRD-YEAR-FIRST-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER", "BN-SECOND-YEAR-FIRST-SEMESTER", "BN-SECOND-YEAR-SECOND-SEMESTER"],
+        "BN-THIRD-YEAR-SECOND-SEMESTER": ["BN-FIRST-YEAR-FIRST-SEMESTER", "BN-FIRST-YEAR-SECOND-SEMESTER", "BN-SECOND-YEAR-FIRST-SEMESTER", "BN-SECOND-YEAR-SECOND-SEMESTER", "BN-THIRD-YEAR-FIRST-SEMESTER"]
+    }
     
     semesters_to_load = all_semesters.get(current_standard, [])
-    print(f"📊 Loading previous {program} GPAs for {current_standard}: {semesters_to_load}")
+    print(f"📊 Loading previous BN GPAs for {current_standard}: {semesters_to_load}")
 
     if not os.path.exists(mastersheet_path):
-        print(f"❌ {program} Mastersheet not found: {mastersheet_path}")
+        print(f"❌ BN Mastersheet not found: {mastersheet_path}")
         return {}
 
     try:
         xl = pd.ExcelFile(mastersheet_path)
-        print(f"📖 Available sheets in {program} mastersheet: {xl.sheet_names}")
+        print(f"📖 Available sheets in BN mastersheet: {xl.sheet_names}")
     except Exception as e:
-        print(f"❌ Error opening {program} mastersheet: {e}")
+        print(f"❌ Error opening BN mastersheet: {e}")
         return {}
 
     for semester in semesters_to_load:
         try:
             sheet_name = get_matching_sheet(xl, semester)
             if not sheet_name:
-                print(f"⚠️ Skipping {program} semester {semester} - no matching sheet found")
+                print(f"⚠️ Skipping BN semester {semester} - no matching sheet found")
                 continue
             
-            print(f"📖 Reading {program} sheet '{sheet_name}' for semester {semester}")
+            print(f"📖 Reading BN sheet '{sheet_name}' for semester {semester}")
             df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
             
+            # If header row 5 doesn't work, try row 0
             if df.empty or len(df.columns) < 3:
                 df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=0)
-                print(f"🔄 Using header row 0 for {program} sheet '{sheet_name}'")
+                print(f"🔄 Using header row 0 for BN sheet '{sheet_name}'")
             
             exam_col = find_exam_number_column(df)
             gpa_col = None
             credit_col = None
             
+            # Find GPA and credit columns with flexible matching
             for col in df.columns:
                 col_str = str(col).upper()
                 if 'GPA' in col_str and 'CGPA' not in col_str:
@@ -987,6 +862,7 @@ def load_previous_gpas(mastersheet_path, current_semester_key, program):
                         if pd.isna(gpa_value):
                             continue
                             
+                        # Get credits passed - default to 30 if not found
                         credits = 30
                         if credit_col and credit_col in row and pd.notna(row[credit_col]):
                             try:
@@ -1001,87 +877,83 @@ def load_previous_gpas(mastersheet_path, current_semester_key, program):
                         all_student_data[exam_no]['credits'].append(credits)
                         all_student_data[exam_no]['semesters'].append(semester)
                         
-                        if idx < 3:
-                            print(f"📊 Loaded {program} GPA for {exam_no}: {gpa_value} with {credits} credits from {semester}")
+                        if idx < 3:  # Log first few for debugging
+                            print(f"📊 Loaded BN GPA for {exam_no}: {gpa_value} with {credits} credits from {semester}")
                             
                     except (ValueError, TypeError) as e:
-                        print(f"⚠️ Error processing row {idx} for {program} {semester}: {e}")
+                        print(f"⚠️ Error processing row {idx} for BN {semester}: {e}")
                         continue
             else:
-                print(f"⚠️ Missing required columns in {program} {sheet_name}: exam_col={exam_col}, gpa_col={gpa_col}")
+                print(f"⚠️ Missing required columns in BN {sheet_name}: exam_col={exam_col}, gpa_col={gpa_col}")
                 
         except Exception as e:
-            print(f"⚠️ Could not load data from {program} {semester}: {e}")
+            print(f"⚠️ Could not load data from BN {semester}: {e}")
             traceback.print_exc()
     
-    print(f"📊 Loaded cumulative {program} data for {len(all_student_data)} students")
+    print(f"📊 Loaded cumulative BN data for {len(all_student_data)} students")
     return all_student_data
 
-def calculate_cgpa(student_data, current_gpa, current_credits, program):
-    """Calculate Cumulative GPA for all programs."""
+def calculate_cgpa(student_data, current_gpa, current_credits):
+    """Calculate Cumulative GPA for BN - ENHANCED FOR ALL SEMESTERS."""
     if not student_data or not student_data.get('gpas'):
-        print(f"⚠️ No previous {program} GPA data, using current GPA: {current_gpa}")
+        print(f"⚠️ No previous BN GPA data, using current GPA: {current_gpa}")
         return current_gpa
 
     total_grade_points = 0.0
     total_credits = 0
 
-    print(f"🔢 Calculating {program} CGPA from {len(student_data['gpas'])} previous semesters")
+    print(f"🔢 Calculating BN CGPA from {len(student_data['gpas'])} previous semesters")
     
     for prev_gpa, prev_credits in zip(student_data['gpas'], student_data['credits']):
         total_grade_points += prev_gpa * prev_credits
         total_credits += prev_credits
         print(f"   - GPA: {prev_gpa}, Credits: {prev_credits}, Running Total: {total_grade_points}/{total_credits}")
 
+    # Add current semester
     total_grade_points += current_gpa * current_credits
     total_credits += current_credits
 
-    print(f"📊 Final {program} calculation: {total_grade_points} / {total_credits}")
+    print(f"📊 Final BN calculation: {total_grade_points} / {total_credits}")
 
     if total_credits > 0:
         cgpa = round(total_grade_points / total_credits, 2)
-        print(f"✅ Calculated {program} CGPA: {cgpa}")
+        print(f"✅ Calculated BN CGPA: {cgpa}")
         return cgpa
     else:
-        print(f"⚠️ No {program} credits, returning current GPA: {current_gpa}")
+        print(f"⚠️ No BN credits, returning current GPA: {current_gpa}")
         return current_gpa
 
-def get_previous_semesters_for_display(current_semester_key, program):
-    """Get list of previous semesters for GPA display in mastersheet."""
+def get_previous_semesters_for_display(current_semester_key):
+    """Get list of previous BN semesters for GPA display in mastersheet."""
     current_standard = standardize_semester_key(current_semester_key)
     
-    if program == "BN":
-        semester_mapping = {
-            "BN-FIRST-YEAR-FIRST-SEMESTER": [],
-            "BN-FIRST-YEAR-SECOND-SEMESTER": ["Semester 1"],
-            "BN-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"], 
-            "BN-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"],
-            "BN-THIRD-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2", "Semester 3", "Semester 4"],
-            "BN-THIRD-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3", "Semester 4", "Semester 5"]
-        }
-    else:
-        semester_mapping = {
-            "ND-FIRST-YEAR-FIRST-SEMESTER": [],
-            "ND-FIRST-YEAR-SECOND-SEMESTER": ["Semester 1"],
-            "ND-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"], 
-            "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"]
-        }
+    semester_mapping = {
+        "BN-FIRST-YEAR-FIRST-SEMESTER": [],
+        "BN-FIRST-YEAR-SECOND-SEMESTER": ["Semester 1"],
+        "BN-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"], 
+        "BN-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"],
+        "BN-THIRD-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2", "Semester 3", "Semester 4"],
+        "BN-THIRD-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3", "Semester 4", "Semester 5"]
+    }
     
     return semester_mapping.get(current_standard, [])
 
 def extract_semester_from_filename(filename):
-    """Extract semester from filename using comprehensive pattern matching."""
+    """Extract BN semester from filename using comprehensive pattern matching - FIXED."""
     filename_upper = filename.upper()
     
-    semester_pattern = r'(BN[-_]?(?:FIRST|SECOND|THIRD|1ST|2ND|3RD)[-_]?YEAR[-_]?(?:FIRST|SECOND|1ST|2ND)[-_]?SEMESTER)|(ND[-_]?(?:FIRST|SECOND|1ST|2ND)[-_]?YEAR[-_]?(?:FIRST|SECOND|1ST|2ND)[-_]?SEMESTER)'
+    # First, try to extract any BN semester-like pattern from filename
+    semester_pattern = r'(BN[-_]?(?:FIRST|SECOND|THIRD|1ST|2ND|3RD)[-_]?YEAR[-_]?(?:FIRST|SECOND|1ST|2ND)[-_]?SEMESTER)'
     match = re.search(semester_pattern, filename_upper)
     
     if match:
-        extracted = match.group(1) or match.group(2)
+        extracted = match.group(1)
+        # Standardize the extracted pattern
         standardized = standardize_semester_key(extracted)
-        print(f"✅ Extracted and standardized: '{filename}' → '{standardized}'")
+        print(f"✅ Extracted and standardized BN: '{filename}' → '{standardized}'")
         return standardized
     
+    # Fallback to comprehensive pattern mapping for BN
     semester_patterns = {
         "BN-FIRST-YEAR-FIRST-SEMESTER": [
             "BN.FIRST.YEAR.FIRST.SEMESTER", "BN-FIRST-YEAR-FIRST-SEMESTER",
@@ -1100,18 +972,6 @@ def extract_semester_from_filename(filename):
         ],
         "BN-THIRD-YEAR-SECOND-SEMESTER": [
             "BN.THIRD.YEAR.SECOND.SEMESTER", "BN-THIRD-YEAR-SECOND-SEMESTER",
-        ],
-        "ND-FIRST-YEAR-FIRST-SEMESTER": [
-            "FIRST.YEAR.FIRST.SEMESTER", "FIRST-YEAR-FIRST-SEMESTER",
-        ],
-        "ND-FIRST-YEAR-SECOND-SEMESTER": [
-            "FIRST.YEAR.SECOND.SEMESTER", "FIRST-YEAR-SECOND-SEMESTER",
-        ],
-        "ND-SECOND-YEAR-FIRST-SEMESTER": [
-            "SECOND.YEAR.FIRST.SEMESTER", "SECOND-YEAR-FIRST-SEMESTER",
-        ],
-        "ND-SECOND-YEAR-SECOND-SEMESTER": [
-            "SECOND.YEAR.SECOND.SEMESTER", "SECOND-YEAR-SECOND-SEMESTER",
         ]
     }
     
@@ -1119,35 +979,38 @@ def extract_semester_from_filename(filename):
         for pattern in patterns:
             flexible_pattern = pattern.replace('.', '[._\\- ]?')
             if re.search(flexible_pattern, filename_upper, re.IGNORECASE):
-                print(f"✅ Matched semester '{semester_key}' for filename: {filename}")
+                print(f"✅ Matched BN semester '{semester_key}' for filename: {filename}")
                 return semester_key
     
-    print(f"❌ Could not determine semester for filename: {filename}")
-    return "UNKNOWN_SEMESTER"
+    print(f"❌ Could not determine BN semester for filename: {filename}")
+    return "UNKNOWN_BN_SEMESTER"
 
-def load_carryover_json_files(carryover_dir, semester_key=None, program=None):
-    """Load carryover JSON files from directory."""
+def load_carryover_json_files(carryover_dir, semester_key=None):
+    """Load BN carryover JSON files from directory - FIXED."""
     carryover_files = []
     
+    # Standardize the target BN semester key
     if semester_key:
         semester_key = standardize_semester_key(semester_key)
     
     previous_semester = get_previous_semester(semester_key)
-    print(f"🔑 Target {program} semester: {semester_key}")
-    print(f"🔑 Previous {program} semester for carryover: {previous_semester}")
+    print(f"🔑 Target BN semester: {semester_key}")
+    print(f"🔑 Previous BN semester for carryover: {previous_semester}")
     
     for file in os.listdir(carryover_dir):
         if file.startswith("co_student_") and file.endswith(".json"):
+            # Extract semester from filename and standardize it
             file_semester = extract_semester_from_filename(file)
             file_semester_standardized = standardize_semester_key(file_semester)
             
-            print(f"📄 Found {program} carryover file: {file}")
-            print(f"   Original semester: {file_semester}")
+            print(f"📄 Found BN carryover file: {file}")
+            print(f"   Original BN semester: {file_semester}")
             print(f"   Standardized: {file_semester_standardized}")
             print(f"   Target previous: {previous_semester}")
             
+            # If previous_semester is specified, only load matching files (carryover from previous)
             if previous_semester and file_semester_standardized != previous_semester:
-                print(f"   ⏭️ Skipping (doesn't match previous {program} semester)")
+                print(f"   ⏭️ Skipping (doesn't match previous BN semester)")
                 continue
             
             file_path = os.path.join(carryover_dir, file)
@@ -1156,20 +1019,20 @@ def load_carryover_json_files(carryover_dir, semester_key=None, program=None):
                     data = json.load(f)
                     carryover_files.append({
                         'filename': file,
-                        'semester': file_semester_standardized,
+                        'semester': file_semester_standardized,  # Use standardized key
                         'data': data,
                         'count': len(data),
                         'file_path': file_path
                     })
-                    print(f"   ✅ Loaded: {len(data)} {program} records")
+                    print(f"   ✅ Loaded: {len(data)} BN records")
             except Exception as e:
-                print(f"Error loading {program} {file}: {e}")
+                print(f"Error loading BN {file}: {e}")
     
-    print(f"📊 Total {program} carryover files loaded: {len(carryover_files)}")
+    print(f"📊 Total BN carryover files loaded: {len(carryover_files)}")
     return carryover_files
 
-def get_carryover_records_from_zip(zip_path, set_name, semester_key, program):
-    """Get carryover records from ZIP file."""
+def get_carryover_records_from_zip(zip_path, set_name, semester_key):
+    """Get BN carryover records from ZIP file."""
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             temp_dir = tempfile.mkdtemp()
@@ -1178,89 +1041,87 @@ def get_carryover_records_from_zip(zip_path, set_name, semester_key, program):
             for member in zip_ref.namelist():
                 if member.startswith("CARRYOVER_RECORDS/"):
                     zip_ref.extract(member, temp_dir)
-            records = load_carryover_json_files(carryover_dir, semester_key, program)
+            records = load_carryover_json_files(carryover_dir, semester_key)
             shutil.rmtree(temp_dir)
-            print(f"✅ Loaded {len(records)} {program} carryover records from ZIP")
+            print(f"✅ Loaded {len(records)} BN carryover records from ZIP")
             return records
     except Exception as e:
-        print(f"❌ Error loading from {program} ZIP: {e}")
+        print(f"❌ Error loading from BN ZIP: {e}")
         return []
 
 def get_carryover_records(program, set_name, semester_key=None):
-    """Get carryover records for a specific program, set, and semester."""
+    """Get BN carryover records for a specific program, set, and semester - FIXED."""
     try:
+        # Standardize BN semester key first
         if semester_key:
             semester_key = standardize_semester_key(semester_key)
-            print(f"🔑 Using standardized {program} semester key: {semester_key}")
+            print(f"🔑 Using standardized BN semester key: {semester_key}")
         
         clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
-            print(f"❌ {program} clean directory not found: {clean_dir}")
+            print(f"❌ BN clean directory not found: {clean_dir}")
             return []
         
+        # Look for both folders and ZIP files (REGULAR results, not carryover)
         timestamp_items = []
         
         for item in os.listdir(clean_dir):
             item_path = os.path.join(clean_dir, item)
             
+            # ONLY include regular result files (exclude carryover files)
             if item.startswith(f"{set_name}_RESULT-") and "CARRYOVER" not in item.upper():
                 if os.path.isdir(item_path) or item.endswith('.zip'):
                     timestamp_items.append(item)
-                    print(f"Found {program} regular result: {item}")
+                    print(f"Found BN regular result: {item}")
         
         if not timestamp_items:
-            print(f"❌ No {program} regular result files found in: {clean_dir}")
+            print(f"❌ No BN regular result files found in: {clean_dir}")
             return []
         
         latest_item = sorted(timestamp_items)[-1]
         latest_path = os.path.join(clean_dir, latest_item)
-        print(f"✅ Using latest {program} result: {latest_item}")
+        print(f"✅ Using latest BN result: {latest_item}")
         
+        # Extract from ZIP or use folder
         if latest_item.endswith('.zip'):
-            return get_carryover_records_from_zip(latest_path, set_name, semester_key, program)
+            return get_carryover_records_from_zip(latest_path, set_name, semester_key)
         else:
             carryover_dir = os.path.join(latest_path, "CARRYOVER_RECORDS")
             if not os.path.exists(carryover_dir):
-                print(f"❌ No {program} CARRYOVER_RECORDS folder in: {latest_path}")
+                print(f"❌ No BN CARRYOVER_RECORDS folder in: {latest_path}")
                 return []
-            return load_carryover_json_files(carryover_dir, semester_key, program)
+            return load_carryover_json_files(carryover_dir, semester_key)
             
     except Exception as e:
-        print(f"Error getting {program} carryover records: {e}")
+        print(f"Error getting BN carryover records: {e}")
         return []
 
-def process_carryover_results(resit_file_path, source_path, source_type, semester_key, set_name, pass_threshold, output_dir, program):
+# FIX 3: Enhanced BN Semester Key Matching with DEBUGGING
+def process_carryover_results(resit_file_path, source_path, source_type, semester_key, set_name, pass_threshold, output_dir):
     """
-    Process carryover results and generate CARRYOVER_mastersheet for all programs.
+    Process BN carryover results and generate CARRYOVER_mastersheet.
     """
-    print(f"\n🔄 PROCESSING {program} CARRYOVER RESULTS FOR {semester_key}")
+    print(f"\n🔄 PROCESSING BN CARRYOVER RESULTS FOR {semester_key}")
     print("=" * 60)
     
-    semester_course_titles, semester_credit_units, course_code_to_title, course_code_to_unit = load_course_data(program)
+    # Load BN course data
+    semester_course_titles, semester_credit_units, course_code_to_title, course_code_to_unit = load_bn_course_data()
     
-    debug_course_matching(resit_file_path, course_code_to_title, course_code_to_unit, program)
+    # DEBUG: Check BN course matching specifically
+    debug_course_matching(resit_file_path, course_code_to_title, course_code_to_unit)
     
-    year, sem_num, level, sem_display, set_code, sem_name = get_semester_display_info(semester_key, program)
+    # Get display info and try multiple sheet key formats
+    year, sem_num, level, sem_display, set_code, sem_name = get_semester_display_info(semester_key)
     
-    possible_sheet_keys = []
-    if program == "BN":
-        possible_sheet_keys = [
-            f"{set_code} {sem_display}",
-            f"{set_code.replace('BN2', 'BN 2').replace('BN1', 'BN 1').replace('BN3', 'BN 3')} {sem_display}",
-            semester_key,
-            semester_key.replace('-', ' ').upper(),
-            f"{set_code} {sem_name}",
-            f"{level} {sem_display}",
-        ]
-    else:
-        possible_sheet_keys = [
-            f"{set_code} {sem_display}",
-            f"{set_code.replace('NDII', 'ND II').replace('NDI', 'ND I')} {sem_display}",
-            semester_key,
-            semester_key.replace('-', ' ').upper(),
-            f"{set_code} {sem_name}",
-            f"{level} {sem_display}",
-        ]
+    # Try multiple sheet key formats for robust matching
+    possible_sheet_keys = [
+        f"{set_code} {sem_display}",                    # "BN2 SECOND SEMESTER"
+        f"{set_code.replace('BN2', 'BN 2').replace('BN1', 'BN 1').replace('BN3', 'BN 3')} {sem_display}",  # "BN 2 SECOND SEMESTER"
+        semester_key,                                   # Original key
+        semester_key.replace('-', ' ').upper(),         # "BN SECOND YEAR SECOND SEMESTER"
+        f"{set_code} {sem_name}",                       # "BN2 Semester 4"
+        f"{level} {sem_display}",                       # "YEAR TWO SECOND SEMESTER"
+    ]
     
     course_titles_dict = {}
     credit_units_dict = {}
@@ -1270,94 +1131,105 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
         if sheet_standard in semester_course_titles:
             course_titles_dict = semester_course_titles[sheet_standard]
             credit_units_dict = semester_credit_units[sheet_standard]
-            print(f"✅ Using {program} sheet key: '{sheet_key}' with {len(course_titles_dict)} courses")
+            print(f"✅ Using BN sheet key: '{sheet_key}' with {len(course_titles_dict)} courses")
             break
         else:
-            print(f"❌ {program} sheet key not found: '{sheet_key}'")
+            print(f"❌ BN sheet key not found: '{sheet_key}'")
     
+    # If no semester-specific dict found, use global dictionaries
     if not course_titles_dict:
-        print(f"⚠️ No {program} semester-specific course data found, using global course mappings")
+        print("⚠️ No BN semester-specific course data found, using global BN course mappings")
         course_titles_dict = course_code_to_title
         credit_units_dict = course_code_to_unit
     
-    print(f"📊 Final {program} course mappings: {len(course_titles_dict)} titles, {len(credit_units_dict)} units")
+    print(f"📊 Final BN course mappings: {len(course_titles_dict)} titles, {len(credit_units_dict)} units")
     
+    # Create output directory
     timestamp = datetime.now().strftime(TIMESTAMP_FMT)
     carryover_output_dir = os.path.join(output_dir, f"CARRYOVER_{set_name}_{semester_key}_{timestamp}")
     os.makedirs(carryover_output_dir, exist_ok=True)
     
     if not os.path.exists(resit_file_path):
-        print(f"❌ {program} resit file not found: {resit_file_path}")
+        print(f"❌ BN resit file not found: {resit_file_path}")
         return False
     
     temp_mastersheet_path = None
     temp_dir = None
     
     try:
+        # Get BN mastersheet path based on source type
         temp_mastersheet_path, temp_dir = get_mastersheet_path(source_path, source_type, semester_key)
         
         if not temp_mastersheet_path:
-            print(f"❌ Failed to get {program} mastersheet")
+            print("❌ Failed to get BN mastersheet")
             return False
         
-        print(f"📖 Reading {program} files...")
+        # Read files
+        print("📖 Reading BN files...")
         resit_df = pd.read_excel(resit_file_path, header=0)
         
+        # FIXED: Try multiple header positions for BN mastersheet
         xl = pd.ExcelFile(temp_mastersheet_path)
         sheet_name = get_matching_sheet(xl, semester_key)
         if not sheet_name:
-            print(f"❌ No matching {program} sheet found for {semester_key}")
+            print(f"❌ No matching BN sheet found for {semester_key}")
             return False
         
-        print(f"📖 Using {program} sheet '{sheet_name}' for current semester {semester_key}")
+        print(f"📖 Using BN sheet '{sheet_name}' for current semester {semester_key}")
         
         try:
             mastersheet_df = pd.read_excel(temp_mastersheet_path, sheet_name=sheet_name, header=5)
         except:
             try:
                 mastersheet_df = pd.read_excel(temp_mastersheet_path, sheet_name=sheet_name, header=0)
-                print(f"⚠️ Using header row 0 for {program} mastersheet")
+                print("⚠️ Using header row 0 for BN mastersheet")
             except Exception as e:
-                print(f"❌ Error reading {program} mastersheet: {e}")
+                print(f"❌ Error reading BN mastersheet: {e}")
                 return False
         
-        print(f"✅ {program} files loaded - Resit: {len(resit_df)} rows, Mastersheet: {len(mastersheet_df)} students")
+        print(f"✅ BN files loaded - Resit: {len(resit_df)} rows, Mastersheet: {len(mastersheet_df)} students")
         
+        # Find exam number columns
         resit_exam_col = find_exam_number_column(resit_df)
         mastersheet_exam_col = find_exam_number_column(mastersheet_df) or 'EXAM NUMBER'
         
         if not resit_exam_col:
-            print(f"❌ Cannot find exam number column in {program} resit file")
+            print("❌ Cannot find exam number column in BN resit file")
             return False
         
-        print(f"📝 {program} Exam columns - Resit: '{resit_exam_col}', Mastersheet: '{mastersheet_exam_col}'")
+        print(f"📝 BN Exam columns - Resit: '{resit_exam_col}', Mastersheet: '{mastersheet_exam_col}'")
         
-        cgpa_data = load_previous_gpas(temp_mastersheet_path, semester_key, program)
+        # Load previous GPAs for CGPA calculation - ENHANCED FOR ALL BN SEMESTERS
+        cgpa_data = load_previous_gpas(temp_mastersheet_path, semester_key)
         
+        # Create BN carryover mastersheet data structure
         carryover_data = []
         updated_students = set()
         
-        print(f"\n🎯 PROCESSING {program} RESIT SCORES...")
+        print(f"\n🎯 PROCESSING BN RESIT SCORES...")
         
         for idx, resit_row in resit_df.iterrows():
             exam_no = str(resit_row[resit_exam_col]).strip().upper()
             if not exam_no or exam_no in ['NAN', 'NONE', '']:
                 continue
             
+            # Find student in BN mastersheet
             student_mask = mastersheet_df[mastersheet_exam_col].astype(str).str.strip().str.upper() == exam_no
             if not student_mask.any():
-                print(f"⚠️ {program} Student {exam_no} not found in mastersheet - skipping")
+                print(f"⚠️ BN Student {exam_no} not found in mastersheet - skipping")
                 continue
             
             student_data = mastersheet_df[student_mask].iloc[0]
             student_name = student_data.get('NAME', 'Unknown')
             
+            # Get current credits passed for CGPA calculation
             current_credits = 0
             for col in mastersheet_df.columns:
                 if 'CU PASSED' in str(col).upper():
                     current_credits = student_data.get(col, 0)
                     break
             
+            # Initialize BN student record for carryover mastersheet
             student_record = {
                 'EXAM NUMBER': exam_no,
                 'NAME': student_name,
@@ -1366,23 +1238,26 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                 'CURRENT_CREDITS': current_credits
             }
             
+            # Calculate CGPA properly - ENHANCED FOR ALL BN SEMESTERS
             if exam_no in cgpa_data:
                 student_record['CURRENT_CGPA'] = calculate_cgpa(
                     cgpa_data[exam_no], 
                     student_record['CURRENT_GPA'], 
-                    current_credits,
-                    program
+                    current_credits
                 )
             else:
                 student_record['CURRENT_CGPA'] = student_record['CURRENT_GPA']
             
+            # Add previous GPAs for ALL BN semesters
             if exam_no in cgpa_data:
                 student_gpa_data = cgpa_data[exam_no]
                 for i, prev_semester in enumerate(student_gpa_data['semesters']):
-                    sem_display_name = get_semester_display_info(prev_semester, program)[5]
+                    # Get semester display name (Semester 1, Semester 2, etc.)
+                    sem_display_name = get_semester_display_info(prev_semester)[5]
                     student_record[f'GPA_{sem_display_name}'] = student_gpa_data['gpas'][i]
-                    print(f"📊 Stored {program} GPA for {exam_no}: {sem_display_name} = {student_gpa_data['gpas'][i]}")
+                    print(f"📊 Stored BN GPA for {exam_no}: {sem_display_name} = {student_gpa_data['gpas'][i]}")
             
+            # Process each course in BN resit file
             for col in resit_df.columns:
                 if col == resit_exam_col or col == 'NAME' or 'Unnamed' in str(col):
                     continue
@@ -1396,6 +1271,7 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                 except (ValueError, TypeError):
                     continue
                 
+                # Check if this course column exists in BN mastersheet
                 if col in mastersheet_df.columns:
                     original_score = student_data.get(col)
                     if pd.isna(original_score):
@@ -1406,8 +1282,11 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                     except (ValueError, TypeError):
                         original_score_val = 0.0
                     
+                    # Only include courses that were re-sat (failed originally and now resat)
                     if original_score_val < pass_threshold:
+                        # Get BN course title using robust matching
                         course_title = find_course_title(col, course_titles_dict, course_code_to_title)
+                        # Get BN credit unit using robust matching
                         credit_unit = find_credit_unit(col, credit_units_dict, course_code_to_unit)
                         
                         student_record['RESIT_COURSES'][col] = {
@@ -1418,79 +1297,60 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                             'credit_unit': credit_unit
                         }
             
+            # Only add BN student to carryover mastersheet if they have resit courses
             if student_record['RESIT_COURSES']:
                 carryover_data.append(student_record)
                 updated_students.add(exam_no)
-                print(f"✅ {program} {exam_no}: {len(student_record['RESIT_COURSES'])} resit courses, CGPA: {student_record['CURRENT_CGPA']}")
+                print(f"✅ BN {exam_no}: {len(student_record['RESIT_COURSES'])} resit courses, CGPA: {student_record['CURRENT_CGPA']}")
         
+        # Generate BN CARRYOVER_mastersheet
         if carryover_data:
-            print(f"\n📊 GENERATING {program} CARRYOVER MASTERSHEET...")
+            print(f"\n📊 GENERATING BN CARRYOVER MASTERSHEET...")
             carryover_mastersheet_path = generate_carryover_mastersheet(
                 carryover_data, carryover_output_dir, semester_key, set_name, timestamp, 
-                cgpa_data, course_titles_dict, credit_units_dict, course_code_to_title, course_code_to_unit, program
+                cgpa_data, course_titles_dict, credit_units_dict, course_code_to_title, course_code_to_unit
             )
             
-            print(f"\n📄 GENERATING {program} INDIVIDUAL STUDENT REPORTS...")
+            # Generate BN individual student reports
+            print(f"\n📄 GENERATING BN INDIVIDUAL STUDENT REPORTS...")
             generate_individual_reports(
-                carryover_data, carryover_output_dir, semester_key, set_name, timestamp, cgpa_data, program
+                carryover_data, carryover_output_dir, semester_key, set_name, timestamp, cgpa_data
             )
             
+            # Create final BN ZIP
             zip_path = os.path.join(output_dir, f"CARRYOVER_{set_name}_{semester_key}_{timestamp}.zip")
-            if create_carryover_zip(carryover_output_dir, zip_path, program):
-                print(f"✅ Final {program} carryover ZIP created: {zip_path}")
+            if create_carryover_zip(carryover_output_dir, zip_path):
+                print(f"✅ Final BN carryover ZIP created: {zip_path}")
             
-            print(f"\n🎉 {program} CARRYOVER PROCESSING COMPLETED!")
+            print(f"\n🎉 BN CARRYOVER PROCESSING COMPLETED!")
             print(f"📁 Output directory: {carryover_output_dir}")
             print(f"📦 ZIP file: {zip_path}")
-            print(f"👨‍🎓 {program} Students processed: {len(carryover_data)}")
+            print(f"👨‍🎓 BN Students processed: {len(carryover_data)}")
             
             return True
         else:
-            print(f"❌ No {program} carryover data found to process")
+            print("❌ No BN carryover data found to process")
             return False
             
     except Exception as e:
-        print(f"❌ Error processing {program} carryover results: {e}")
+        print(f"❌ Error processing BN carryover results: {e}")
         traceback.print_exc()
         return False
     finally:
+        # Clean up temporary files
         if temp_dir and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-            print(f"✅ Cleaned up {program} temporary files")
+            print("✅ Cleaned up BN temporary files")
 
-# NOTE: Due to character limits, I need to provide the remaining functions separately.
-# The generate_carryover_mastersheet, generate_remarks, generate_individual_reports, 
-# create_carryover_zip, and main functions are identical to Document 1 lines 1500-2500.
-# Copy those functions here to complete the file.
-
-def generate_remarks(resit_courses, program):
-    """Generate remarks based on resit performance."""
-    passed_count = sum(1 for course_data in resit_courses.values() 
-                      if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD)
-    total_count = len(resit_courses)
+def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data, course_titles, course_units, course_code_to_title, course_code_to_unit):
+    """Generate the BN CARRYOVER_mastersheet with enhanced GPA tracking for ALL semesters."""
     
-    if passed_count == total_count:
-        return f"All {program} courses passed in resit"
-    elif passed_count > 0:
-        return f"{passed_count}/{total_count} {program} courses passed in resit"
-    else:
-        return f"No improvement in {program} resit"
-
-def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data, course_titles, course_units, course_code_to_title, course_code_to_unit, program):
-    """Generate the CARRYOVER_mastersheet with enhanced GPA tracking for all programs."""
-    
+    # Create workbook
     wb = Workbook()
     ws = wb.active
+    ws.title = "BN_CARRYOVER_RESULTS"
     
-    if program == "BN":
-        ws.title = "BN_CARRYOVER_RESULTS"
-        program_name = "BASIC NURSING"
-        program_abbr = "BN"
-    else:
-        ws.title = "CARRYOVER_RESULTS"
-        program_name = "NATIONAL DIPLOMA"
-        program_abbr = "ND"
-    
+    # Add logo if available
     if os.path.exists(DEFAULT_LOGO_PATH):
         try:
             from openpyxl.drawing.image import Image
@@ -1501,18 +1361,23 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
         except Exception as e:
             print(f"⚠️ Could not add logo: {e}")
     
+    # Title and headers - UPDATED with dynamic GPA columns
     current_year = 2025
     next_year = 2026
-    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key, program)
+    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
     
+    # Calculate total columns needed for merging
     all_courses = set()
     for student in carryover_data:
         all_courses.update(student['RESIT_COURSES'].keys())
     
-    previous_semesters = get_previous_semesters_for_display(semester_key, program)
+    # Get previous BN semesters for GPA display - DYNAMIC FOR ALL SEMESTERS
+    previous_semesters = get_previous_semesters_for_display(semester_key)
     
+    # Build headers structure with dynamic GPA columns
     headers = ['S/N', 'EXAM NUMBER', 'NAME']
     
+    # Add previous BN GPA columns dynamically
     for prev_sem in previous_semesters:
         headers.append(f'GPA {prev_sem}')
     
@@ -1526,6 +1391,7 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     total_columns = len(headers)
     last_column = get_column_letter(total_columns)
     
+    # CENTRALIZED TITLE ROWS FOR BN
     ws.merge_cells(f'A3:{last_column}3')
     title_cell = ws['A3']
     title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
@@ -1534,34 +1400,38 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     
     ws.merge_cells(f'A4:{last_column}4')
     subtitle_cell = ws['A4']
-    
-    if program == "BN":
-        subtitle_cell.value = f"{program_name} RESIT - {current_year}/{next_year} SESSION {level} {sem_display} EXAMINATIONS RESULT — {datetime.now().strftime('%B %d, %Y')}"
-    else:
-        subtitle_cell.value = f"RESIT - {current_year}/{next_year} SESSION {program_name} {level} {sem_display} EXAMINATIONS RESULT — {datetime.now().strftime('%B %d, %Y')}"
-    
+    subtitle_cell.value = f"BASIC NURSING RESIT - {current_year}/{next_year} SESSION {level} {sem_display} EXAMINATIONS RESULT — {datetime.now().strftime('%B %d, %Y')}"
     subtitle_cell.font = Font(bold=True, size=12)
     subtitle_cell.alignment = Alignment(horizontal='center', vertical='center')
     
-    print(f"🔍 {program} Courses found in resit data: {sorted(all_courses)}")
-    print(f"📊 {program} GPA columns for {semester_key}: Previous={previous_semesters}, Current={current_semester_name}")
+    print(f"🔍 BN Courses found in resit data: {sorted(all_courses)}")
+    print(f"📊 BN GPA columns for {semester_key}: Previous={previous_semesters}, Current={current_semester_name}")
     
+    # Build headers structure with BN course titles, codes, and credit units
+    print(f"🔍 BN Courses found in resit data: {sorted(all_courses)}")
+    
+    # Build headers structure with BN course titles, codes, and credit units
     headers = ['S/N', 'EXAM NUMBER', 'NAME']
     
+    # Add previous BN GPA columns dynamically
     for prev_sem in previous_semesters:
         headers.append(f'GPA {prev_sem}')
     
+    # Add BN course columns with titles, codes, and credit units
     course_headers = []
-    course_title_mapping = {}
-    course_unit_mapping = {}
+    course_title_mapping = {}  # Store the actual BN titles we find
+    course_unit_mapping = {}   # Store the BN credit units
     
     for course in sorted(all_courses):
+        # Use robust BN title lookup
         course_title = find_course_title(course, course_titles, course_code_to_title)
         course_title_mapping[course] = course_title
         
+        # Get BN credit unit using robust matching
         credit_unit = find_credit_unit(course, course_units, course_code_to_unit)
         course_unit_mapping[course] = credit_unit
         
+        # Truncate long BN course titles for display
         if len(course_title) > 30:
             course_title = course_title[:27] + "..."
         course_headers.extend([f'{course}', f'{course}_RESIT'])
@@ -1569,59 +1439,79 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     headers.extend(course_headers)
     headers.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
     
-    title_row = [''] * 3
+    # Write BN course titles row (row 5) with counterclockwise orientation
+    title_row = [''] * 3  # S/N, EXAM NUMBER, NAME
     
+    # Add previous BN GPA placeholders
     for prev_sem in previous_semesters:
-        title_row.extend([''])
+        title_row.extend([''])  # GPA placeholders
     
+    # Add BN course titles with counterclockwise orientation
     for course in sorted(all_courses):
         course_title = course_title_mapping[course]
         if len(course_title) > 30:
             course_title = course_title[:27] + "..."
-        title_row.extend([course_title, course_title])
+        title_row.extend([course_title, course_title])  # Use title for both original and resit columns
     
-    title_row.extend(['', '', ''])
+    title_row.extend(['', '', ''])  # GPA Current, CGPA, REMARKS
     
-    ws.append(title_row)
+    ws.append(title_row)  # This is row 5
     
-    credit_row = [''] * 3
+    # Write BN credit units row (row 6)
+    credit_row = [''] * 3  # S/N, EXAM NUMBER, NAME
     
+    # Add previous BN GPA placeholders
     for prev_sem in previous_semesters:
-        credit_row.extend([''])
+        credit_row.extend([''])  # GPA placeholders
     
+    # Add BN credit units for each course
     for course in sorted(all_courses):
         credit_unit = course_unit_mapping[course]
-        credit_row.extend([f'CU: {credit_unit}', f'CU: {credit_unit}'])
+        credit_row.extend([f'CU: {credit_unit}', f'CU: {credit_unit}'])  # Credit unit for both original and resit columns
     
-    credit_row.extend(['', '', ''])
+    credit_row.extend(['', '', ''])  # GPA Current, CGPA, REMARKS
     
-    ws.append(credit_row)
+    ws.append(credit_row)  # This is row 6
     
+    # Write BN course codes row (row 7)
     code_row = ['S/N', 'EXAM NUMBER', 'NAME']
     
+    # Add previous BN GPA headers
     for prev_sem in previous_semesters:
         code_row.append(f'GPA {prev_sem}')
     
+    # Add BN course codes
     for course in sorted(all_courses):
         code_row.extend([f'{course}', f'{course}_RESIT'])
     
     code_row.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
     
-    ws.append(code_row)
+    ws.append(code_row)  # This is row 7
     
+    # Define print-friendly colors for BN course title columns (light pastel colors)
     course_colors = [
-        "E6F3FF", "FFF0E6", "E6FFE6", "FFF6E6", "F0E6FF",
-        "E6FFFF", "FFE6F2", "F5F5DC", "E6F7FF", "FFF5E6",
+        "E6F3FF",  # Light blue
+        "FFF0E6",  # Light orange
+        "E6FFE6",  # Light green
+        "FFF6E6",  # Light peach
+        "F0E6FF",  # Light purple
+        "E6FFFF",  # Light cyan
+        "FFE6F2",  # Light pink
+        "F5F5DC",  # Light beige
+        "E6F7FF",  # Light sky blue
+        "FFF5E6",  # Light apricot
     ]
     
-    start_col = 4
-    if previous_semesters:
+    # Apply colors to BN course columns in all header rows (5, 6, 7)
+    start_col = 4  # Start after S/N, EXAM NUMBER, NAME
+    if previous_semesters:  # Skip GPA columns if they exist
         start_col += len(previous_semesters)
     
     color_index = 0
     for course in sorted(all_courses):
-        for row in [5, 6, 7]:
-            for offset in [0, 1]:
+        # Apply colors to all three header rows for this BN course pair
+        for row in [5, 6, 7]:  # CHANGED: Now rows 5, 6, 7
+            for offset in [0, 1]:  # Original and resit columns
                 cell = ws.cell(row=row, column=start_col + offset)
                 cell.fill = PatternFill(start_color=course_colors[color_index % len(course_colors)], 
                                       end_color=course_colors[color_index % len(course_colors)], 
@@ -1633,16 +1523,18 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
                     top=Side(style='thin'), bottom=Side(style='thin')
                 )
         
+        # Apply rotation only to BN course titles row (row 5)
         for offset in [0, 1]:
-            cell = ws.cell(row=5, column=start_col + offset)
+            cell = ws.cell(row=5, column=start_col + offset)  # CHANGED: Row 5 for BN course titles
             cell.alignment = Alignment(text_rotation=90, horizontal='center', vertical='center')
             cell.font = Font(bold=True, size=9)
         
         color_index += 1
-        start_col += 2
+        start_col += 2  # Move to next BN course pair
     
-    for row in [5, 6, 7]:
-        for col in range(1, 4):
+    # Style the non-course header columns (S/N, EXAM NUMBER, NAME, GPA columns)
+    for row in [5, 6, 7]:  # CHANGED: Rows 5, 6, 7
+        for col in range(1, 4):  # S/N, EXAM NUMBER, NAME
             cell = ws.cell(row=row, column=col)
             cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
             cell.font = Font(color="FFFFFF", bold=True)
@@ -1652,6 +1544,7 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
                 top=Side(style='thin'), bottom=Side(style='thin')
             )
         
+        # Style BN GPA columns if they exist
         gpa_col = 4
         for prev_sem in previous_semesters:
             cell = ws.cell(row=row, column=gpa_col)
@@ -1664,7 +1557,8 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             )
             gpa_col += 1
         
-        for col in range(len(headers)-2, len(headers)+1):
+        # Style final BN GPA columns
+        for col in range(len(headers)-2, len(headers)+1):  # GPA Current, CGPA, REMARKS
             cell = ws.cell(row=row, column=col)
             cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
             cell.font = Font(color="FFFFFF", bold=True)
@@ -1674,29 +1568,35 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
                 top=Side(style='thin'), bottom=Side(style='thin')
             )
     
-    row_idx = 8
+    # Write BN data starting from row 8 (after headers)
+    row_idx = 8  # CHANGED: Data starts at row 8 now
     failed_counts = {course: 0 for course in all_courses}
     
-    start_col = 4
-    if previous_semesters:
+    # Apply colors to BN data rows for course columns
+    start_col = 4  # Reset start column
+    if previous_semesters:  # Skip GPA columns if they exist
         start_col += len(previous_semesters)
     
     for student in carryover_data:
         exam_no = student['EXAM NUMBER']
         
-        ws.cell(row=row_idx, column=1, value=row_idx-7)
+        # Basic BN info
+        ws.cell(row=row_idx, column=1, value=row_idx-7)  # S/N (adjusted for new row)
         ws.cell(row=row_idx, column=2, value=student['EXAM NUMBER'])
         ws.cell(row=row_idx, column=3, value=student['NAME'])
         
+        # Previous BN GPAs - DYNAMIC FOR ALL SEMESTERS
         gpa_col = 4
         for prev_sem in previous_semesters:
             gpa_value = student.get(f'GPA_{prev_sem}', '')
             ws.cell(row=row_idx, column=gpa_col, value=gpa_value)
             gpa_col += 1
         
+        # BN Course scores - APPLY COLORS TO DATA ROWS
         course_col = gpa_col
         color_index = 0
         for course in sorted(all_courses):
+            # Apply the same alternating colors to BN data cells
             for offset in [0, 1]:
                 cell = ws.cell(row=row_idx, column=course_col + offset)
                 cell.fill = PatternFill(start_color=course_colors[color_index % len(course_colors)], 
@@ -1706,10 +1606,12 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             if course in student['RESIT_COURSES']:
                 course_data = student['RESIT_COURSES'][course]
                 
+                # Original score (color red if failed)
                 orig_cell = ws.cell(row=row_idx, column=course_col, value=course_data['original_score'])
                 if course_data['original_score'] < DEFAULT_PASS_THRESHOLD:
                     orig_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
                 
+                # Resit score (color green if passed, red if failed)
                 resit_cell = ws.cell(row=row_idx, column=course_col+1, value=course_data['resit_score'])
                 if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD:
                     resit_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
@@ -1723,30 +1625,38 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             color_index += 1
             course_col += 2
         
+        # Current BN GPA and CGPA
         ws.cell(row=row_idx, column=course_col, value=student['CURRENT_GPA'])
         ws.cell(row=row_idx, column=course_col+1, value=student['CURRENT_CGPA'])
         
-        remarks = generate_remarks(student['RESIT_COURSES'], program)
+        # BN Remarks
+        remarks = generate_remarks(student['RESIT_COURSES'])
         ws.cell(row=row_idx, column=course_col+2, value=remarks)
         
         row_idx += 1
     
-    failed_row_idx = row_idx
-    ws.cell(row=failed_row_idx, column=1, value=f"{program} FAILED COUNT BY COURSE:").font = Font(bold=True)
+    # Add BN failed count summary - MOVED TO THE EMPTY ROW IMMEDIATELY AFTER DATA
+    failed_row_idx = row_idx  # Use the current row (empty row after data)
+    ws.cell(row=failed_row_idx, column=1, value="BN FAILED COUNT BY COURSE:").font = Font(bold=True)
     
+    # Apply color to BN failed count row - LIGHT YELLOW BACKGROUND
     for col in range(1, len(headers) + 1):
         cell = ws.cell(row=failed_row_idx, column=col)
         cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
     
-    course_col = gpa_col
+    # Write BN failed counts under each course's RESIT column
+    course_col = gpa_col  # Start at first BN course column
     for course in sorted(all_courses):
+        # Write the failed count in the RESIT column (course_col + 1)
         count_cell = ws.cell(row=failed_row_idx, column=course_col+1, value=failed_counts[course])
         count_cell.font = Font(bold=True)
         count_cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
         course_col += 2
     
-    summary_start_row = failed_row_idx + 2
+    # Add BN main summary section - LEFT ALIGNED
+    summary_start_row = failed_row_idx + 2  # One empty row after failed count
     
+    # Calculate BN summary statistics
     total_students = len(carryover_data)
     passed_all = sum(1 for student in carryover_data 
                     if all(course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD 
@@ -1755,186 +1665,202 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     carryover_count = total_students - passed_all
     total_failed_attempts = sum(failed_counts.values())
     
+    # LEFT-ALIGNED BN SUMMARY DATA
     summary_data = [
-        [f"{program} CARRYOVER SUMMARY"],
-        [f"A total of {total_students} {program} students registered and sat for the Carryover Examination"],
-        [f"A total of {passed_all} {program} students passed all carryover courses"],
-        [f"A total of {carryover_count} {program} students failed one or more carryover courses and must repeat them"],
-        [f"Total failed {program} resit attempts: {total_failed_attempts} across all courses"],
-        [f"{program} Carryover processing completed on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')}"],
-        [""],
-        [""],
-        ["", ""],
+        ["BASIC NURSING CARRYOVER SUMMARY"],
+        [f"A total of {total_students} BN students registered and sat for the Carryover Examination"],
+        [f"A total of {passed_all} BN students passed all carryover courses"],
+        [f"A total of {carryover_count} BN students failed one or more carryover courses and must repeat them"],
+        [f"Total failed BN resit attempts: {total_failed_attempts} across all courses"],
+        [f"BN Carryover processing completed on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')}"],
+        [""],  # Empty row for spacing
+        [""],  # Another empty row
+        ["", ""],  # Signatories will be placed in separate columns
         ["________________________", "________________________"],
         ["Mrs. Abini Hauwa", "Mrs. Olukemi Ogunleye"],
-        ["Head of Exams", f"Chairman, {program} Program C'tee"]
+        ["Head of Exams", "Chairman, BN Program C'tee"]
     ]
     
     for i, row_data in enumerate(summary_data):
         row_num = summary_start_row + i
         if len(row_data) == 1:
-            if row_data[0]:
+            if row_data[0]:  # Only merge if there's actual content
                 ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=10)
                 cell = ws.cell(row=row_num, column=1, value=row_data[0])
-                if i == 0:
+                if i == 0:  # "BN SUMMARY" header
                     cell.font = Font(bold=True, size=12, underline='single')
                 else:
                     cell.font = Font(bold=False, size=11)
+                # LEFT ALIGNMENT for BN summary text
                 cell.alignment = Alignment(horizontal='left', vertical='center')
         elif len(row_data) == 2:
+            # MOVED BN SIGNATORIES FURTHER LEFT - aligned with summary
             left_cell = ws.cell(row=row_num, column=1, value=row_data[0])
             right_cell = ws.cell(row=row_num, column=4, value=row_data[1])
             
-            if i >= len(summary_data) - 3:
+            # Style BN signatory rows
+            if i >= len(summary_data) - 3:  # Last 3 rows are BN signatories
                 left_cell.alignment = Alignment(horizontal='left')
                 right_cell.alignment = Alignment(horizontal='left')
                 left_cell.font = Font(bold=True, size=11)
                 right_cell.font = Font(bold=True, size=11)
     
+    # Apply borders to BN data area
     thin_border = Border(
         left=Side(style='thin'), right=Side(style='thin'),
         top=Side(style='thin'), bottom=Side(style='thin')
     )
     
-    for row in ws.iter_rows(min_row=7, max_row=row_idx-1, min_col=1, max_col=len(headers)):
+    for row in ws.iter_rows(min_row=7, max_row=row_idx-1, min_col=1, max_col=len(headers)):  # CHANGED: min_row=7
         for cell in row:
             cell.border = thin_border
     
-    ws.freeze_panes = 'D8'
+    # Professional formatting for BN
+    ws.freeze_panes = 'D8'  # CHANGED: Freeze at row 8 (BN data start)
     
+    # Set professional font for entire BN worksheet
     for row in ws.iter_rows():
         for cell in row:
             if cell.font is None or not cell.font.bold:
                 cell.font = Font(name='Calibri', size=11)
     
+    # IMPROVED AUTO-ADJUST COLUMN WIDTHS FOR BN - PROPERLY FITS LONGEST TEXT
     for col_idx, column in enumerate(ws.columns, 1):
         max_length = 0
         column_letter = get_column_letter(col_idx)
         
+        # Check all cells in the column to find the longest content
         for cell in column:
             try:
                 if cell.value is not None:
+                    # Convert to string and calculate length
                     cell_value = str(cell.value)
                     cell_length = len(cell_value)
                     
+                    # For rotated text in row 5, we need to handle differently
                     if cell.row == 5 and cell.alignment.text_rotation == 90:
-                        cell_length = max(cell_length, 10)
+                        # For rotated text, we want wider columns to accommodate the text
+                        cell_length = max(cell_length, 10)  # Minimum width for rotated text
                     
+                    # Adjust for numeric values (scores, GPAs)
                     if isinstance(cell.value, (int, float)) and not isinstance(cell.value, bool):
-                        cell_length = max(cell_length, 8)
+                        cell_length = max(cell_length, 8)  # Ensure enough space for numbers
                     
                     if cell_length > max_length:
                         max_length = cell_length
             except:
                 pass
         
-        adjusted_width = min(max_length + 2, 50)
+        # Set BN column width based on content with reasonable limits
+        adjusted_width = min(max_length + 2, 50)  # Add padding, cap at 50
         
-        if col_idx == 1:
+        # Apply specific adjustments for different BN column types
+        if col_idx == 1:  # S/N
             adjusted_width = 8
-        elif col_idx == 2:
+        elif col_idx == 2:  # EXAM NUMBER
             adjusted_width = 18
-        elif col_idx == 3:
-            adjusted_width = 35
+        elif col_idx == 3:  # NAME
+            adjusted_width = 35  # Generous space for full BN names
         elif col_idx >= 4 and col_idx <= (4 + len(previous_semesters) - 1):
+            # BN GPA columns
             adjusted_width = 15
-        elif col_idx >= len(headers) - 2:
+        elif col_idx >= len(headers) - 2:  # GPA Current, CGPA, REMARKS
             adjusted_width = 15
         else:
-            adjusted_width = min(max(adjusted_width, 12), 25)
+            # BN Course columns - ensure they're wide enough for content
+            adjusted_width = min(max(adjusted_width, 12), 25)  # BN Course columns between 12-25 width
         
         ws.column_dimensions[column_letter].width = adjusted_width
     
-    for row_idx in range(8, row_idx):
-        if row_idx % 2 == 0:
+    # Apply alternating row colors for better BN readability
+    for row_idx in range(8, row_idx):  # BN Data rows only (starting from row 8)
+        if row_idx % 2 == 0:  # Even rows
             for cell in ws[row_idx]:
+                # Only apply if no special fill (like course colors or pass/fail colors)
                 if (cell.fill.start_color.index == '00000000' or 
                     cell.fill.start_color.index == '00FFFFFF'):
                     cell.fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
     
-    gpa_fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
+    # Color code BN GPA columns in data area for better distinction
+    gpa_fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")  # Light purple
     if previous_semesters:
-        for row in range(8, row_idx):
-            for col in range(4, 4 + len(previous_semesters)):
+        for row in range(8, row_idx):  # CHANGED: Starting from row 8
+            for col in range(4, 4 + len(previous_semesters)):  # Previous BN GPA columns
                 cell = ws.cell(row=row, column=col)
                 if cell.fill.start_color.index == '00000000':
                     cell.fill = gpa_fill
     
-    final_gpa_fill = PatternFill(start_color="E0FFFF", end_color="E0FFFF", fill_type="solid")
-    for row in range(8, row_idx):
-        for col in range(len(headers)-2, len(headers)+1):
+    # Color code final BN GPA columns in data area
+    final_gpa_fill = PatternFill(start_color="E0FFFF", end_color="E0FFFF", fill_type="solid")  # Light cyan
+    for row in range(8, row_idx):  # CHANGED: Starting from row 8
+        for col in range(len(headers)-2, len(headers)+1):  # GPA Current, CGPA, REMARKS
             cell = ws.cell(row=row, column=col)
             if cell.fill.start_color.index == '00000000':
                 cell.fill = final_gpa_fill
     
-    if program == "BN":
-        filename = f"BN_CARRYOVER_mastersheet_{timestamp}.xlsx"
-    else:
-        filename = f"CARRYOVER_mastersheet_{timestamp}.xlsx"
-        
+    # Save BN file
+    filename = f"BN_CARRYOVER_mastersheet_{timestamp}.xlsx"
     filepath = os.path.join(output_dir, filename)
     wb.save(filepath)
     
-    print(f"✅ {program} CARRYOVER mastersheet generated: {filepath}")
+    print(f"✅ BN CARRYOVER mastersheet generated: {filepath}")
+    print(f"📊 BN Course title mapping used: {course_title_mapping}")
+    print(f"📊 BN Credit units used: {course_unit_mapping}")
+    print(f"🎨 Applied color coding: BN Course title row (row 5) with pastel colors")
     return filepath
 
-def generate_individual_reports(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data, program):
-    """Generate remarks based on resit performance."""
+def generate_remarks(resit_courses):
+    """Generate BN remarks based on resit performance."""
     passed_count = sum(1 for course_data in resit_courses.values() 
                       if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD)
     total_count = len(resit_courses)
     
     if passed_count == total_count:
-        return f"All {program} courses passed in resit"
+        return "All BN courses passed in resit"
     elif passed_count > 0:
-        return f"{passed_count}/{total_count} {program} courses passed in resit"
+        return f"{passed_count}/{total_count} BN courses passed in resit"
     else:
-        return f"No improvement in {program} resit"
+        return "No improvement in BN resit"
 
-def generate_individual_reports(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data, program):
-    """Generate individual student reports in CSV format."""
-    if program == "BN":
-        reports_dir = os.path.join(output_dir, "BN_INDIVIDUAL_REPORTS")
-    else:
-        reports_dir = os.path.join(output_dir, "INDIVIDUAL_REPORTS")
-        
+def generate_individual_reports(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data):
+    """Generate BN individual student reports in CSV format."""
+    reports_dir = os.path.join(output_dir, "BN_INDIVIDUAL_REPORTS")
     os.makedirs(reports_dir, exist_ok=True)
     
     for student in carryover_data:
         exam_no = student['EXAM NUMBER']
+        # Sanitize the BN exam number for filename safety
         safe_exam_no = sanitize_filename(exam_no)
-        
-        if program == "BN":
-            filename = f"bn_carryover_report_{safe_exam_no}_{timestamp}.csv"
-        else:
-            filename = f"carryover_report_{safe_exam_no}_{timestamp}.csv"
-            
+        filename = f"bn_carryover_report_{safe_exam_no}_{timestamp}.csv"
         filepath = os.path.join(reports_dir, filename)
         
         report_data = []
-        report_data.append([f"{program} CARRYOVER RESULT REPORT"])
+        report_data.append(["BASIC NURSING CARRYOVER RESULT REPORT"])
         report_data.append(["FCT COLLEGE OF NURSING SCIENCES"])
-        report_data.append([f"{program} Set: {set_name}"])
-        report_data.append([f"{program} Semester: {semester_key}"])
+        report_data.append([f"BN Set: {set_name}"])
+        report_data.append([f"BN Semester: {semester_key}"])
         report_data.append([])
-        report_data.append([f"{program} STUDENT INFORMATION"])
-        report_data.append(["Exam Number:", student['EXAM NUMBER']])
+        report_data.append(["BN STUDENT INFORMATION"])
+        report_data.append(["BN Exam Number:", student['EXAM NUMBER']])
         report_data.append(["Name:", student['NAME']])
         report_data.append([])
         
-        report_data.append([f"{program} PREVIOUS GPAs"])
+        # Previous BN GPAs - ENHANCED FOR ALL SEMESTERS
+        report_data.append(["BN PREVIOUS GPAs"])
         for key in sorted([k for k in student.keys() if k.startswith('GPA_')]):
             semester = key.replace('GPA_', '')
             report_data.append([f"{semester}:", student[key]])
         report_data.append([])
         
-        report_data.append([f"{program} CURRENT ACADEMIC RECORD"])
-        report_data.append(["Current GPA:", student['CURRENT_GPA']])
-        report_data.append(["Current CGPA:", student['CURRENT_CGPA']])
+        # Current BN GPA and CGPA
+        report_data.append(["BN CURRENT ACADEMIC RECORD"])
+        report_data.append(["Current BN GPA:", student['CURRENT_GPA']])
+        report_data.append(["Current BN CGPA:", student['CURRENT_CGPA']])
         report_data.append([])
         
-        report_data.append([f"{program} RESIT COURSES"])
-        report_data.append(["Course Code", "Course Title", "Credit Unit", "Original Score", "Resit Score", "Status"])
+        # BN Resit courses
+        report_data.append(["BN RESIT COURSES"])
+        report_data.append(["BN Course Code", "BN Course Title", "BN Credit Unit", "Original Score", "Resit Score", "Status"])
         
         for course_code, course_data in student['RESIT_COURSES'].items():
             status = "PASSED" if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD else "FAILED"
@@ -1949,17 +1875,18 @@ def generate_individual_reports(carryover_data, output_dir, semester_key, set_na
                 status
             ])
         
+        # Save BN CSV
         try:
             df = pd.DataFrame(report_data)
             df.to_csv(filepath, index=False, header=False)
-            print(f"✅ Generated {program} report for: {exam_no}")
+            print(f"✅ Generated BN report for: {exam_no}")
         except Exception as e:
-            print(f"❌ Error generating {program} report for {exam_no}: {e}")
+            print(f"❌ Error generating BN report for {exam_no}: {e}")
     
-    print(f"✅ Generated {len(carryover_data)} {program} individual student reports in {reports_dir}")
+    print(f"✅ Generated {len(carryover_data)} BN individual student reports in {reports_dir}")
 
-def create_carryover_zip(source_dir, zip_path, program):
-    """Create ZIP file of carryover results."""
+def create_carryover_zip(source_dir, zip_path):
+    """Create ZIP file of BN carryover results."""
     try:
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(source_dir):
@@ -1967,24 +1894,33 @@ def create_carryover_zip(source_dir, zip_path, program):
                     file_path = os.path.join(root, file)
                     arcname = os.path.relpath(file_path, source_dir)
                     zipf.write(file_path, arcname)
-        print(f"✅ {program} ZIP file created: {zip_path}")
+        print(f"✅ BN ZIP file created: {zip_path}")
         return True
     except Exception as e:
-        print(f"❌ Error creating {program} ZIP: {e}")
+        print(f"❌ Error creating BN ZIP: {e}")
         return False
 
 def main():
-    """Main function to process carryover results for all programs."""
-    print("🎯 UNIFIED CARRYOVER RESULT PROCESSOR - ALL PROGRAMS")
+    """Main function to process BN carryover results - FIXED TO ONLY SCAN SELECTED BN PROGRAM."""
+    print("🎯 BASIC NURSING CARRYOVER RESULT PROCESSOR - BN-SPECIFIC VERSION")
     print("=" * 50)
     
-    set_name = os.getenv("SELECTED_SET", "ND-2025")
-    semester_key = os.getenv("SELECTED_SEMESTERS", "ND-FIRST-YEAR-SECOND-SEMESTER")
+    # Check for alternative BN course files
+    print("🔍 Looking for BN course files...")
+    alternative_files = find_alternative_course_files()
+    
+    # Debug BN course file structure first
+    debug_course_file_structure()
+    
+    # BN Configuration
+    set_name = os.getenv("SELECTED_SET", "SET47")  # Changed to BN set as requested
+    semester_key = os.getenv("SELECTED_SEMESTERS", "BN-FIRST-YEAR-SECOND-SEMESTER")  # Updated default
     resit_file_path = os.getenv("RESIT_FILE_PATH", "")
     pass_threshold = float(os.getenv("PASS_THRESHOLD", str(DEFAULT_PASS_THRESHOLD)))
     
-    print(f"🎯 Processing: Set={set_name}, Semester={semester_key}")
+    print(f"🎯 Processing BN: Set={set_name}, Semester={semester_key}")
     
+    # Determine BN program from set - FIXED LOGIC
     if set_name.startswith("SET4"):
         program = "BN" 
     elif set_name.startswith("ND-"):
@@ -1992,12 +1928,15 @@ def main():
     elif set_name.startswith("BM") or set_name.startswith("SET"):
         program = "BM"
     else:
-        program = "ND"
-        print(f"⚠️ Could not determine program from set name '{set_name}', defaulting to ND")
+        # Default to BN if we can't determine
+        program = "BN"
+        print(f"⚠️ Could not determine program from BN set name '{set_name}', defaulting to BN")
     
+    # FIXED: Use correct BN base directory structure based on your file structure
+    # Your BN files are in EXAMS_INTERNAL/BN/SET47/
     possible_base_dirs = [
-        BASE_DIR,
-        os.path.join(BASE_DIR, "EXAMS_INTERNAL"),
+        BASE_DIR,  # Original base (~/student_result_cleaner)
+        os.path.join(BASE_DIR, "EXAMS_INTERNAL"),  # This is where your files actually are
         os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL'),
     ]
     
@@ -2006,68 +1945,96 @@ def main():
     output_dir = None
     
     for base in possible_base_dirs:
+        # Try the standard BN structure first - ONLY FOR THE SELECTED BN PROGRAM
         test_raw_dir = os.path.join(base, program, set_name, "RAW_RESULTS")
         test_clean_dir = os.path.join(base, program, set_name, "CLEAN_RESULTS")
         
-        print(f"🔍 Checking {program} directory: {test_clean_dir}")
+        print(f"🔍 Checking BN directory: {test_clean_dir}")
         
         if os.path.exists(test_clean_dir):
             raw_dir = test_raw_dir
             clean_dir = test_clean_dir
             output_dir = test_clean_dir
-            print(f"✅ Found {program} clean directory: {clean_dir}")
+            print(f"✅ Found BN clean directory: {clean_dir}")
             break
     
+    # If not found in standard BN locations, try alternative structures
     if not clean_dir:
-        print(f"🔍 Trying alternative {program} directory structures...")
+        print("🔍 Trying alternative BN directory structures...")
+        # Try direct path to EXAMS_INTERNAL/BN/SET47
         alt_clean_dir = os.path.join(BASE_DIR, "EXAMS_INTERNAL", program, set_name, "CLEAN_RESULTS")
-        print(f"🔍 Checking alternative {program} directory: {alt_clean_dir}")
+        print(f"🔍 Checking alternative BN directory: {alt_clean_dir}")
         
         if os.path.exists(alt_clean_dir):
             raw_dir = os.path.join(BASE_DIR, "EXAMS_INTERNAL", program, set_name, "RAW_RESULTS")
             clean_dir = alt_clean_dir
             output_dir = alt_clean_dir
-            print(f"✅ Found alternative {program} clean directory: {clean_dir}")
+            print(f"✅ Found alternative BN clean directory: {clean_dir}")
     
     if not clean_dir:
-        print(f"❌ {program} clean directory not found for {program}/{set_name}")
+        print(f"❌ BN clean directory not found for {program}/{set_name}")
         print("💡 Please check:")
-        print(f"   - {program} Set name: {set_name}")
-        print(f"   - {program} Program: {program}") 
-        print(f"   - Base directory: {BASE_DIR}")
+        print(f"   - BN Set name: {set_name}")
+        print(f"   - BN Program: {program}") 
+        print(f"   - BN Base directory: {BASE_DIR}")
+        print(f"   - Expected BN directory: .../EXAMS_INTERNAL/{program}/{set_name}/CLEAN_RESULTS/")
+        
+        # Show what BN directories actually exist
+        exams_internal_path = os.path.join(BASE_DIR, "EXAMS_INTERNAL")
+        if os.path.exists(exams_internal_path):
+            print(f"📁 Contents of EXAMS_INTERNAL: {os.listdir(exams_internal_path)}")
+            program_path = os.path.join(exams_internal_path, program)
+            if os.path.exists(program_path):
+                print(f"📁 Contents of BN {program}: {os.listdir(program_path)}")
+        
+        print("💡 Please run the BN regular result processor first to generate clean results")
         return
     
-    print(f"📁 {program} Base directory: {BASE_DIR}")
-    print(f"📁 {program} Raw directory: {raw_dir}")
-    print(f"📁 {program} Clean directory: {clean_dir}")
-    print(f"📁 {program} Output directory: {output_dir}")
-    print(f"📁 {program} Resit file path: {resit_file_path}")
+    print(f"📁 BN Base directory: {BASE_DIR}")
+    print(f"📁 BN Raw directory: {raw_dir}")
+    print(f"📁 BN Clean directory: {clean_dir}")
+    print(f"📁 BN Output directory: {output_dir}")
+    print(f"📁 BN Resit file path: {resit_file_path}")
     
+    # Validate BN resit file path
     if not resit_file_path or not os.path.exists(resit_file_path):
-        print(f"❌ {program} resit file not provided or doesn't exist: {resit_file_path}")
-        print(f"💡 Please set the RESIT_FILE_PATH environment variable to a valid {program} resit file")
+        print(f"❌ BN resit file not provided or doesn't exist: {resit_file_path}")
+        print("💡 Please set the RESIT_FILE_PATH environment variable to a valid BN resit file")
         return
 
+    # Check if BN raw directory exists (as indicator of set existence)
     if not os.path.exists(raw_dir):
-        print(f"⚠️ {program} raw directory doesn't exist: {raw_dir}")
-        print(f"💡 The {program} set might not be properly set up")
+        print(f"⚠️ BN raw directory doesn't exist: {raw_dir}")
+        print("💡 The BN set might not be properly set up")
     
-    print(f"🔍 Looking for {program} mastersheet in: {clean_dir}")
-    source_path, source_type = find_latest_mastersheet_source(clean_dir, set_name, program)
+    # Find latest BN mastersheet source (ZIP or folder) - ONLY IN THE SELECTED BN PROGRAM'S CLEAN_DIR
+    print(f"🔍 Looking for BN mastersheet in: {clean_dir}")
+    source_path, source_type = find_latest_mastersheet_source(clean_dir, set_name)
     if not source_path:
-        print(f"❌ No {program} ZIP files or result folders found in {clean_dir}")
-        print(f"💡 Please run the {program} regular result processor first to generate clean results")
+        print(f"❌ No BN ZIP files or result folders found in {clean_dir}")
+        print(f"📁 Available BN files in {clean_dir}:")
+        if os.path.exists(clean_dir):
+            try:
+                files = os.listdir(clean_dir)
+                for f in files:
+                    print(f"   - {f}")
+            except Exception as e:
+                print(f"   Error listing BN directory: {e}")
+        else:
+            print("   BN Directory not exist")
+        print("💡 Please run the BN regular result processor first to generate clean results")
         return
     
+    # Process BN carryover results
     success = process_carryover_results(
-        resit_file_path, source_path, source_type, semester_key, set_name, pass_threshold, output_dir, program
+        resit_file_path, source_path, source_type, semester_key, set_name, pass_threshold, output_dir
     )
     
     if success:
-        print(f"\n✅ {program} Carryover processing completed successfully!")
-        print(f"📁 Check the {program} CLEAN_RESULTS directory for the CARRYOVER output")
+        print(f"\n✅ BN Carryover processing completed successfully!")
+        print(f"📁 Check the BN CLEAN_RESULTS directory for the CARRYOVER output")
     else:
-        print(f"\n❌ {program} Carryover processing failed!")
+        print(f"\n❌ BN Carryover processing failed!")
 
 if __name__ == "__main__":
     main()

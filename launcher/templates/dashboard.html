@@ -823,11 +823,15 @@
                             <strong>PUTME Results</strong>
                             <span>Process Post-UTME exams</span>
                         </a>
-                        <a href="{{ url_for('run_script', script_name='caosce') }}" class="action-btn">
-                            <div class="action-icon">📊</div>
-                            <strong>CAOSCE Results</strong>
-                            <span>Process CAOSCE exams</span>
-                        </a>
+                        <!-- CAOSCE FIXED SECTION -->
+                        <form action="{{ url_for('run_script', script_name='caosce') }}" method="POST" style="margin: 0; display: inline;">
+                            <button type="submit" class="action-btn" style="border: none; width: 100%; cursor: pointer; background: transparent;">
+                                <div class="action-icon">📊</div>
+                                <strong>CAOSCE Results</strong>
+                                <span>Process CAOSCE exams</span>
+                            </button>
+                        </form>
+                        <!-- END CAOSCE FIX -->
                         <a href="{{ url_for('run_script', script_name='clean') }}" class="action-btn">
                             <div class="action-icon">📝</div>
                             <strong>Internal Exams</strong>
