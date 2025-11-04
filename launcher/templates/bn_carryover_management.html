@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Nursing Carryover Management - {{ college | default('FCT College of Nursing Sciences') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --shadow: 0 6px 20px rgba(0,0,0,0.08);
+            --border-color: #e9ecef;
+            --bn-color: #3498db;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            display: flex;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 200px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            color: white;
+            padding: 0;
+            transition: width 0.3s ease, transform 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 50px;
+        }
+
+        .sidebar-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            padding: 15px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo-section {
+            text-align: center;
+        }
+
+        .logo-section img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo-section img {
+            width: 60px;
+            height: 60px;
+        }
+
+        .logo-section h2 {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+
+        .logo-section p {
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+
+        .sidebar.collapsed .logo-section h2,
+        .sidebar.collapsed .logo-section p,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .sidebar-nav a span:not(.nav-icon) {
+            display: none;
+        }
+
+        .sidebar-nav {
+            padding: 10px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 15px;
+        }
+
+        .nav-section-title {
+            padding: 6px 15px;
+            font-size: 0.6em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.5;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.9em;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--secondary);
+        }
+
+        .nav-icon {
+            font-size: 1em;
+            width: 16px;
+            text-align: center;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper.expanded {
+            margin-left: 50px;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 15px;
+            left: 180px;
+            z-index: 1100;
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            color: var(--dark);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-btn.shifted {
+            left: 30px;
+        }
+
+        .toggle-btn:hover {
+            background: var(--secondary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .header-bar {
+            background: white;
+            padding: 15px 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1000px;
+            margin: 0 auto;
+            min-height: 50px;
+        }
+
+        .header-left h1 {
+            font-size: 1.2em;
+            color: var(--dark);
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .header-left h2 {
+            font-size: 0.75em;
+            color: #666;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1em;
+        }
+
+        .environment-badge {
+            padding: 5px 12px;
+            border-radius: 18px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .environment-production {
+            background: linear-gradient(135deg, var(--danger) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .environment-development {
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
+            color: white;
+        }
+
+        .env-indicator {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .form-container {
+            max-width: 1000px;
+            margin: 15px auto;
+            padding: 15px 25px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 15px;
+            border-left: 4px solid var(--bn-color);
+        }
+
+        .form-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .form-header-icon {
+            font-size: 2em;
+            color: var(--bn-color);
+        }
+
+        .form-section h3 {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .program-badge {
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 18px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .section-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .form-group select,
+        .form-group input[type="text"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input[type="text"]:focus,
+        .form-group input[type="file"]:focus {
+            border-color: var(--bn-color);
+            background: white;
+            outline: none;
+        }
+
+        .form-group select:valid,
+        .form-group input[type="text"]:valid {
+            border-color: var(--success);
+        }
+
+        .carryover-section {
+            background: linear-gradient(135deg, #e8f4fd 0%, #d6eaff 100%);
+            border: 2px solid var(--bn-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .carryover-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .carryover-icon {
+            font-size: 1.5em;
+            color: var(--bn-color);
+        }
+
+        .carryover-header h4 {
+            font-size: 1.2em;
+            color: var(--bn-color);
+            font-weight: 600;
+        }
+
+        .carryover-badge {
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        .carryover-note {
+            background: linear-gradient(135deg, #d6eaff 0%, #b3d9ff 100%);
+            border: 2px solid #99ccff;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #004085;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .info-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 8px;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-note {
+            background: linear-gradient(135deg, #e8f4fd 0%, #d6eaff 100%);
+            border: 2px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-size: 0.9em;
+            color: #004085;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--danger);
+        }
+
+        .flash-messages {
+            margin: 15px 0;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: var(--success);
+            color: #155724;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-color: var(--danger);
+            color: #721c24;
+        }
+
+        .alert-icon {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            border-top: 4px solid var(--bn-color);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--bn-color);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 15px;
+            color: #ccc;
+        }
+
+        /* Carryover Configuration Styles */
+        .checkbox-group {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+        }
+
+        .checkbox-group h4 {
+            font-size: 1.1em;
+            color: var(--dark);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .form-check input {
+            margin-right: 10px;
+            transform: scale(1.1);
+        }
+
+        .form-check label {
+            font-size: 0.95em;
+            color: var(--dark);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .form-check label strong {
+            font-weight: 600;
+        }
+
+        .form-check label span {
+            font-size: 0.85em;
+            color: #666;
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                transform: translateX(-200px);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .content-wrapper {
+                margin-left: 0;
+            }
+
+            .toggle-btn {
+                left: 10px;
+                top: 10px;
+            }
+
+            .toggle-btn.shifted {
+                left: 10px;
+            }
+
+            .header-bar {
+                padding: 10px 15px;
+                margin: 40px auto 0;
+                max-width: 100%;
+            }
+
+            .header-left h1 {
+                font-size: 1em;
+            }
+
+            .header-left h2 {
+                font-size: 0.7em;
+            }
+
+            .form-container {
+                padding: 10px 15px;
+            }
+
+            .form-section {
+                padding: 15px;
+            }
+
+            .form-section h3 {
+                font-size: 1.2em;
+            }
+
+            .form-group label {
+                font-size: 0.9em;
+            }
+
+            .form-group select,
+            .form-group input[type="number"] {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.9em;
+            }
+
+            .info-text, .form-note {
+                font-size: 0.8em;
+            }
+
+            .form-header-icon {
+                font-size: 1.8em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="FCT College of Nursing Sciences" onerror="this.style.display='none'">
+                <h2>FCTCNS</h2>
+                <p>Results Processing</p>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main Menu</div>
+                <a href="{{ url_for('dashboard') }}">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">File Management</div>
+                <a href="{{ url_for('upload_center') }}">
+                    <span class="nav-icon">📤</span>
+                    <span>Upload Center</span>
+                </a>
+                <a href="{{ url_for('download_center') }}">
+                    <span class="nav-icon">📥</span>
+                    <span>Download Center</span>
+                </a>
+                <a href="{{ url_for('file_browser') }}">
+                    <span class="nav-icon">📁</span>
+                    <span>File Browser</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Carryover Management</div>
+                <a href="{{ url_for('carryover') }}">
+                    <span class="nav-icon">🔄</span>
+                    <span>ND Carryover</span>
+                </a>
+                <a href="{{ url_for('bn_carryover') }}" class="active">
+                    <span class="nav-icon">🔄</span>
+                    <span>BN Carryover</span>
+                </a>
+                <a href="{{ url_for('bm_carryover') }}">
+                    <span class="nav-icon">🔄</span>
+                    <span>BM Carryover</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="{{ url_for('debug_paths') }}">
+                    <span class="nav-icon">⚙️</span>
+                    <span>System Tools</span>
+                </a>
+                <a href="{{ url_for('debug_dir_contents') }}">
+                    <span class="nav-icon">🔍</span>
+                    <span>Debug Directory Contents</span>
+                </a>
+                <a href="{{ url_for('logout') }}">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <div class="content-wrapper" id="main">
+        <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()">☰</button>
+
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college | default('FCT College of Nursing Sciences') }}</h1>
+                <h2>{{ department | default('Examinations Office') }}</h2>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9em;">Admin</div>
+                        <div style="font-size: 0.75em; color: #666;">Administrator</div>
+                    </div>
+                </div>
+                <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
+                    <span class="env-indicator"></span>
+                    {{ environment | default('Local Development') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert {% if category == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                <span class="alert-icon">{% if category == 'success' %}✅{% else %}❌{% endif %}</span>
+                {{ message | safe }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="form-container">
+            <!-- BN Carryover Processing Form -->
+            <div class="form-section">
+                <div class="form-header">
+                    <i class="fas fa-user-nurse form-header-icon"></i>
+                    <div>
+                        <h3>Basic Nursing Carryover & Resit Processing</h3>
+                        <span class="program-badge">BN</span>
+                    </div>
+                </div>
+
+                <div class="section-description">
+                    <i class="fas fa-info-circle"></i> Process carryover and resit examination results for Basic Nursing students. This tool integrates resit results with existing student records and recalculates academic status.
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('process_bn_resit') }}" id="bn_carryover_form">
+                    <input type="hidden" name="processing_type" value="carryover">
+                    
+                    <div class="carryover-section">
+                        <div class="carryover-header">
+                            <i class="fas fa-sync-alt carryover-icon"></i>
+                            <h4>Basic Nursing Carryover/Resit Processing</h4>
+                            <span class="carryover-badge">BN SPECIAL PROCESSING</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="resit_set" class="required"><i class="fas fa-folder"></i> Academic Set</label>
+                            <select id="resit_set" name="resit_set" required>
+                                <option value="">-- Select BN Set --</option>
+                                {% for set in bn_sets %}
+                                <option value="{{ set }}">{{ set }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Select the Basic Nursing academic set for carryover processing</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="resit_semester" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
+                            <select id="resit_semester" name="resit_semester" required>
+                                <option value="">-- Select Semester --</option>
+                                <option value="N-FIRST-YEAR-FIRST-SEMESTER">First Year - First Semester</option>
+                                <option value="N-FIRST-YEAR-SECOND-SEMESTER">First Year - Second Semester</option>
+                                <option value="N-SECOND-YEAR-FIRST-SEMESTER">Second Year - First Semester</option>
+                                <option value="N-SECOND-YEAR-SECOND-SEMESTER">Second Year - Second Semester</option>
+                                <option value="N-THIRD-YEAR-FIRST-SEMESTER">Third Year - First Semester</option>
+                                <option value="N-THIRD-YEAR-SECOND-SEMESTER">Third Year - Second Semester</option>
+                            </select>
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Select the semester for carryover processing</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="resit_file" class="required"><i class="fas fa-file-upload"></i> BN Resit Results File (Excel)</label>
+                            <input type="file" id="resit_file" name="resit_file" accept=".xlsx,.xls" required>
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Upload the Basic Nursing resit results Excel file</div>
+                        </div>
+
+                        <!-- Carryover Processing Configuration -->
+                        <div class="carryover-section">
+                            <div class="carryover-header">
+                                <i class="fas fa-redo carryover-icon"></i>
+                                <h4>Carryover Processing Configuration</h4>
+                                <span class="carryover-badge">AUTO TRACKING</span>
+                            </div>
+
+                            <div class="checkbox-group">
+                                <h4><i class="fas fa-cog"></i> Carryover Options</h4>
+                                
+                                <div class="form-check">
+                                    <input type="checkbox" name="enable_carryover_tracking" id="enable_carryover_tracking" checked>
+                                    <label for="enable_carryover_tracking">
+                                        <strong><i class="fas fa-list-check"></i> Enable Carryover Course Tracking</strong><br>
+                                        <span>Automatically identify students with failed courses and track them across semesters</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input type="checkbox" name="generate_carryover_reports" id="generate_carryover_reports" checked>
+                                    <label for="generate_carryover_reports">
+                                        <strong><i class="fas fa-file-export"></i> Generate Individual Carryover Reports</strong><br>
+                                        <span>Create detailed Excel and JSON reports for each student with carryover courses</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input type="checkbox" name="save_carryover_summary" id="save_carryover_summary" checked>
+                                    <label for="save_carryover_summary">
+                                        <strong><i class="fas fa-table"></i> Save Carryover Summary</strong><br>
+                                        <span>Generate a comprehensive summary of all carryover students per semester</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-note">
+                                <i class="fas fa-info-circle"></i> <strong>📋 How It Works:</strong> 
+                                <ul style="margin-top: 10px; margin-left: 20px;">
+                                    <li>System identifies students who scored below the passing threshold</li>
+                                    <li>Creates individual carryover records with failed course details</li>
+                                    <li>Generates reports in the CARRYOVER_RECORDS subfolder</li>
+                                    <li>Tracks resit attempts when carryover files are processed later</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="carryover-note">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>File Format:</strong> Upload an Excel file with columns: Student ID, Course Code, Score for Basic Nursing students.
+                        </div>
+                    </div>
+
+                    <div class="form-note" id="bn_carryover_processing_note">
+                        <i class="fas fa-sync-alt"></i> <strong>🔄 Ready for BN Carryover Processing:</strong> Click the button below to process Basic Nursing carryover/resit results.
+                    </div>
+
+                    <button type="submit" class="btn" id="bn_carryover_submit_btn" aria-label="Process BN Carryover Results">
+                        <i class="fas fa-sync-alt"></i> 
+                        <span>Process Basic Nursing Carryover Results</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- BN Carryover Statistics Section -->
+            <div class="form-section">
+                <div class="form-header">
+                    <i class="fas fa-chart-bar form-header-icon"></i>
+                    <div>
+                        <h3>Basic Nursing Carryover Statistics</h3>
+                        <span class="program-badge">BN OVERVIEW</span>
+                    </div>
+                </div>
+
+                <div class="section-description">
+                    <i class="fas fa-info-circle"></i> Overview of carryover students across Basic Nursing academic sets. Monitor students requiring resit examinations and track improvement progress.
+                </div>
+
+                {% if bn_carryover_data %}
+                <div class="stats-grid">
+                    {% for set_name, data in bn_carryover_data.items() %}
+                    <div class="stat-card">
+                        <div class="stat-number">{{ data.total_students }}</div>
+                        <div class="stat-label">Carryover Students in BN/{{ set_name }}</div>
+                        <div class="info-text">
+                            <i class="fas fa-calendar"></i> Across {{ data.total_semesters }} semester(s)
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>No BN Carryover Data Available</h3>
+                    <p>Process Basic Nursing examination results first to identify carryover students.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const contentWrapper = document.getElementById('main');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            contentWrapper.classList.toggle('expanded');
+            toggleBtn.classList.toggle('shifted');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.innerHTML = '☰';
+            } else {
+                toggleBtn.innerHTML = '✕';
+            }
+        }
+
+        function validateBNCarryoverForm() {
+            const resitSet = document.getElementById('resit_set').value;
+            const resitSemester = document.getElementById('resit_semester').value;
+            const resitFile = document.getElementById('resit_file').value;
+            
+            if (!resitSet) {
+                alert('Please select a Basic Nursing academic set for carryover processing.');
+                return false;
+            }
+            
+            if (!resitSemester) {
+                alert('Please select a target semester for carryover processing.');
+                return false;
+            }
+            
+            if (!resitFile) {
+                alert('Please upload a Basic Nursing carryover Excel file.');
+                return false;
+            }
+            
+            const allowedExtensions = /(\.xlsx|\.xls)$/i;
+            if (!allowedExtensions.exec(resitFile)) {
+                alert('Please upload a valid Excel file (.xlsx or .xls).');
+                return false;
+            }
+            
+            return true;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const carryoverForm = document.getElementById('bn_carryover_form');
+            carryoverForm.onsubmit = function(e) {
+                if (!validateBNCarryoverForm()) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const submitBtn = document.getElementById('bn_carryover_submit_btn');
+                submitBtn.disabled = true;
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing BN Carryover...`;
+                
+                return true;
+            };
+
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    alert.style.opacity = '0';
+                    alert.style.transition = 'opacity 1s ease';
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 1000);
+                });
+            }, 15000);
+        });
+    </script>
+</body>
+</html>

@@ -16,6 +16,9 @@
             --dark: #2c3e50;
             --gradient-start: #667eea;
             --gradient-end: #764ba2;
+            --nd-color: #e74c3c;
+            --bn-color: #3498db;
+            --bm-color: #9b59b6;
         }
 
         * {
@@ -458,6 +461,15 @@
             transform: translateY(-2px);
         }
 
+        .btn-secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+        }
+
         .btn-success {
             background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
             color: white;
@@ -536,17 +548,66 @@
             background: white;
         }
 
+        .carryover-card.nd-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
+            border-color: #ffe3e3;
+        }
+
+        .carryover-card.bn-card {
+            background: linear-gradient(135deg, #f0f8ff 0%, #e1f0ff 100%);
+            border-color: #e1f0ff;
+        }
+
+        .carryover-card.bm-card {
+            background: linear-gradient(135deg, #f8f0ff 0%, #f0e1ff 100%);
+            border-color: #f0e1ff;
+        }
+
+        .carryover-card.nd-card:hover {
+            border-color: var(--nd-color);
+        }
+
+        .carryover-card.bn-card:hover {
+            border-color: var(--bn-color);
+        }
+
+        .carryover-card.bm-card:hover {
+            border-color: var(--bm-color);
+        }
+
         .carryover-card h4 {
-            color: var(--danger);
             margin-bottom: 8px;
             font-size: 1em;
+        }
+
+        .carryover-card.nd-card h4 {
+            color: var(--nd-color);
+        }
+
+        .carryover-card.bn-card h4 {
+            color: var(--bn-color);
+        }
+
+        .carryover-card.bm-card h4 {
+            color: var(--bm-color);
         }
 
         .carryover-stats {
             font-size: 2em;
             font-weight: bold;
-            color: var(--danger);
             margin-bottom: 5px;
+        }
+
+        .carryover-card.nd-card .carryover-stats {
+            color: var(--nd-color);
+        }
+
+        .carryover-card.bn-card .carryover-stats {
+            color: var(--bn-color);
+        }
+
+        .carryover-card.bm-card .carryover-stats {
+            color: var(--bm-color);
         }
 
         .carryover-card p {
@@ -561,6 +622,85 @@
             color: #666;
             background: #f8f9fa;
             border-radius: 8px;
+        }
+
+        .carryover-management-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .program-management-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-top: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .program-management-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .program-management-card.nd-card {
+            border-top-color: var(--nd-color);
+        }
+
+        .program-management-card.bn-card {
+            border-top-color: var(--bn-color);
+        }
+
+        .program-management-card.bm-card {
+            border-top-color: var(--bm-color);
+        }
+
+        .program-management-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .program-management-card.nd-card h4 {
+            color: var(--nd-color);
+        }
+
+        .program-management-card.bn-card h4 {
+            color: var(--bn-color);
+        }
+
+        .program-management-card.bm-card h4 {
+            color: var(--bm-color);
+        }
+
+        .program-management-card p {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+
+        .program-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+            color: white;
+        }
+
+        .nd-badge {
+            background: linear-gradient(135deg, var(--nd-color) 0%, #c0392b 100%);
+        }
+
+        .bn-badge {
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
+        }
+
+        .bm-badge {
+            background: linear-gradient(135deg, var(--bm-color) 0%, #8e44ad 100%);
         }
 
         .footer {
@@ -694,6 +834,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .carryover-management-grid {
+                grid-template-columns: 1fr;
+            }
+
             .footer-content {
                 grid-template-columns: 1fr;
             }
@@ -735,11 +879,37 @@
                 </a>
             </div>
 
+            <!-- UPDATED: Exam Processing Section -->
             <div class="nav-section">
-                <div class="nav-section-title">Student Management</div>
-                <a href="{{ url_for('carryover') }}">
-                    <span class="nav-icon">📚</span>
-                    <span>Carryover Students</span>
+                <div class="nav-section-title">Exam Processing</div>
+                <a href="{{ url_for('run_script', script_name='exam_processor_nd') }}">
+                    <span class="nav-icon">🎓</span>
+                    <span>ND Exam Processor</span>
+                </a>
+                <a href="{{ url_for('bn_regular_exam_processor') }}">
+                    <span class="nav-icon">💉</span>
+                    <span>BN Exam Processor</span>
+                </a>
+                <a href="{{ url_for('bm_regular_exam_processor') }}">
+                    <span class="nav-icon">🤰</span>
+                    <span>BM Exam Processor</span>
+                </a>
+            </div>
+
+            <!-- UPDATED: Carryover Management Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">Carryover Management</div>
+                <a href="{{ url_for('nd_carryover') }}">
+                    <span class="nav-icon">🎓</span>
+                    <span>ND Carryover</span>
+                </a>
+                <a href="{{ url_for('bn_carryover') }}">
+                    <span class="nav-icon">💉</span>
+                    <span>BN Carryover</span>
+                </a>
+                <a href="{{ url_for('bm_carryover') }}">
+                    <span class="nav-icon">🤰</span>
+                    <span>BM Carryover</span>
                 </a>
             </div>
 
@@ -808,15 +978,15 @@
                             <strong>ND Exams</strong>
                             <span>Process ND results</span>
                         </a>
-                        <a href="{{ url_for('run_script', script_name='exam_processor_bn') }}" class="action-btn">
+                        <a href="{{ url_for('bn_regular_exam_processor') }}" class="action-btn">
                             <div class="action-icon">💉</div>
                             <strong>Basic Nursing</strong>
-                            <span>Process nursing results</span>
+                            <span>BN Exam Processor</span>
                         </a>
-                        <a href="{{ url_for('run_script', script_name='exam_processor_bm') }}" class="action-btn">
+                        <a href="{{ url_for('bm_regular_exam_processor') }}" class="action-btn">
                             <div class="action-icon">🤰</div>
                             <strong>Basic Midwifery</strong>
-                            <span>Process midwifery results</span>
+                            <span>BM Exam Processor</span>
                         </a>
                         <a href="{{ url_for('run_script', script_name='utme') }}" class="action-btn">
                             <div class="action-icon">📘</div>
@@ -846,6 +1016,30 @@
                 </div>
             </div>
 
+            <!-- Carryover Management Section -->
+            <div class="carryover-section">
+                <h2>🔄 Carryover Management</h2>
+                <p>Manage carryover students and process resit examinations for each program</p>
+                <div class="carryover-management-grid">
+                    <div class="program-management-card nd-card">
+                        <h4><span class="program-badge nd-badge">ND</span> National Diploma Carryover</h4>
+                        <p>Process National Diploma carryover and resit examinations for all ND sets.</p>
+                        <a href="{{ url_for('nd_carryover') }}" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--nd-color) 0%, #c0392b 100%);">Manage ND Carryovers</a>
+                    </div>
+                    <div class="program-management-card bn-card">
+                        <h4><span class="program-badge bn-badge">BN</span> Basic Nursing Carryover</h4>
+                        <p>Process Basic Nursing carryover and resit examinations for all BN sets.</p>
+                        <a href="{{ url_for('bn_carryover') }}" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);">Manage BN Carryovers</a>
+                    </div>
+                    <div class="program-management-card bm-card">
+                        <h4><span class="program-badge bm-badge">BM</span> Basic Midwifery Carryover</h4>
+                        <p>Process Basic Midwifery carryover and resit examinations for all BM sets.</p>
+                        <a href="{{ url_for('bm_carryover') }}" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--bm-color) 0%, #8e44ad 100%);">Manage BM Carryovers</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carryover Statistics Section -->
             <div class="carryover-section">
                 <h2>📚 Carryover Students Overview</h2>
                 <p>Summary of students with carryover courses across programs</p>
@@ -853,12 +1047,18 @@
                     <div class="carryover-grid">
                         {% for program, sets in carryover_summaries.items() %}
                             {% for set_name, summary in sets.items() %}
-                                <div class="carryover-card">
+                                <div class="carryover-card {% if program == 'ND' %}nd-card{% elif program == 'BN' %}bn-card{% elif program == 'BM' %}bm-card{% endif %}">
                                     <h4>{{ program }} - {{ set_name }}</h4>
                                     <div class="carryover-stats">{{ summary.total_students }}</div>
                                     <p>Students with carryovers</p>
                                     <p>Total courses: {{ summary.total_courses }}</p>
-                                    <a href="{{ url_for('carryover') }}" class="btn btn-primary" style="width: 100%;">Manage Carryovers</a>
+                                    {% if program == 'ND' %}
+                                        <a href="{{ url_for('nd_carryover') }}" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--nd-color) 0%, #c0392b 100%);">Manage ND Carryovers</a>
+                                    {% elif program == 'BN' %}
+                                        <a href="{{ url_for('bn_carryover') }}" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);">Manage BN Carryovers</a>
+                                    {% elif program == 'BM' %}
+                                        <a href="{{ url_for('bm_carryover') }}" class="btn btn-primary" style="width: 100%; background: linear-gradient(135deg, var(--bm-color) 0%, #8e44ad 100%);">Manage BM Carryovers</a>
+                                    {% endif %}
                                 </div>
                             {% endfor %}
                         {% endfor %}

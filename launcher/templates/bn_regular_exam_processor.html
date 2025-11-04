@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Nursing Regular Exam Processor - {{ college | default('FCT College of Nursing Sciences') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gradient-start: #3498db;
+            --gradient-end: #2980b9;
+            --shadow: 0 6px 20px rgba(0,0,0,0.08);
+            --border-color: #e9ecef;
+            --carryover-color: #8e44ad;
+            --bn-color: #3498db;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            display: flex;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 200px;
+            height: 100vh;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            color: white;
+            padding: 0;
+            transition: width 0.3s ease, transform 0.3s ease;
+            overflow-y: auto;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 50px;
+        }
+
+        .sidebar-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(180deg, var(--dark) 0%, #1a252f 100%);
+            padding: 15px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo-section {
+            text-align: center;
+        }
+
+        .logo-section img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 8px;
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed .logo-section img {
+            width: 60px;
+            height: 60px;
+        }
+
+        .logo-section h2 {
+            font-size: 1.1em;
+            margin-bottom: 4px;
+        }
+
+        .logo-section p {
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+
+        .sidebar.collapsed .logo-section h2,
+        .sidebar.collapsed .logo-section p,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .sidebar-nav a span:not(.nav-icon) {
+            display: none;
+        }
+
+        .sidebar-nav {
+            padding: 10px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 15px;
+        }
+
+        .nav-section-title {
+            padding: 6px 15px;
+            font-size: 0.6em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.5;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            font-size: 0.9em;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav a.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--secondary);
+        }
+
+        .nav-icon {
+            font-size: 1em;
+            width: 16px;
+            text-align: center;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            margin-left: 200px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper.expanded {
+            margin-left: 50px;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 15px;
+            left: 180px;
+            z-index: 1100;
+            background: white;
+            border: 2px solid #e0e0e0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+            color: var(--dark);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-btn.shifted {
+            left: 30px;
+        }
+
+        .toggle-btn:hover {
+            background: var(--secondary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .header-bar {
+            background: white;
+            padding: 15px 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 1000px;
+            margin: 0 auto;
+            min-height: 50px;
+        }
+
+        .header-left h1 {
+            font-size: 1.2em;
+            color: var(--dark);
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .header-left h2 {
+            font-size: 0.75em;
+            color: #666;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1em;
+        }
+
+        .environment-badge {
+            padding: 5px 12px;
+            border-radius: 18px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .environment-production {
+            background: linear-gradient(135deg, var(--danger) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .environment-development {
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
+            color: white;
+        }
+
+        .env-indicator {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .form-container {
+            max-width: 1000px;
+            margin: 15px auto;
+            padding: 15px 25px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 15px;
+            border-left: 4px solid var(--bn-color);
+        }
+
+        .form-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .form-header-icon {
+            font-size: 2em;
+            color: var(--bn-color);
+        }
+
+        .form-section h3 {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .program-badge {
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 18px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .section-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .form-group select,
+        .form-group input[type="number"],
+        .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input[type="number"]:focus,
+        .form-group input[type="file"]:focus {
+            border-color: var(--bn-color);
+            background: white;
+            outline: none;
+        }
+
+        .form-group select:valid,
+        .form-group input[type="number"]:valid {
+            border-color: var(--success);
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .form-check input {
+            margin-right: 10px;
+            transform: scale(1.1);
+        }
+
+        .form-check label {
+            font-size: 0.95em;
+            color: var(--dark);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .form-check label strong {
+            font-weight: 600;
+        }
+
+        .form-check label span {
+            font-size: 0.85em;
+            color: #666;
+            display: block;
+        }
+
+        .checkbox-group {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+        }
+
+        .checkbox-group h4 {
+            font-size: 1.1em;
+            color: var(--dark);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .semester-checkboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .toggle-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--warning);
+        }
+
+        .toggle-section label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-weight: 600;
+            color: var(--dark);
+            cursor: pointer;
+        }
+
+        .toggle-section select {
+            width: auto;
+            min-width: 200px;
+            padding: 8px 12px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-carryover {
+            background: linear-gradient(135deg, var(--carryover-color) 0%, #6c3483 100%);
+        }
+
+        .info-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 8px;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .threshold-note {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+            border: 2px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #856404;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-note {
+            background: linear-gradient(135deg, #e8f4fd 0%, #d6eaff 100%);
+            border: 2px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-size: 0.9em;
+            color: #004085;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--danger);
+        }
+
+        .flash-messages {
+            margin: 15px 0;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 5px solid;
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: var(--success);
+            color: #155724;
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-color: var(--danger);
+            color: #721c24;
+        }
+
+        .alert-icon {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        .processing-mode-indicator {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .mode-regular {
+            background: var(--success);
+        }
+
+        .mode-carryover {
+            background: var(--carryover-color);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+                transform: translateX(-200px);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .content-wrapper {
+                margin-left: 0;
+            }
+
+            .toggle-btn {
+                left: 10px;
+                top: 10px;
+            }
+
+            .toggle-btn.shifted {
+                left: 10px;
+            }
+
+            .header-bar {
+                padding: 10px 15px;
+                margin: 40px auto 0;
+                max-width: 100%;
+            }
+
+            .header-left h1 {
+                font-size: 1em;
+            }
+
+            .header-left h2 {
+                font-size: 0.7em;
+            }
+
+            .form-container {
+                padding: 10px 15px;
+            }
+
+            .form-section {
+                padding: 15px;
+            }
+
+            .form-section h3 {
+                font-size: 1.2em;
+            }
+
+            .form-group label {
+                font-size: 0.9em;
+            }
+
+            .form-group select,
+            .form-group input[type="number"] {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 0.9em;
+            }
+
+            .semester-checkboxes {
+                grid-template-columns: 1fr;
+            }
+
+            .toggle-section select {
+                min-width: 100%;
+            }
+
+            .info-text, .threshold-note, .form-note {
+                font-size: 0.8em;
+            }
+
+            .form-header-icon {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="FCT College of Nursing Sciences" onerror="this.style.display='none'">
+                <h2>FCTCNS</h2>
+                <p>Results Processing</p>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Main Menu</div>
+                <a href="{{ url_for('dashboard') }}">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">File Management</div>
+                <a href="{{ url_for('upload_center') }}">
+                    <span class="nav-icon">📤</span>
+                    <span>Upload Center</span>
+                </a>
+                <a href="{{ url_for('download_center') }}">
+                    <span class="nav-icon">📥</span>
+                    <span>Download Center</span>
+                </a>
+                <a href="{{ url_for('file_browser') }}">
+                    <span class="nav-icon">📁</span>
+                    <span>File Browser</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Carryover Management</div>
+                <a href="{{ url_for('nd_carryover') }}">
+                    <span class="nav-icon">🎓</span>
+                    <span>ND Carryover</span>
+                </a>
+                <a href="{{ url_for('bn_carryover') }}" class="active">
+                    <span class="nav-icon">💉</span>
+                    <span>BN Carryover</span>
+                </a>
+                <a href="{{ url_for('bm_carryover') }}">
+                    <span class="nav-icon">🤰</span>
+                    <span>BM Carryover</span>
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="{{ url_for('debug_paths') }}">
+                    <span class="nav-icon">⚙️</span>
+                    <span>System Tools</span>
+                </a>
+                <a href="{{ url_for('debug_dir_contents') }}">
+                    <span class="nav-icon">🔍</span>
+                    <span>Debug Directory Contents</span>
+                </a>
+                <a href="{{ url_for('logout') }}">
+                    <span class="nav-icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <div class="content-wrapper" id="main">
+        <button class="toggle-btn" id="toggleBtn" onclick="toggleSidebar()">☰</button>
+
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college | default('FCT College of Nursing Sciences') }}</h1>
+                <h2>{{ department | default('Examinations Office') }}</h2>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9em;">Admin</div>
+                        <div style="font-size: 0.75em; color: #666;">Administrator</div>
+                    </div>
+                </div>
+                <span class="environment-badge {% if environment == 'Railway Production' %}environment-production{% else %}environment-development{% endif %}">
+                    <span class="env-indicator"></span>
+                    {{ environment | default('Local Development') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert {% if category == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                <span class="alert-icon">{% if category == 'success' %}✅{% else %}❌{% endif %}</span>
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="form-container">
+            <div class="form-section">
+                <div class="form-header">
+                    <i class="fas fa-user-nurse form-header-icon"></i>
+                    <div>
+                        <h3>Basic Nursing Regular Exam Processor</h3>
+                        <span class="program-badge">BN REGULAR PROCESSING</span>
+                    </div>
+                </div>
+
+                <div class="section-description">
+                    <i class="fas fa-info-circle"></i> Configure academic processing parameters for Basic Nursing regular examination results. This tool processes raw examination data and generates comprehensive results with GPA calculations, student status tracking, and academic reports.
+                </div>
+
+                <!-- Regular Processing Form Only -->
+                <form method="POST" action="{{ url_for('run_script', script_name='exam_processor_bn') }}" enctype="multipart/form-data" id="regular_form">
+                    <div class="form-note">
+                        <i class="fas fa-info-circle"></i> <strong>📋 Note:</strong> Ensure examination files are uploaded to the appropriate RAW_RESULTS directory before processing. Files should follow the naming convention: [Semester]_[Course]_[Set].xlsx
+                    </div>
+
+                    <div class="form-group">
+                        <label for="selected_set" class="required"><i class="fas fa-folder"></i> Academic Set / Cohort</label>
+                        <select class="form-select" id="selected_set" name="selected_set" required aria-describedby="set-help">
+                            <option value="">-- Select Academic Set --</option>
+                            <option value="all">Process All Available Sets</option>
+                            {% for set in bn_sets %}
+                            <option value="{{ set }}">{{ set }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="info-text" id="set-help"><i class="fas fa-info-circle"></i> Select a specific academic cohort or choose to process all available sets</div>
+                    </div>
+
+                    <div class="toggle-section">
+                        <label for="processing_mode">
+                            <span><i class="fas fa-cog"></i> Processing Mode</span>
+                            <select class="form-select" id="processing_mode" name="processing_mode" onchange="toggleSemesterSelection()" aria-describedby="mode-help">
+                                <option value="auto">Automatic Mode</option>
+                                <option value="manual">Manual Semester Selection</option>
+                            </select>
+                        </label>
+                        <div class="info-text" id="mode-help">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Automatic:</strong> Processes all semesters with available data<br>
+                            <strong>Manual:</strong> Select specific semesters to process
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="semesters_section" style="display: none;">
+                        <label><i class="fas fa-calendar"></i> Semester Selection</label>
+                        <div class="checkbox-group">
+                            <h4><i class="fas fa-check-square"></i> Available Semesters</h4>
+                            <div class="semester-checkboxes" id="semester_checkboxes">
+                                <!-- Semester checkboxes populated by JavaScript -->
+                            </div>
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Select specific semesters to process. Only selected semesters will be included in the processing.</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pass_threshold" class="required"><i class="fas fa-percentage"></i> Passing Threshold (%)</label>
+                        <input type="number" id="pass_threshold" name="pass_threshold" value="50.0" step="0.1" min="0" max="100" required aria-describedby="pass-help">
+                        <div class="info-text" id="pass-help"><i class="fas fa-info-circle"></i> Minimum score required to pass a course. Standard academic threshold is 50%.</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="upgrade_threshold"><i class="fas fa-percentage"></i> Grade Upgrade Threshold</label>
+                        <input type="number" id="upgrade_threshold" name="upgrade_threshold" value="0" min="0" max="49" aria-describedby="upgrade-help">
+                        <div class="info-text" id="upgrade-help"><i class="fas fa-info-circle"></i> Set the minimum score for grade upgrades (45-49). Scores from this value up to 49 will be upgraded to 50.</div>
+                        <div class="threshold-note"><i class="fas fa-exclamation-triangle"></i> <strong>⚠️ Important:</strong> Set to 0 to disable grade upgrades. Only enable if authorized by academic policy.</div>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="generate_pdf" id="generate_pdf" checked aria-label="Generate Individual Student PDF Reports">
+                        <label for="generate_pdf">
+                            <strong><i class="fas fa-file-pdf"></i> Generate Individual Student PDF Reports</strong><br>
+                            <span>Creates professional PDF reports for each student with detailed academic performance</span>
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="track_withdrawn" id="track_withdrawn" checked aria-label="Track Withdrawn Student Status">
+                        <label for="track_withdrawn">
+                            <strong><i class="fas fa-user-times"></i> Track Withdrawn Student Status</strong><br>
+                            <span>Monitor and track students with withdrawn status across semesters</span>
+                        </label>
+                    </div>
+
+                    <div class="form-note">
+                        <i class="fas fa-rocket"></i> <strong>🚀 Ready to Process:</strong> Click the button below to start processing examination results. Processing time depends on the number of files and students. Do not close the browser during processing.
+                    </div>
+
+                    <button type="submit" class="btn" id="submit_btn" aria-label="Process Basic Nursing Examination Results">
+                        <i class="fas fa-rocket"></i> 
+                        <span>Process Basic Nursing Examination Results</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const semesterConfigs = {
+            'BN': [
+                { value: 'N-FIRST-YEAR-FIRST-SEMESTER', label: 'First Year - First Semester' },
+                { value: 'N-FIRST-YEAR-SECOND-SEMESTER', label: 'First Year - Second Semester' },
+                { value: 'N-SECOND-YEAR-FIRST-SEMESTER', label: 'Second Year - First Semester' },
+                { value: 'N-SECOND-YEAR-SECOND-SEMESTER', label: 'Second Year - Second Semester' },
+                { value: 'N-THIRD-YEAR-FIRST-SEMESTER', label: 'Third Year - First Semester' },
+                { value: 'N-THIRD-YEAR-SECOND-SEMESTER', label: 'Third Year - Second Semester' }
+            ]
+        };
+
+        const setConfigs = {
+            'BN': {{ bn_sets | tojson }}
+        };
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const contentWrapper = document.getElementById('main');
+            const toggleBtn = document.getElementById('toggleBtn');
+            
+            sidebar.classList.toggle('collapsed');
+            contentWrapper.classList.toggle('expanded');
+            toggleBtn.classList.toggle('shifted');
+            
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.innerHTML = '☰';
+            } else {
+                toggleBtn.innerHTML = '✕';
+            }
+        }
+
+        function updateSetsAndSemesters() {
+            const setSelect = document.getElementById('selected_set');
+            const semesterCheckboxes = document.getElementById('semester_checkboxes');
+
+            setSelect.innerHTML = '<option value="">-- Select Academic Set --</option><option value="all">Process All Available Sets</option>';
+            const sets = setConfigs['BN'] || [];
+            sets.forEach(set => {
+                const option = document.createElement('option');
+                option.value = set;
+                option.textContent = set;
+                setSelect.appendChild(option);
+            });
+
+            semesterCheckboxes.innerHTML = '';
+            const semesters = semesterConfigs['BN'] || [];
+            semesters.forEach(sem => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input type="checkbox" name="selected_semesters" value="${sem.value}" id="${sem.value}" aria-label="${sem.label}">
+                    <label for="${sem.value}">${sem.label}</label>
+                `;
+                semesterCheckboxes.appendChild(div);
+            });
+        }
+
+        function toggleSemesterSelection() {
+            const processingMode = document.getElementById('processing_mode').value;
+            const semestersSection = document.getElementById('semesters_section');
+            
+            if (processingMode === 'manual') {
+                semestersSection.style.display = 'block';
+            } else {
+                semestersSection.style.display = 'none';
+            }
+        }
+
+        function validateRegularForm() {
+            const selectedSet = document.getElementById('selected_set').value;
+            const processingMode = document.getElementById('processing_mode').value;
+            const passThreshold = document.getElementById('pass_threshold').value;
+            
+            if (!selectedSet) {
+                alert('Please select an academic set to process.');
+                return false;
+            }
+            
+            if (processingMode === 'manual') {
+                const selectedSemesters = document.querySelectorAll('input[name="selected_semesters"]:checked');
+                if (selectedSemesters.length === 0) {
+                    alert('Please select at least one semester to process in manual mode.');
+                    return false;
+                }
+            }
+            
+            if (!passThreshold || passThreshold < 0 || passThreshold > 100) {
+                alert('Please enter a valid passing threshold between 0 and 100.');
+                return false;
+            }
+            
+            return true;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSetsAndSemesters();
+            toggleSemesterSelection();
+
+            // Regular form validation
+            const regularForm = document.getElementById('regular_form');
+            regularForm.onsubmit = function(e) {
+                if (!validateRegularForm()) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                const submitBtn = document.getElementById('submit_btn');
+                submitBtn.disabled = true;
+                submitBtn.classList.add('disabled');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+                
+                return true;
+            };
+
+            // Auto-hide flash messages after 15 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    alert.style.opacity = '0';
+                    alert.style.transition = 'opacity 1s ease';
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 1000);
+                });
+            }, 15000);
+
+            // Set active navigation link
+            const navLinks = document.querySelectorAll('.sidebar-nav a');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === window.location.pathname) {
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1450 @@
+[
+  {
+    "exam_number": "7434",
+    "name": "ABDULKADIR MARYAM IKPEMOSIME",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 49.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 14.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 14.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7440",
+    "name": "ABDULSALAM  ZULIEHAT",
+    "failed_courses": [
+      {
+        "course_code": "GNS127",
+        "original_score": 41.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7451",
+    "name": "ADO AMATULLAH",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 39.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 6.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 6.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 34.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7456",
+    "name": "AHMED-RUFAI ASMAU",
+    "failed_courses": [
+      {
+        "course_code": "GNS122",
+        "original_score": 18.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 18.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 49.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 18.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7457",
+    "name": "AJEH MARTHA SYLVERA",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 44.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS122",
+        "original_score": 45.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 34.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 21.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 21.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7463",
+    "name": "ALIU MARIA OCHUWA",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7467",
+    "name": "AMADI JULIET OBIANUJUNWA",
+    "failed_courses": [
+      {
+        "course_code": "GNS123",
+        "original_score": 33.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 23.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 23.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 32.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7478",
+    "name": "AUGUSTINE  MONICA ENOSI",
+    "failed_courses": [
+      {
+        "course_code": "GNS122",
+        "original_score": 44.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 45.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 40.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 27.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 27.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 40.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7480",
+    "name": "AYIKOYE FLOURISH ULIEJU",
+    "failed_courses": [
+      {
+        "course_code": "GNS123",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 26.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 44.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7482",
+    "name": "BABAJIDE DEBORAH GBEMISOLA",
+    "failed_courses": [
+      {
+        "course_code": "GNS123",
+        "original_score": 27.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 27.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 42.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 41.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7491",
+    "name": "DAUDA  CYNTIKI KUYET",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 15.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 15.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS122",
+        "original_score": 18.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7497",
+    "name": "EBERECHUKWU DIVINE STEPHEN",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 28.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 22.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 22.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7498",
+    "name": "EDWARD ISAAC DANJUMA",
+    "failed_courses": [
+      {
+        "course_code": "GNS122",
+        "original_score": 33.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 49.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 47.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 24.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 39.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 5.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 5.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7500",
+    "name": "ELOCHUKWU PROMISE ONYINYECHI",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS122",
+        "original_score": 30.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7507",
+    "name": "ESIKE  CHINENYE STEPHANIE",
+    "failed_courses": [
+      {
+        "course_code": "GNS123",
+        "original_score": 26.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 30.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7515",
+    "name": "HARUNA  HAFSAT UMAR",
+    "failed_courses": [
+      {
+        "course_code": "GNS122",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 16.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 16.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 44.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7535",
+    "name": "JAMES  MERCY NDOUK",
+    "failed_courses": [
+      {
+        "course_code": "GNS122",
+        "original_score": 33.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 44.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 42.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7538",
+    "name": "JOSEPHAT RUTH CHIDERA",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 24.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 25.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 25.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 22.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 22.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 47.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 18.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7544",
+    "name": "LAWRENCE  ESTHER AMARACHI",
+    "failed_courses": [
+      {
+        "course_code": "GNS122",
+        "original_score": 49.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 26.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 40.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 23.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 23.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7545",
+    "name": "LUKA JENNIFER",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 19.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 19.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 42.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 42.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 39.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7550",
+    "name": "MBUI GIFT  ODUM",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 40.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS122",
+        "original_score": 38.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 19.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 19.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 14.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 14.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7557",
+    "name": "MOLOKWU ONYINYECHUKWU OLIVIA",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 31.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 31.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 45.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 20.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 20.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 43.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7559",
+    "name": "MOSES VICTORY ESHIOFUNE",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 30.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 37.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 37.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 33.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7562",
+    "name": "MOYOSORE JUMOKE DOLAPO-GRACE",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 40.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 26.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 16.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 16.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7579",
+    "name": "ODEAHAN ITOHAN ABIGAIL",
+    "failed_courses": [
+      {
+        "course_code": "GNS125",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 32.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7580",
+    "name": "OGBE  INNOCENT OCHE",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 14.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 14.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 31.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 31.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 24.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 28.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 42.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7599",
+    "name": "PETER ISHAKU",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 45.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS122",
+        "original_score": 49.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 18.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 9.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 9.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7605",
+    "name": "SAMSON ERNEST ALLU",
+    "failed_courses": [
+      {
+        "course_code": "GNS123",
+        "original_score": 44.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 48.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 47.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7607",
+    "name": "SANUSI MABEL",
+    "failed_courses": [
+      {
+        "course_code": "GNS123",
+        "original_score": 32.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS124",
+        "original_score": 28.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS125",
+        "original_score": 28.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7618",
+    "name": "THEOPHILUS BUKOLA CHRYSOPRASE",
+    "failed_courses": [
+      {
+        "course_code": "GNS121",
+        "original_score": 34.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS122",
+        "original_score": 40.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS123",
+        "original_score": 47.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7626",
+    "name": "UNUABOR PHILIP OSEIWE",
+    "failed_courses": [
+      {
+        "course_code": "GNS124",
+        "original_score": 36.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS126",
+        "original_score": 41.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS127",
+        "original_score": 46.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GNS128",
+        "original_score": 28.0,
+        "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+        "set": "SET47",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "N-FIRST-YEAR-SECOND-SEMESTER",
+    "set": "SET47",
+    "identified_date": "2025-11-04 19:34:19",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  }
+]

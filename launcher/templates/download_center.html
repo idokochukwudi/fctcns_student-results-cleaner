@@ -597,6 +597,15 @@
             gap: 6px;
         }
 
+        .subfolder-indicator {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            margin-left: 8px;
+        }
+
         @media (max-width: 1024px) {
             .file-grid {
                 grid-template-columns: 1fr;
@@ -693,6 +702,18 @@
                 <a href="{{ url_for('dashboard') }}">
                     <span class="nav-icon">🏠</span>
                     <span>Dashboard</span>
+                </a>
+                <a href="{{ url_for('nd_regular_exam_processor') }}">
+                    <span class="nav-icon">🎓</span>
+                    <span>ND Exam Processor</span>
+                </a>
+                <a href="{{ url_for('bn_regular_exam_processor') }}">
+                    <span class="nav-icon">👨‍⚕️</span>
+                    <span>BN Exam Processor</span>
+                </a>
+                <a href="{{ url_for('bm_regular_exam_processor') }}">
+                    <span class="nav-icon">👶</span>
+                    <span>BM Exam Processor</span>
                 </a>
             </div>
             <div class="nav-section">
@@ -800,12 +821,18 @@
                                         <div class="file-name">
                                             <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                             {{ file.name }}
+                                            {% if file.subfolder and file.subfolder != file.folder %}
+                                            <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                            {% endif %}
                                         </div>
                                         <div class="file-meta">
                                             {% if file.semester and file.semester != "Unknown" %}
                                             <span class="semester-badge">{{ file.semester }}</span><br>
                                             {% endif %}
                                             <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                            {% if file.subfolder and file.subfolder != file.folder %}
+                                            <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                            {% endif %}
                                             <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                             <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                         </div>
@@ -881,12 +908,18 @@
                                         <div class="file-name">
                                             <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                             {{ file.name }}
+                                            {% if file.subfolder and file.subfolder != file.folder %}
+                                            <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                            {% endif %}
                                         </div>
                                         <div class="file-meta">
                                             {% if file.semester and file.semester != "Unknown" %}
                                             <span class="semester-badge">{{ file.semester }}</span><br>
                                             {% endif %}
                                             <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                            {% if file.subfolder and file.subfolder != file.folder %}
+                                            <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                            {% endif %}
                                             <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                             <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                         </div>
@@ -962,12 +995,18 @@
                                         <div class="file-name">
                                             <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                             {{ file.name }}
+                                            {% if file.subfolder and file.subfolder != file.folder %}
+                                            <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                            {% endif %}
                                         </div>
                                         <div class="file-meta">
                                             {% if file.semester and file.semester != "Unknown" %}
                                             <span class="semester-badge">{{ file.semester }}</span><br>
                                             {% endif %}
                                             <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                            {% if file.subfolder and file.subfolder != file.folder %}
+                                            <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                            {% endif %}
                                             <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                             <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                         </div>
@@ -1018,9 +1057,15 @@
                                 <div class="file-name">
                                     <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                     {{ file.name }}
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                    {% endif %}
                                 </div>
                                 <div class="file-meta">
                                     <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                    {% endif %}
                                     <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                     <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                 </div>
@@ -1068,9 +1113,15 @@
                                 <div class="file-name">
                                     <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                     {{ file.name }}
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                    {% endif %}
                                 </div>
                                 <div class="file-meta">
                                     <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                    {% endif %}
                                     <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                     <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                 </div>
@@ -1118,9 +1169,15 @@
                                 <div class="file-name">
                                     <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                     {{ file.name }}
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                    {% endif %}
                                 </div>
                                 <div class="file-meta">
                                     <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                    {% endif %}
                                     <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                     <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                 </div>
@@ -1168,9 +1225,15 @@
                                 <div class="file-name">
                                     <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
                                     {{ file.name }}
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
+                                    {% endif %}
                                 </div>
                                 <div class="file-meta">
                                     <i class="fas fa-folder"></i> {{ file.folder }}<br>
+                                    {% if file.subfolder and file.subfolder != file.folder %}
+                                    <i class="fas fa-folder-tree"></i> {{ file.subfolder }}<br>
+                                    {% endif %}
                                     <i class="fas fa-ruler"></i> {{ (file.size / 1024 / 1024)|round(2) }} MB<br>
                                     <i class="fas fa-calendar"></i> {{ file.modified | datetimeformat }}
                                 </div>

@@ -20,8 +20,13 @@ import platform
 import difflib
 import math
 import glob
+import json
 import tempfile
 import shutil
+import zipfile
+import time
+import logging
+import traceback
 
 # PDF generation
 from reportlab.lib.pagesizes import A4
@@ -34,6 +39,13 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 # ----------------------------
 # BM-Specific Configuration
 # ----------------------------
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 def is_running_on_railway():
     """Check if we're running on Railway"""
@@ -107,7 +119,7 @@ def process_uploaded_file(uploaded_file_path, base_dir_norm):
     Process uploaded file in web mode.
     This function handles the single uploaded file for web processing.
     """
-    print("🔧 Processing uploaded file in web mode")
+    logger.info("🔧 Processing uploaded file in web mode")
     
     # Extract set name from filename or use default
     filename = os.path.basename(uploaded_file_path)
@@ -138,8 +150,8 @@ def process_uploaded_file(uploaded_file_path, base_dir_norm):
         # Detect semester from filename
         semester_key, _, _, _, _, _ = detect_semester_from_filename(filename)
         
-        print(f"🎯 Detected semester: {semester_key}")
-        print(f"📁 Processing uploaded file: {filename}")
+        logger.info(f"🎯 Detected semester: {semester_key}")
+        logger.info(f"📁 Processing uploaded file: {filename}")
         
         # Process the file
         result = process_single_file(
@@ -159,15 +171,29 @@ def process_uploaded_file(uploaded_file_path, base_dir_norm):
         )
         
         if result is not None:
-            print(f"✅ Successfully processed uploaded file")
+            logger.info(f"✅ Successfully processed uploaded file")
+            
+            # Zip the results
+            result_folder = os.path.join(clean_dir, f"{set_name}_RESULT-{ts}")
+            if os.path.exists(result_folder):
+                zip_path = os.path.join(clean_dir, f"{set_name}_RESULT-{ts}.zip")
+                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for root, _, files in os.walk(result_folder):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, result_folder)
+                            zipf.write(file_path, arcname)
+                logger.info(f"✅ Zipped results: {zip_path}")
+                # Remove the folder after zipping to clean up
+                shutil.rmtree(result_folder)
+            
             return True
         else:
-            print(f"❌ Failed to process uploaded file")
+            logger.error(f"❌ Failed to process uploaded file")
             return False
             
     except Exception as e:
-        print(f"❌ Error processing uploaded file: {e}")
-        import traceback
+        logger.error(f"❌ Error processing uploaded file: {e}")
         traceback.print_exc()
         return False
     finally:
@@ -183,9 +209,52 @@ def get_upgrade_threshold_from_env():
             return upgrade_value
     return None
 
+def create_bm_zip_for_set(clean_dir, set_name, ts, set_output_dir):
+    """Create ZIP file for BM set with verification."""
+    try:
+        # Wait for file operations
+        time.sleep(2)
+        
+        # Verify source directory
+        if not os.path.exists(set_output_dir):
+            logger.error(f"❌ Output directory doesn't exist: {set_output_dir}")
+            return False
+        
+        # Count files
+        file_count = sum(len(files) for _, _, files in os.walk(set_output_dir))
+        if file_count == 0:
+            logger.error(f"❌ No files to zip in: {set_output_dir}")
+            return False
+        
+        # Create ZIP
+        zip_filename = f"{set_name}_RESULT-{ts}.zip"
+        zip_path = os.path.join(clean_dir, zip_filename)
+        
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, _, files in os.walk(set_output_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    arcname = os.path.relpath(file_path, set_output_dir)
+                    zipf.write(file_path, arcname)
+        
+        # Verify ZIP
+        if os.path.exists(zip_path) and os.path.getsize(zip_path) > 1000:
+            with zipfile.ZipFile(zip_path, 'r') as test_zip:
+                if len(test_zip.namelist()) == file_count:
+                    # Safe to remove original
+                    shutil.rmtree(set_output_dir)
+                    logger.info(f"✅ ZIP created and verified: {zip_path}")
+                    return True
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"❌ ZIP creation failed: {e}")
+        return False
+
 def process_in_non_interactive_mode(params, base_dir_norm):
     """Process exams in non-interactive mode for web interface."""
-    print("🔧 Running in NON-INTERACTIVE mode (web interface)")
+    logger.info("🔧 Running in NON-INTERACTIVE mode (web interface)")
     
     # Use parameters from environment variables
     selected_set = params['selected_set']
@@ -199,41 +268,41 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     available_sets = get_available_sets(base_dir_norm)
     
     if not available_sets:
-        print("❌ No BM sets found")
+        logger.error("❌ No BM sets found")
         return False
     
     # Remove BM-COURSES from available sets if present
     available_sets = [s for s in available_sets if s != 'BM-COURSES']
     
     if not available_sets:
-        print("❌ No valid BM sets found (only BM-COURSES present)")
+        logger.error("❌ No valid BM sets found (only BM-COURSES present)")
         return False
     
     # Determine which sets to process
     if selected_set == "all":
         sets_to_process = available_sets
-        print(f"🎯 Processing ALL sets: {sets_to_process}")
+        logger.info(f"🎯 Processing ALL sets: {sets_to_process}")
     else:
         if selected_set in available_sets:
             sets_to_process = [selected_set]
-            print(f"🎯 Processing selected set: {selected_set}")
+            logger.info(f"🎯 Processing selected set: {selected_set}")
         else:
-            print(f"⚠️ Selected set '{selected_set}' not found, processing all sets")
+            logger.warning(f"⚠️ Selected set '{selected_set}' not found, processing all sets")
             sets_to_process = available_sets
     
     # Determine which semesters to process
     if processing_mode == "auto" or not selected_semesters or 'all' in selected_semesters:
         semesters_to_process = SEMESTER_ORDER.copy()
-        print(f"🎯 Processing ALL semesters: {semesters_to_process}")
+        logger.info(f"🎯 Processing ALL semesters: {semesters_to_process}")
     else:
         semesters_to_process = selected_semesters
-        print(f"🎯 Processing selected semesters: {semesters_to_process}")
+        logger.info(f"🎯 Processing selected semesters: {semesters_to_process}")
     
     # Load course data once
     try:
         semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
     except Exception as e:
-        print(f"❌ Could not load course data: {e}")
+        logger.error(f"❌ Could not load course data: {e}")
         return False
     
     ts = datetime.now().strftime(TIMESTAMP_FMT)
@@ -241,33 +310,40 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     # Process each set and semester
     total_processed = 0
     for bm_set in sets_to_process:
-        print(f"\n{'='*60}")
-        print(f"PROCESSING SET: {bm_set}")
-        print(f"{'='*60}")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"PROCESSING SET: {bm_set}")
+        logger.info(f"{'='*60}")
         
         # BM: Raw and clean directories under BM folder
-        raw_dir = normalize_path(os.path.join(base_dir_norm, "BM", bm_set, "RAW_RESULTS"))
-        clean_dir = normalize_path(os.path.join(base_dir_norm, "BM", bm_set, "CLEAN_RESULTS"))
+        raw_dir = os.path.join(base_dir_norm, "BM", bm_set, "RAW_RESULTS")
+        clean_dir = os.path.join(base_dir_norm, "BM", bm_set, "CLEAN_RESULTS")
         
         # Create directories if they don't exist
         os.makedirs(raw_dir, exist_ok=True)
         os.makedirs(clean_dir, exist_ok=True)
         
         if not os.path.exists(raw_dir):
-            print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
+            logger.warning(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
             continue
         
         raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".xlsx", ".xls")) and not f.startswith("~$")]
         if not raw_files:
-            print(f"⚠️ No raw files in {raw_dir}; skipping {bm_set}")
+            logger.warning(f"⚠️ No raw files in {raw_dir}; skipping {bm_set}")
             continue
         
-        print(f"📁 Found {len(raw_files)} raw files in {bm_set}: {raw_files}")
+        logger.info(f"📁 Found {len(raw_files)} raw files in {bm_set}: {raw_files}")
+        
+        # Create timestamped output directory
+        set_output_dir = os.path.join(clean_dir, f"{bm_set}_RESULT-{ts}")
+        os.makedirs(set_output_dir, exist_ok=True)
+        
+        # Track semesters processed for this set
+        semesters_processed = []
         
         # Process selected semesters
         for semester_key in semesters_to_process:
             if semester_key not in SEMESTER_ORDER:
-                print(f"⚠️ Skipping unknown semester: {semester_key}")
+                logger.warning(f"⚠️ Skipping unknown semester: {semester_key}")
                 continue
             
             # Check if there are files for this semester
@@ -279,7 +355,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
                     break
             
             if semester_files_exist:
-                print(f"\n🎯 Processing {semester_key} in {bm_set}...")
+                logger.info(f"\n🎯 Processing {semester_key} in {bm_set}...")
                 try:
                     # Process the semester with the upgrade threshold
                     result = process_semester_files(
@@ -299,20 +375,39 @@ def process_in_non_interactive_mode(params, base_dir_norm):
                         upgrade_min_threshold=upgrade_min_threshold
                     )
                     
-                    if result is not None:
-                        print(f"✅ Successfully processed {semester_key}")
+                    if result is not None and result.get('success', False):
+                        logger.info(f"✅ Successfully processed {semester_key}")
                         total_processed += 1
+                        semesters_processed.append(semester_key)
                     else:
-                        print(f"❌ Failed to process {semester_key}")
+                        logger.error(f"❌ Failed to process {semester_key}")
                         
                 except Exception as e:
-                    print(f"❌ Error processing {semester_key}: {e}")
-                    import traceback
+                    logger.error(f"❌ Error processing {semester_key}: {e}")
                     traceback.print_exc()
             else:
-                print(f"⚠️ No files found for {semester_key} in {bm_set}, skipping...")
+                logger.warning(f"⚠️ No files found for {semester_key} in {bm_set}, skipping...")
+        
+        # Only create ZIP if semesters were actually processed
+        if semesters_processed:
+            logger.info(f"📦 Creating ZIP for {bm_set} ({len(semesters_processed)} semesters)")
+            create_bm_zip_for_set(clean_dir, bm_set, ts, set_output_dir)
+        else:
+            logger.warning(f"⚠️ No semesters processed for {bm_set}, skipping ZIP")
+            if os.path.exists(set_output_dir):
+                shutil.rmtree(set_output_dir)
     
-    print(f"\n📊 PROCESSING SUMMARY: {total_processed} semester(s) processed")
+    logger.info(f"\n📊 PROCESSING SUMMARY: {total_processed} semester(s) processed")
+    
+    # NEW: Print BM-specific summaries
+    logger.info("\n📊 BM STUDENT TRACKING SUMMARY:")
+    logger.info("Total unique BM students tracked: {}".format(len(STUDENT_TRACKER)))
+    logger.info("Total BM withdrawn students: {}".format(len(WITHDRAWN_STUDENTS)))
+
+    if CARRYOVER_STUDENTS:
+        logger.info("\n📋 BM CARRYOVER STUDENT SUMMARY:")
+        logger.info("Total BM carryover students: {}".format(len(CARRYOVER_STUDENTS)))
+    
     return total_processed > 0
 
 def get_form_parameters():
@@ -329,13 +424,13 @@ def get_form_parameters():
     if selected_semesters_str:
         selected_semesters = selected_semesters_str.split(',')
     
-    print(f"🎯 FORM PARAMETERS:")
-    print(f"   Selected Set: {selected_set}")
-    print(f"   Processing Mode: {processing_mode}")
-    print(f"   Selected Semesters: {selected_semesters}")
-    print(f"   Pass Threshold: {pass_threshold}")
-    print(f"   Generate PDF: {generate_pdf}")
-    print(f"   Track Withdrawn: {track_withdrawn}")
+    logger.info(f"🎯 FORM PARAMETERS:")
+    logger.info(f"   Selected Set: {selected_set}")
+    logger.info(f"   Processing Mode: {processing_mode}")
+    logger.info(f"   Selected Semesters: {selected_semesters}")
+    logger.info(f"   Pass Threshold: {pass_threshold}")
+    logger.info(f"   Generate PDF: {generate_pdf}")
+    logger.info(f"   Track Withdrawn: {track_withdrawn}")
     
     return {
         'selected_set': selected_set,
@@ -370,19 +465,235 @@ DEFAULT_LOGO_PATH = os.path.normpath(
 
 NAME_WIDTH_CAP = 40
 
-# Define BM semester processing order (3-year program)
+# Define BM semester processing order (3-year program) - FIXED: Changed BM- prefix to M- prefix consistently
 SEMESTER_ORDER = [
-    "BM-FIRST-YEAR-FIRST-SEMESTER",
-    "BM-FIRST-YEAR-SECOND-SEMESTER",
-    "BM-SECOND-YEAR-FIRST-SEMESTER",
-    "BM-SECOND-YEAR-SECOND-SEMESTER",
-    "BM-THIRD-YEAR-FIRST-SEMESTER",
-    "BM-THIRD-YEAR-SECOND-SEMESTER"
+    "M-FIRST-YEAR-FIRST-SEMESTER",
+    "M-FIRST-YEAR-SECOND-SEMESTER",
+    "M-SECOND-YEAR-FIRST-SEMESTER",
+    "M-SECOND-YEAR-SECOND-SEMESTER",
+    "M-THIRD-YEAR-FIRST-SEMESTER",
+    "M-THIRD-YEAR-SECOND-SEMESTER"
 ]
 
 # Global student tracker
 STUDENT_TRACKER = {}
 WITHDRAWN_STUDENTS = {}
+CARRYOVER_STUDENTS = {}  # New global carryover tracker for BM
+
+# ----------------------------
+# NEW: CGPA SUMMARY SHEET FUNCTION
+# ----------------------------
+
+def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
+    """Create a CGPA summary sheet that aggregates GPA across all BM semesters."""
+    try:
+        logger.info("📊 Creating BM CGPA Summary Sheet...")
+        
+        # Load the mastersheet workbook
+        wb = load_workbook(mastersheet_path)
+        
+        # Collect GPA data from all BM semesters
+        cgpa_data = {}
+        
+        for sheet_name in wb.sheetnames:
+            if sheet_name in SEMESTER_ORDER:
+                df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
+                
+                # Find exam number and GPA columns
+                exam_col = find_column_by_names(df, ["EXAMS NUMBER", "REG. No", "Reg No"])
+                gpa_col = None
+                name_col = None
+                
+                for col in df.columns:
+                    col_str = str(col).upper()
+                    if 'GPA' in col_str:
+                        gpa_col = col
+                    elif 'NAME' in col_str:
+                        name_col = col
+                
+                if exam_col and gpa_col:
+                    for idx, row in df.iterrows():
+                        exam_no = str(row[exam_col]).strip()
+                        if exam_no and exam_no != 'nan':
+                            if exam_no not in cgpa_data:
+                                cgpa_data[exam_no] = {
+                                    'name': row[name_col] if name_col and pd.notna(row.get(name_col)) else '',
+                                    'gpas': {}
+                                }
+                            cgpa_data[exam_no]['gpas'][sheet_name] = row[gpa_col]
+        
+        # Create CGPA summary dataframe
+        summary_data = []
+        for exam_no, data in cgpa_data.items():
+            row = {
+                'EXAMS NUMBER': exam_no,
+                'NAME': data['name']
+            }
+            
+            # Add GPA for each semester
+            total_gpa = 0
+            semester_count = 0
+            
+            for semester in SEMESTER_ORDER:
+                if semester in data['gpas']:
+                    row[semester] = data['gpas'][semester]
+                    if pd.notna(data['gpas'][semester]):
+                        total_gpa += data['gpas'][semester]
+                        semester_count += 1
+                else:
+                    row[semester] = None
+            
+            # Calculate CGPA
+            row['CGPA'] = round(total_gpa / semester_count, 2) if semester_count > 0 else 0.0
+            summary_data.append(row)
+        
+        # Create summary dataframe
+        summary_df = pd.DataFrame(summary_data)
+        
+        # Add the summary sheet to the workbook
+        if 'CGPA_SUMMARY' in wb.sheetnames:
+            del wb['CGPA_SUMMARY']
+        
+        ws = wb.create_sheet('CGPA_SUMMARY')
+        
+        # Write header
+        headers = ['EXAMS NUMBER', 'NAME'] + SEMESTER_ORDER + ['CGPA']
+        for col_idx, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_idx, value=header)
+        
+        # Write data
+        for row_idx, row_data in enumerate(summary_data, 2):
+            for col_idx, header in enumerate(headers, 1):
+                ws.cell(row=row_idx, column=col_idx, value=row_data.get(header, ''))
+        
+        # Style the header
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="4A90E2", end_color="4A90E2", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        wb.save(mastersheet_path)
+        logger.info("✅ BM CGPA Summary sheet created successfully")
+        
+        return summary_df
+        
+    except Exception as e:
+        logger.error(f"❌ Error creating BM CGPA summary sheet: {e}")
+        return None
+
+# ----------------------------
+# NEW: ANALYSIS SHEET FUNCTION
+# ----------------------------
+
+def create_bm_analysis_sheet(mastersheet_path, timestamp):
+    """Create an analysis sheet with comprehensive statistics for BM."""
+    try:
+        logger.info("📈 Creating BM Analysis Sheet...")
+        
+        wb = load_workbook(mastersheet_path)
+        
+        # Collect data from all semesters
+        analysis_data = {
+            'semester': [],
+            'total_students': [],
+            'passed_all': [],
+            'carryover_students': [],
+            'withdrawn_students': [],
+            'average_gpa': [],
+            'pass_rate': []
+        }
+        
+        for sheet_name in wb.sheetnames:
+            if sheet_name in SEMESTER_ORDER:
+                df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
+                
+                # Basic statistics
+                total_students = len(df)
+                passed_all = len(df[df['REMARKS'] == 'Passed']) if 'REMARKS' in df.columns else 0
+                
+                # Calculate carryover students
+                carryover_count = 0
+                if 'REMARKS' in df.columns:
+                    carryover_count = len(df[df['REMARKS'].str.contains('Failed', na=False)])
+                
+                # Calculate average GPA
+                avg_gpa = df['GPA'].mean() if 'GPA' in df.columns and not df['GPA'].isna().all() else 0
+                
+                # Calculate pass rate
+                pass_rate = (passed_all / total_students * 100) if total_students > 0 else 0
+                
+                analysis_data['semester'].append(sheet_name)
+                analysis_data['total_students'].append(total_students)
+                analysis_data['passed_all'].append(passed_all)
+                analysis_data['carryover_students'].append(carryover_count)
+                analysis_data['withdrawn_students'].append(0)
+                analysis_data['average_gpa'].append(round(avg_gpa, 2))
+                analysis_data['pass_rate'].append(round(pass_rate, 2))
+        
+        # Create analysis dataframe
+        analysis_df = pd.DataFrame(analysis_data)
+        
+        # Add overall statistics
+        overall_stats = {
+            'semester': 'OVERALL',
+            'total_students': analysis_df['total_students'].sum(),
+            'passed_all': analysis_df['passed_all'].sum(),
+            'carryover_students': analysis_df['carryover_students'].sum(),
+            'withdrawn_students': analysis_df['withdrawn_students'].sum(),
+            'average_gpa': round(analysis_df['average_gpa'].mean(), 2),
+            'pass_rate': round(analysis_df['pass_rate'].mean(), 2)
+        }
+        analysis_df = pd.concat([analysis_df, pd.DataFrame([overall_stats])], ignore_index=True)
+        
+        # Add the analysis sheet to the workbook
+        if 'ANALYSIS' in wb.sheetnames:
+            del wb['ANALYSIS']
+        
+        ws = wb.create_sheet('ANALYSIS')
+        
+        # Write header
+        headers = ['SEMESTER', 'TOTAL STUDENTS', 'PASSED ALL', 'CARRYOVER STUDENTS', 
+                  'WITHDRAWN STUDENTS', 'AVERAGE GPA', 'PASS RATE (%)']
+        for col_idx, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_idx, value=header)
+        
+        # Write data
+        for row_idx, row_data in analysis_df.iterrows():
+            ws.cell(row=row_idx+2, column=1, value=row_data['semester'])
+            ws.cell(row=row_idx+2, column=2, value=row_data['total_students'])
+            ws.cell(row=row_idx+2, column=3, value=row_data['passed_all'])
+            ws.cell(row=row_idx+2, column=4, value=row_data['carryover_students'])
+            ws.cell(row=row_idx+2, column=5, value=row_data['withdrawn_students'])
+            ws.cell(row=row_idx+2, column=6, value=row_data['average_gpa'])
+            ws.cell(row=row_idx+2, column=7, value=row_data['pass_rate'])
+        
+        # Style the header
+        for cell in ws[1]:
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill(start_color="27ae60", end_color="27ae60", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        wb.save(mastersheet_path)
+        logger.info("✅ BM Analysis sheet created successfully")
+        
+        return analysis_df
+        
+    except Exception as e:
+        logger.error(f"❌ Error creating BM analysis sheet: {e}")
+        return None
 
 # ----------------------------
 # Upgrade Rule Functions
@@ -393,36 +704,36 @@ def get_upgrade_threshold_from_user(semester_key, set_name):
     Prompt user to choose upgrade threshold for BM results.
     Returns: (min_threshold, upgraded_count) or (None, 0) if skipped
     """
-    print(f"\n🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED")
-    print(f"📚 Semester: {semester_key}")
-    print(f"📁 Set: {set_name}")
-    print("\nSelect minimum score to upgrade (45-49). All scores >= selected value up to 49 will be upgraded to 50.")
-    print("Enter 0 to skip upgrade.")
+    logger.info(f"\n🎯 MANAGEMENT THRESHOLD UPGRADE RULE DETECTED")
+    logger.info(f"📚 Semester: {semester_key}")
+    logger.info(f"📁 Set: {set_name}")
+    logger.info("\nSelect minimum score to upgrade (45-49). All scores >= selected value up to 49 will be upgraded to 50.")
+    logger.info("Enter 0 to skip upgrade.")
     
     while True:
         try:
             choice = input("\nEnter your choice (0, 45, 46, 47, 48, 49): ").strip()
             
             if not choice:
-                print("❌ Please enter a value.")
+                logger.error("❌ Please enter a value.")
                 continue
                 
             if choice == '0':
-                print("⏭️ Skipping upgrade for this semester.")
+                logger.info("⏭️ Skipping upgrade for this semester.")
                 return None, 0
                 
             if choice in ['45', '46', '47', '48', '49']:
                 min_threshold = int(choice)
-                print(f"✅ Upgrade rule selected: {min_threshold}–49 → 50")
+                logger.info(f"✅ Upgrade rule selected: {min_threshold}–49 → 50")
                 return min_threshold, 0
             else:
-                print("❌ Invalid choice. Please enter 0, 45, 46, 47, 48, or 49.")
+                logger.error("❌ Invalid choice. Please enter 0, 45, 46, 47, 48, or 49.")
                 
         except KeyboardInterrupt:
-            print("\n👋 Operation cancelled by user.")
+            logger.info("\n👋 Operation cancelled by user.")
             sys.exit(0)
         except Exception as e:
-            print(f"❌ Error: {e}. Please try again.")
+            logger.error(f"❌ Error: {e}. Please try again.")
 
 def apply_upgrade_rule(mastersheet, ordered_codes, min_threshold):
     """
@@ -435,7 +746,7 @@ def apply_upgrade_rule(mastersheet, ordered_codes, min_threshold):
     upgraded_count = 0
     upgraded_students = set()
     
-    print(f"🔄 Applying upgrade rule: {min_threshold}–49 → 50")
+    logger.info(f"🔄 Applying upgrade rule: {min_threshold}–49 → 50")
     
     for code in ordered_codes:
         for idx in mastersheet.index:
@@ -449,13 +760,13 @@ def apply_upgrade_rule(mastersheet, ordered_codes, min_threshold):
                 
                 # Log first few upgrades for visibility
                 if upgraded_count <= 5:
-                    print(f"🔼 {exam_no} - {code}: {original_score} → 50")
+                    logger.info(f"🔼 {exam_no} - {code}: {original_score} → 50")
     
     if upgraded_count > 0:
-        print(f"✅ Upgraded {upgraded_count} scores from {min_threshold}–49 to 50")
-        print(f"📊 Affected {len(upgraded_students)} students")
+        logger.info(f"✅ Upgraded {upgraded_count} scores from {min_threshold}–49 to 50")
+        logger.info(f"📊 Affected {len(upgraded_students)} students")
     else:
-        print(f"ℹ️ No scores found in range {min_threshold}–49 to upgrade")
+        logger.info(f"ℹ️ No scores found in range {min_threshold}–49 to upgrade")
     
     return mastersheet, upgraded_count
 
@@ -515,8 +826,8 @@ def update_student_tracker(
     """
     global STUDENT_TRACKER, WITHDRAWN_STUDENTS
 
-    print(f"📊 Updating student tracker for {semester_key}")
-    print(f"📝 Current students in this semester: {len(exam_numbers)}")
+    logger.info(f"📊 Updating student tracker for {semester_key}")
+    logger.info(f"📝 Current students in this semester: {len(exam_numbers)}")
 
     # Track withdrawn students
     if withdrawn_students:
@@ -527,7 +838,7 @@ def update_student_tracker(
                     'withdrawn_date': datetime.now().strftime(TIMESTAMP_FMT),
                     'reappeared_semesters': []
                 }
-                print(f"🚫 Marked as withdrawn: {exam_no} in {semester_key}")
+                logger.info(f"🚫 Marked as withdrawn: {exam_no} in {semester_key}")
 
     for exam_no in exam_numbers:
         if exam_no not in STUDENT_TRACKER:
@@ -547,14 +858,14 @@ def update_student_tracker(
 
             # Check if student was previously withdrawn and has reappeared
             if STUDENT_TRACKER[exam_no]['withdrawn']:
-                print(f"⚠️ PREVIOUSLY WITHDRAWN STUDENT REAPPEARED: {exam_no}")
+                logger.warning(f"⚠️ PREVIOUSLY WITHDRAWN STUDENT REAPPEARED: {exam_no}")
                 if exam_no in WITHDRAWN_STUDENTS:
                     if semester_key not in WITHDRAWN_STUDENTS[exam_no]['reappeared_semesters']:
                         WITHDRAWN_STUDENTS[exam_no]['reappeared_semesters'].append(
                             semester_key)
 
-    print(f"📈 Total unique students tracked: {len(STUDENT_TRACKER)}")
-    print(f"🚫 Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+    logger.info(f"📈 Total unique students tracked: {len(STUDENT_TRACKER)}")
+    logger.info(f"🚫 Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
 
 def mark_student_withdrawn(exam_no, semester_key):
     """Mark a student as withdrawn in a specific semester."""
@@ -600,14 +911,200 @@ def filter_out_withdrawn_students(mastersheet, semester_key):
                 filtered_mastersheet = filtered_mastersheet[filtered_mastersheet["EXAMS NUMBER"] != exam_no]
 
     if removed_students:
-        print(
+        logger.info(
             f"🚫 Removed {len(removed_students)} previously withdrawn students from {semester_key}:")
         for exam_no in removed_students:
             withdrawal_history = get_withdrawal_history(exam_no)
-            print(
+            logger.info(
                 f"   - {exam_no} (withdrawn in {withdrawal_history['withdrawn_semester']})")
 
     return filtered_mastersheet, removed_students
+
+# ----------------------------
+# Carryover Management for BM
+# ----------------------------
+def initialize_carryover_tracker():
+    """Initialize the global carryover tracker for BM."""
+    global CARRYOVER_STUDENTS
+    CARRYOVER_STUDENTS = {}
+
+    # Load previous carryover records from all JSON files
+    carryover_jsons = glob.glob(os.path.join(BM_BASE_DIR, "**/co_student*.json"), recursive=True)
+    for jf in sorted(carryover_jsons, key=os.path.getmtime):  # Load in chronological order, later files override
+        try:
+            with open(jf, 'r') as f:
+                data = json.load(f)
+                for student in data:
+                    student_key = f"{student['exam_number']}_{student['semester']}"
+                    CARRYOVER_STUDENTS[student_key] = student
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to load carryover from {jf}: {e}")
+
+    logger.info(f"📂 Loaded {len(CARRYOVER_STUDENTS)} previous carryover records")
+
+def identify_carryover_students(mastersheet_df, semester_key, set_name, pass_threshold=50.0):
+    """
+    Identify BM students with carryover courses from current semester processing.
+    """
+    carryover_students = []
+    
+    # Get course columns (excluding student info columns)
+    course_columns = [col for col in mastersheet_df.columns 
+                     if col not in ['S/N', 'EXAMS NUMBER', 'NAME', 'REMARKS', 
+                                   'CU Passed', 'CU Failed', 'TCPE', 'GPA', 'AVERAGE']]
+    
+    for idx, student in mastersheet_df.iterrows():
+        failed_courses = []
+        exam_no = str(student['EXAMS NUMBER'])
+        student_name = student['NAME']
+        
+        for course in course_columns:
+            score = student.get(course, 0)
+            try:
+                score_val = float(score) if pd.notna(score) else 0
+                if score_val < pass_threshold:
+                    failed_courses.append({
+                        'course_code': course,
+                        'original_score': score_val,
+                        'semester': semester_key,
+                        'set': set_name,
+                        'resit_attempts': 0,
+                        'best_score': score_val,
+                        'status': 'Failed'
+                    })
+            except (ValueError, TypeError):
+                continue
+        
+        if failed_courses:
+            carryover_data = {
+                'exam_number': exam_no,
+                'name': student_name,
+                'failed_courses': failed_courses,
+                'semester': semester_key,
+                'set': set_name,
+                'identified_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'total_resit_attempts': 0,
+                'status': 'Active'
+            }
+            carryover_students.append(carryover_data)
+            
+            # Update global tracker
+            student_key = "{}_{}".format(exam_no, semester_key)
+            CARRYOVER_STUDENTS[student_key] = carryover_data
+    
+    return carryover_students
+
+def save_carryover_records(carryover_students, output_dir, set_name, semester_key):
+    """
+    Save BM carryover student records to the clean results folder.
+    UPDATED: Use centralized CARRYOVER_RECORDS folder like BN
+    """
+    if not carryover_students:
+        logger.info("ℹ️ No carryover students to save")
+        return None
+    
+    # FIXED: Always navigate to CLEAN_RESULTS parent
+    # Find CLEAN_RESULTS directory by walking up the path
+    current_dir = output_dir
+    while current_dir and not current_dir.endswith('CLEAN_RESULTS'):
+        parent = os.path.dirname(current_dir)
+        if parent == current_dir:  # Reached root
+            current_dir = output_dir
+            break
+        current_dir = parent
+    
+    # If we're in a timestamped folder, go up one level
+    if '_RESULT-' in os.path.basename(current_dir):
+        clean_results_dir = os.path.dirname(current_dir)
+    else:
+        clean_results_dir = current_dir
+    
+    carryover_dir = os.path.join(clean_results_dir, "CARRYOVER_RECORDS")
+    os.makedirs(carryover_dir, exist_ok=True)
+    
+    logger.info(f"📁 Saving carryover records to centralized location: {carryover_dir}")
+    
+    # Generate filename with set and semester tags
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = "co_student_{}_{}_{}".format(set_name, semester_key, timestamp)
+    
+    # Save as Excel
+    excel_file = os.path.join(carryover_dir, "{}.xlsx".format(filename))
+    
+    # Prepare data for Excel
+    records_data = []
+    for student in carryover_students:
+        for course in student['failed_courses']:
+            record = {
+                'EXAMS NUMBER': student['exam_number'],
+                'NAME': student['name'],
+                'COURSE CODE': course['course_code'],
+                'ORIGINAL SCORE': course['original_score'],
+                'SEMESTER': student['semester'],
+                'SET': student['set'],
+                'RESIT ATTEMPTS': course['resit_attempts'],
+                'BEST SCORE': course['best_score'],
+                'STATUS': course['status'],
+                'IDENTIFIED DATE': student['identified_date'],
+                'OVERALL_STATUS': student['status']
+            }
+            records_data.append(record)
+    
+    if records_data:
+        df = pd.DataFrame(records_data)
+        df.to_excel(excel_file, index=False)
+        logger.info("✅ BM Carryover records saved: {}".format(excel_file))
+        
+        # Add basic formatting
+        try:
+            wb = load_workbook(excel_file)
+            ws = wb.active
+            
+            # Simple header formatting only
+            header_row = ws[1]
+            for cell in header_row:
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center")
+            
+            # Auto-adjust column widths
+            for column in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column[0].column)
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 30)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            wb.save(excel_file)
+            logger.info("✅ Added basic formatting to BM carryover Excel file")
+            
+        except Exception as e:
+            logger.warning("⚠️ Could not add basic formatting to BM carryover file: {}".format(e))
+    
+    # Save as JSON for easy processing
+    json_file = os.path.join(carryover_dir, "{}.json".format(filename))
+    with open(json_file, 'w') as f:
+        json.dump(carryover_students, f, indent=2)
+    
+    # Save individual CSV reports
+    individual_dir = os.path.join(carryover_dir, "INDIVIDUAL_REPORTS")
+    os.makedirs(individual_dir, exist_ok=True)
+    
+    for student in carryover_students:
+        student_records = [r for r in records_data if r['EXAMS NUMBER'] == student['exam_number']]
+        if student_records:
+            student_df = pd.DataFrame(student_records)
+            student_filename = f"carryover_report_{student['exam_number']}_{timestamp}.csv"
+            student_path = os.path.join(individual_dir, student_filename)
+            student_df.to_csv(student_path, index=False)
+            logger.info(f"✅ Saved individual carryover report: {student_path}")
+    
+    logger.info("📁 BM Carryover records saved in: {}".format(carryover_dir))
+    return carryover_dir
 
 # ----------------------------
 # Set Selection Functions
@@ -618,7 +1115,7 @@ def get_available_sets(base_dir):
     # BM: Sets are under BM folder
     bm_dir = os.path.join(base_dir, "BM")
     if not os.path.exists(bm_dir):
-        print(f"❌ BM directory not found: {bm_dir}")
+        logger.error(f"❌ BM directory not found: {bm_dir}")
         return []
         
     sets = []
@@ -633,39 +1130,39 @@ def get_user_set_choice(available_sets):
     Prompt user to choose which set to process.
     Returns the selected set directory name.
     """
-    print("\n🎯 AVAILABLE SETS:")
+    logger.info("\n🎯 AVAILABLE SETS:")
     for i, set_name in enumerate(available_sets, 1):
-        print(f"{i}. {set_name}")
-    print(f"{len(available_sets) + 1}. Process ALL sets")
+        logger.info(f"{i}. {set_name}")
+    logger.info(f"{len(available_sets) + 1}. Process ALL sets")
 
     while True:
         try:
             choice = input(
                 f"\nEnter your choice (1-{len(available_sets) + 1}): ").strip()
             if not choice:
-                print("❌ Please enter a choice.")
+                logger.error("❌ Please enter a choice.")
                 continue
 
             if choice.isdigit():
                 choice_num = int(choice)
                 if 1 <= choice_num <= len(available_sets):
                     selected_set = available_sets[choice_num - 1]
-                    print(f"✅ Selected set: {selected_set}")
+                    logger.info(f"✅ Selected set: {selected_set}")
                     return [selected_set]
                 elif choice_num == len(available_sets) + 1:
-                    print("✅ Selected: ALL sets")
+                    logger.info("✅ Selected: ALL sets")
                     return available_sets
                 else:
-                    print(
+                    logger.error(
                         f"❌ Invalid choice. Please enter a number between 1-{len(available_sets) + 1}.")
             else:
-                print("❌ Please enter a valid number.")
+                logger.error("❌ Please enter a valid number.")
 
         except KeyboardInterrupt:
-            print("\n👋 Operation cancelled by user.")
+            logger.info("\n👋 Operation cancelled by user.")
             sys.exit(0)
         except Exception as e:
-            print(f"❌ Error: {e}. Please try again.")
+            logger.error(f"❌ Error: {e}. Please try again.")
 
 # ----------------------------
 # Grade and GPA calculation
@@ -719,11 +1216,29 @@ def load_course_data():
       (semester_course_maps, semester_credit_units,
        semester_lookup, semester_course_titles)
     """
-    course_file = os.path.join(BM_COURSES_DIR, "M-course-code-creditUnit.xlsx")
-    print(f"Loading BM course data from: {course_file}")
-    if not os.path.exists(course_file):
-        raise FileNotFoundError(f"BM course file not found: {course_file}")
-
+    # FIXED: Flexible course file detection
+    possible_filenames = [
+        "M-course-code-creditUnit.xlsx",
+        "BM-course-code-creditUnit.xlsx",
+        "m-course-code-creditUnit.xlsx",
+        "bm-course-code-creditUnit.xlsx"
+    ]
+    
+    course_file = None
+    for filename in possible_filenames:
+        test_path = os.path.join(BM_COURSES_DIR, filename)
+        if os.path.exists(test_path):
+            course_file = test_path
+            break
+    
+    if not course_file:
+        raise FileNotFoundError(
+            f"BM course file not found. Tried: {possible_filenames}\n"
+            f"In directory: {BM_COURSES_DIR}"
+        )
+    
+    logger.info(f"Loading BM course data from: {course_file}")
+    
     xl = pd.ExcelFile(course_file)
     semester_course_maps = {}
     semester_credit_units = {}
@@ -739,7 +1254,7 @@ def load_course_data():
         df.columns = [str(c).strip() for c in df.columns]
         expected = ['COURSE CODE', 'COURSE TITLE', 'CU']
         if not all(col in df.columns for col in expected):
-            print(
+            logger.warning(
                 f"Warning: sheet '{sheet}' missing expected columns {expected} — skipped")
             continue
         dfx = df.dropna(subset=['COURSE CODE', 'COURSE TITLE'])
@@ -749,7 +1264,7 @@ def load_course_data():
             '.', '', regex=False).str.isdigit()
         dfx = dfx[valid_mask]
         if dfx.empty:
-            print(
+            logger.warning(
                 f"Warning: sheet '{sheet}' has no valid rows after cleaning — skipped")
             continue
         codes = dfx['COURSE CODE'].astype(str).str.strip().tolist()
@@ -777,7 +1292,7 @@ def load_course_data():
 
     if not semester_course_maps:
         raise ValueError("No course data loaded from BM course workbook")
-    print(f"Loaded BM course sheets: {list(semester_course_maps.keys())}")
+    logger.info(f"Loaded BM course sheets: {list(semester_course_maps.keys())}")
     return semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles
 
 # ----------------------------
@@ -797,30 +1312,25 @@ def detect_semester_from_filename(filename):
     """
     filename_upper = filename.upper()
 
-    # Map filename patterns to actual BM course sheet names
-    if 'FIRST-YEAR-FIRST-SEMESTER' in filename_upper or 'FIRST_YEAR_FIRST_SEMESTER' in filename_upper or 'FIRST SEMESTER' in filename_upper:
-        return "BM-FIRST-YEAR-FIRST-SEMESTER", 1, 1, "YEAR ONE", "FIRST SEMESTER", "BMI"
-    elif 'FIRST-YEAR-SECOND-SEMESTER' in filename_upper or 'FIRST_YEAR_SECOND_SEMESTER' in filename_upper or 'SECOND SEMESTER' in filename_upper:
-        return "BM-FIRST-YEAR-SECOND-SEMESTER", 1, 2, "YEAR ONE", "SECOND SEMESTER", "BMI"
-    elif 'SECOND-YEAR-FIRST-SEMESTER' in filename_upper or 'SECOND_YEAR_FIRST_SEMESTER' in filename_upper:
-        return "BM-SECOND-YEAR-FIRST-SEMESTER", 2, 1, "YEAR TWO", "FIRST SEMESTER", "BMII"
-    elif 'SECOND-YEAR-SECOND-SEMESTER' in filename_upper or 'SECOND_YEAR_SECOND_SEMESTER' in filename_upper:
-        return "BM-SECOND-YEAR-SECOND-SEMESTER", 2, 2, "YEAR TWO", "SECOND SEMESTER", "BMII"
-    elif 'THIRD-YEAR-FIRST-SEMESTER' in filename_upper or 'THIRD_YEAR_FIRST_SEMESTER' in filename_upper:
-        return "BM-THIRD-YEAR-FIRST-SEMESTER", 3, 1, "YEAR THREE", "FIRST SEMESTER", "BMIII"
-    elif 'THIRD-YEAR-SECOND-SEMESTER' in filename_upper or 'THIRD_YEAR_SECOND_SEMESTER' in filename_upper:
-        return "BM-THIRD-YEAR-SECOND-SEMESTER", 3, 2, "YEAR THREE", "SECOND SEMESTER", "BMIII"
-    elif 'FIRST' in filename_upper and 'SECOND' not in filename_upper:
-        return "BM-FIRST-YEAR-FIRST-SEMESTER", 1, 1, "YEAR ONE", "FIRST SEMESTER", "BMI"
-    elif 'SECOND' in filename_upper:
-        return "BM-FIRST-YEAR-SECOND-SEMESTER", 1, 2, "YEAR ONE", "SECOND SEMESTER", "BMI"
-    elif 'THIRD' in filename_upper:
-        return "BM-SECOND-YEAR-FIRST-SEMESTER", 2, 1, "YEAR TWO", "FIRST SEMESTER", "BMII"
-    else:
-        # Default fallback
-        print(
-            f"⚠️ Could not detect semester from filename: {filename}, defaulting to BM-FIRST-YEAR-FIRST-SEMESTER")
-        return "BM-FIRST-YEAR-FIRST-SEMESTER", 1, 1, "YEAR ONE", "FIRST SEMESTER", "BMI"
+    # Map filename patterns to actual BM course sheet names - FIXED: Changed BM- prefix to M- prefix consistently
+    semester_patterns = {
+        r'FIRST[-_\s]YEAR[-_\s]FIRST[-_\s]SEMESTER': "M-FIRST-YEAR-FIRST-SEMESTER",
+        r'FIRST[-_\s]YEAR[-_\s]SECOND[-_\s]SEMESTER': "M-FIRST-YEAR-SECOND-SEMESTER",
+        r'SECOND[-_\s]YEAR[-_\s]FIRST[-_\s]SEMESTER': "M-SECOND-YEAR-FIRST-SEMESTER",
+        r'SECOND[-_\s]YEAR[-_\s]SECOND[-_\s]SEMESTER': "M-SECOND-YEAR-SECOND-SEMESTER",
+        r'THIRD[-_\s]YEAR[-_\s]FIRST[-_\s]SEMESTER': "M-THIRD-YEAR-FIRST-SEMESTER",
+        r'THIRD[-_\s]YEAR[-_\s]SECOND[-_\s]SEMESTER': "M-THIRD-YEAR-SECOND-SEMESTER",
+    }
+    
+    for pattern, semester_key in semester_patterns.items():
+        if re.search(pattern, filename_upper):
+            logger.info(f"✅ Detected {semester_key} from: {filename}")
+            # Get display info using the fixed function
+            year, semester_num, level_display, semester_display, set_code = get_semester_display_info(semester_key)
+            return semester_key, year, semester_num, level_display, semester_display, set_code
+    
+    # If no match, raise error instead of defaulting
+    raise ValueError(f"❌ Could not detect semester from filename: {filename}")
 
 def get_semester_display_info(semester_key):
     """
@@ -829,6 +1339,7 @@ def get_semester_display_info(semester_key):
     """
     semester_lower = semester_key.lower()
 
+    # FIXED: Changed BM- prefix to M- prefix with correct set codes
     if 'first-year-first-semester' in semester_lower:
         return 1, 1, "YEAR ONE", "FIRST SEMESTER", "BMI"
     elif 'first-year-second-semester' in semester_lower:
@@ -848,8 +1359,9 @@ def get_semester_display_info(semester_key):
     elif 'third' in semester_lower:
         return 2, 1, "YEAR TWO", "FIRST SEMESTER", "BMII"
     else:
-        # Default to first semester, first year
-        return 1, 1, "YEAR ONE", "FIRST SEMESTER", "BMI"
+        # Default with warning
+        logger.warning(f"⚠️ Unknown semester: {semester_key}, using default")
+        return (1, 1, "YEAR ONE", "FIRST SEMESTER", "BMI")
 
 def match_semester_from_filename(fname, semester_lookup):
     """Match semester using the lookup table with flexible matching."""
@@ -881,131 +1393,83 @@ def find_column_by_names(df, candidate_names):
                 return col
     return None
 
+# ----------------------------
+# FIXED: Previous GPA Loading Function for BM
+# ----------------------------
+
 def load_previous_gpas_from_processed_files(
         output_dir, current_semester_key, timestamp):
     """
-    Load previous GPA data from previously processed mastersheets in the same run.
+    Load previous GPA data - FIXED VERSION for BM.
     Returns dict: {exam_number: previous_gpa}
     """
     previous_gpas = {}
 
-    print(f"\n🔍 LOADING PREVIOUS GPA for: {current_semester_key}")
+    logger.info(f"\n🔍 LOADING PREVIOUS GPA for: {current_semester_key}")
 
-    # Determine previous semester based on current
     current_year, current_semester_num, _, _, _ = get_semester_display_info(
         current_semester_key)
 
-    if current_semester_num == 1 and current_year == 1:
-        # First semester of first year - no previous GPA
-        print("📊 First semester of first year - no previous GPA available")
-        return previous_gpas
-    elif current_semester_num == 2 and current_year == 1:
-        # Second semester of first year - look for first semester of first year
-        prev_semester = "BM-FIRST-YEAR-FIRST-SEMESTER"
-    elif current_semester_num == 1 and current_year == 2:
-        # First semester of second year - look for second semester of first
-        # year
-        prev_semester = "BM-FIRST-YEAR-SECOND-SEMESTER"
-    elif current_semester_num == 2 and current_year == 2:
-        # Second semester of second year - look for first semester of second
-        # year
-        prev_semester = "BM-SECOND-YEAR-FIRST-SEMESTER"
-    elif current_semester_num == 1 and current_year == 3:
-        # First semester of third year - look for second semester of second
-        # year
-        prev_semester = "BM-SECOND-YEAR-SECOND-SEMESTER"
-    elif current_semester_num == 2 and current_year == 3:
-        # Second semester of third year - look for first semester of third
-        # year
-        prev_semester = "BM-THIRD-YEAR-FIRST-SEMESTER"
-    else:
-        print(
-            f"⚠️ Unknown semester combination: Year {current_year}, Semester {current_semester_num}")
+    # Map for BM semesters
+    semester_sequence = {
+        (1, 1): None,
+        (1, 2): "M-FIRST-YEAR-FIRST-SEMESTER",
+        (2, 1): "M-FIRST-YEAR-SECOND-SEMESTER",
+        (2, 2): "M-SECOND-YEAR-FIRST-SEMESTER",
+        (3, 1): "M-SECOND-YEAR-SECOND-SEMESTER",
+        (3, 2): "M-THIRD-YEAR-FIRST-SEMESTER"
+    }
+
+    prev_semester = semester_sequence.get((current_year, current_semester_num))
+
+    if not prev_semester:
+        logger.info("📊 First semester - no previous GPA available")
         return previous_gpas
 
-    print(f"🔍 Looking for previous GPA data from: {prev_semester}")
+    logger.info(f"🔍 Looking for previous GPA data from: {prev_semester}")
 
-    # Look for the mastersheet file from the previous semester in the same
-    # timestamp directory
-    mastersheet_pattern = os.path.join(
-        output_dir,
-        f"BM_RESULT-{timestamp}",
-        f"mastersheet_{timestamp}.xlsx")
-    print(f"🔍 Checking for mastersheet: {mastersheet_pattern}")
+    # FIXED: Direct path to mastersheet
+    mastersheet_path = os.path.join(output_dir, f"mastersheet_{timestamp}.xlsx")
 
-    if os.path.exists(mastersheet_pattern):
-        print(f"✅ Found mastersheet: {mastersheet_pattern}")
-        try:
-            # Read the Excel file properly, skipping the header rows that
-            # contain merged cells
-            df = pd.read_excel(
-                mastersheet_pattern,
-                sheet_name=prev_semester,
-                header=5)  # Skip first 5 rows
+    if not os.path.exists(mastersheet_path):
+        logger.error(f"❌ Mastersheet not found: {mastersheet_path}")
+        return previous_gpas
 
-            print(f"📋 Columns in {prev_semester}: {df.columns.tolist()}")
+    try:
+        df = pd.read_excel(mastersheet_path, sheet_name=prev_semester, header=5)
+        logger.info(f"📋 Columns in {prev_semester}: {df.columns.tolist()}")
 
-            # Find the actual column names by checking for exam number and GPA
-            # columns
-            exam_col = None
-            gpa_col = None
+        exam_col = None
+        gpa_col = None
 
-            for col in df.columns:
-                col_str = str(col).upper().strip()
-                if 'EXAM' in col_str or 'REG' in col_str or 'NUMBER' in col_str:
-                    exam_col = col
-                elif 'GPA' in col_str:
-                    gpa_col = col
+        for col in df.columns:
+            col_str = str(col).upper().strip()
+            if 'EXAM' in col_str or 'REG' in col_str or 'NUMBER' in col_str:
+                exam_col = col
+            elif 'GPA' in col_str:
+                gpa_col = col
+                break
 
-            if exam_col and gpa_col:
-                print(
-                    f"✅ Found exam column: '{exam_col}', GPA column: '{gpa_col}'")
+        if exam_col and gpa_col:
+            logger.info(f"✅ Found columns: '{exam_col}', '{gpa_col}'")
 
-                gpas_loaded = 0
-                for idx, row in df.iterrows():
-                    exam_no = str(row[exam_col]).strip()
-                    gpa = row[gpa_col]
+            for idx, row in df.iterrows():
+                exam_no = str(row[exam_col]).strip()
+                gpa = row[gpa_col]
 
-                    if pd.notna(gpa) and pd.notna(
-                            exam_no) and exam_no != 'nan' and exam_no != '':
-                        try:
-                            previous_gpas[exam_no] = float(gpa)
-                            gpas_loaded += 1
-                            if gpas_loaded <= 5:  # Show first 5 for debugging
-                                print(f"📝 Loaded GPA: {exam_no} → {gpa}")
-                        except (ValueError, TypeError):
-                            continue
+                if pd.notna(gpa) and pd.notna(exam_no) and exam_no != 'nan' and exam_no != '':
+                    try:
+                        previous_gpas[exam_no] = float(gpa)
+                    except (ValueError, TypeError):
+                        continue
 
-                print(
-                    f"✅ Loaded previous GPAs for {gpas_loaded} students from {prev_semester}")
-
-                if gpas_loaded > 0:
-                    # Show sample of loaded GPAs for verification
-                    sample_gpas = list(previous_gpas.items())[:3]
-                    print(f"📊 Sample GPAs loaded: {sample_gpas}")
-                else:
-                    print(f"⚠️ No valid GPA data found in {prev_semester}")
-            else:
-                print(f"❌ Could not find required columns in {prev_semester}")
-                if not exam_col:
-                    print("❌ Could not find exam number column")
-                if not gpa_col:
-                    print("❌ Could not find GPA column")
-
-        except Exception as e:
-            print(f"⚠️ Could not read mastersheet: {str(e)}")
-            import traceback
-            traceback.print_exc()
-    else:
-        print(f"❌ Mastersheet not found: {mastersheet_pattern}")
-        # Check if directory exists
-        dir_path = os.path.dirname(mastersheet_pattern)
-        if os.path.exists(dir_path):
-            print(f"📁 Directory contents: {os.listdir(dir_path)}")
+            logger.info(f"✅ Loaded {len(previous_gpas)} previous GPAs")
         else:
-            print(f"📁 Directory not found: {dir_path}")
+            logger.error(f"❌ Could not find required columns")
 
-    print(f"📊 FINAL: Loaded {len(previous_gpas)} previous GPAs")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not read mastersheet: {str(e)}")
+
     return previous_gpas
 
 def load_all_previous_gpas_for_cgpa(
@@ -1016,7 +1480,7 @@ def load_all_previous_gpas_for_cgpa(
     Load ALL previous GPAs from all completed semesters for CGPA calculation.
     Returns dict: {exam_number: {'gpas': [gpa1, gpa2, ...], 'credits': [credits1, credits2, ...]}}
     """
-    print(
+    logger.info(
         f"\n🔍 LOADING ALL PREVIOUS GPAs for CGPA calculation: {current_semester_key}")
 
     current_year, current_semester_num, _, _, _ = get_semester_display_info(
@@ -1030,51 +1494,51 @@ def load_all_previous_gpas_for_cgpa(
         return {}
     elif current_semester_num == 2 and current_year == 1:
         # Second semester of first year - load first semester
-        semesters_to_load = ["BM-FIRST-YEAR-FIRST-SEMESTER"]
+        semesters_to_load = ["M-FIRST-YEAR-FIRST-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
     elif current_semester_num == 1 and current_year == 2:
         # First semester of second year - load both first year semesters
         semesters_to_load = [
-            "BM-FIRST-YEAR-FIRST-SEMESTER",
-            "BM-FIRST-YEAR-SECOND-SEMESTER"]
+            "M-FIRST-YEAR-FIRST-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-FIRST-YEAR-SECOND-SEMESTER"  # FIXED: Changed BM- prefix to M- prefix
+        ]
     elif current_semester_num == 2 and current_year == 2:
         # Second semester of second year - load all previous semesters
         semesters_to_load = [
-            "BM-FIRST-YEAR-FIRST-SEMESTER",
-            "BM-FIRST-YEAR-SECOND-SEMESTER",
-            "BM-SECOND-YEAR-FIRST-SEMESTER"
+            "M-FIRST-YEAR-FIRST-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-FIRST-YEAR-SECOND-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-SECOND-YEAR-FIRST-SEMESTER"  # FIXED: Changed BM- prefix to M- prefix
         ]
     elif current_semester_num == 1 and current_year == 3:
         # First semester of third year - load all first and second year semesters
         semesters_to_load = [
-            "BM-FIRST-YEAR-FIRST-SEMESTER",
-            "BM-FIRST-YEAR-SECOND-SEMESTER",
-            "BM-SECOND-YEAR-FIRST-SEMESTER",
-            "BM-SECOND-YEAR-SECOND-SEMESTER"
+            "M-FIRST-YEAR-FIRST-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-FIRST-YEAR-SECOND-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-SECOND-YEAR-FIRST-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-SECOND-YEAR-SECOND-SEMESTER"  # FIXED: Changed BM- prefix to M- prefix
         ]
     elif current_semester_num == 2 and current_year == 3:
         # Second semester of third year - load all previous semesters
         semesters_to_load = [
-            "BM-FIRST-YEAR-FIRST-SEMESTER",
-            "BM-FIRST-YEAR-SECOND-SEMESTER",
-            "BM-SECOND-YEAR-FIRST-SEMESTER",
-            "BM-SECOND-YEAR-SECOND-SEMESTER",
-            "BM-THIRD-YEAR-FIRST-SEMESTER"
+            "M-FIRST-YEAR-FIRST-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-FIRST-YEAR-SECOND-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-SECOND-YEAR-FIRST-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-SECOND-YEAR-SECOND-SEMESTER",  # FIXED: Changed BM- prefix to M- prefix
+            "M-THIRD-YEAR-FIRST-SEMESTER"  # FIXED: Changed BM- prefix to M- prefix
         ]
 
-    print(f"📚 Semesters to load for CGPA: {semesters_to_load}")
+    logger.info(f"📚 Semesters to load for CGPA: {semesters_to_load}")
 
     all_student_data = {}
     mastersheet_path = os.path.join(
         output_dir,
-        f"BM_RESULT-{timestamp}",
         f"mastersheet_{timestamp}.xlsx")
 
     if not os.path.exists(mastersheet_path):
-        print(f"❌ Mastersheet not found: {mastersheet_path}")
+        logger.error(f"❌ Mastersheet not found: {mastersheet_path}")
         return {}
 
     for semester in semesters_to_load:
-        print(f"📖 Loading data from: {semester}")
+        logger.info(f"📖 Loading data from: {semester}")
         try:
             # Load the semester data, skipping header rows
             df = pd.read_excel(mastersheet_path, sheet_name=semester, header=5)
@@ -1133,9 +1597,9 @@ def load_all_previous_gpas_for_cgpa(
                             continue
 
         except Exception as e:
-            print(f"⚠️ Could not load data from {semester}: {str(e)}")
+            logger.warning(f"⚠️ Could not load data from {semester}: {str(e)}")
 
-    print(f"📊 Loaded cumulative data for {len(all_student_data)} students")
+    logger.info(f"📊 Loaded cumulative data for {len(all_student_data)} students")
     return all_student_data
 
 def calculate_cgpa(student_data, current_gpa, current_credits):
@@ -1244,15 +1708,15 @@ def get_user_semester_choice():
     Prompt user to choose which semesters to process.
     Returns list of semester keys to process.
     """
-    print("\n🎯 SEMESTER PROCESSING OPTIONS:")
-    print("1. Process ALL semesters in order")
-    print("2. Process FIRST YEAR - FIRST SEMESTER only")
-    print("3. Process FIRST YEAR - SECOND SEMESTER only")
-    print("4. Process SECOND YEAR - FIRST SEMESTER only")
-    print("5. Process SECOND YEAR - SECOND SEMESTER only")
-    print("6. Process THIRD YEAR - FIRST SEMESTER only")
-    print("7. Process THIRD YEAR - SECOND SEMESTER only")
-    print("8. Custom selection")
+    logger.info("\n🎯 SEMESTER PROCESSING OPTIONS:")
+    logger.info("1. Process ALL semesters in order")
+    logger.info("2. Process FIRST YEAR - FIRST SEMESTER only")
+    logger.info("3. Process FIRST YEAR - SECOND SEMESTER only")
+    logger.info("4. Process SECOND YEAR - FIRST SEMESTER only")
+    logger.info("5. Process SECOND YEAR - SECOND SEMESTER only")
+    logger.info("6. Process THIRD YEAR - FIRST SEMESTER only")
+    logger.info("7. Process THIRD YEAR - SECOND SEMESTER only")
+    logger.info("8. Custom selection")
 
     while True:
         try:
@@ -1260,38 +1724,38 @@ def get_user_semester_choice():
             if choice == "1":
                 return SEMESTER_ORDER.copy()
             elif choice == "2":
-                return ["BM-FIRST-YEAR-FIRST-SEMESTER"]
+                return ["M-FIRST-YEAR-FIRST-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
             elif choice == "3":
-                return ["BM-FIRST-YEAR-SECOND-SEMESTER"]
+                return ["M-FIRST-YEAR-SECOND-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
             elif choice == "4":
-                return ["BM-SECOND-YEAR-FIRST-SEMESTER"]
+                return ["M-SECOND-YEAR-FIRST-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
             elif choice == "5":
-                return ["BM-SECOND-YEAR-SECOND-SEMESTER"]
+                return ["M-SECOND-YEAR-SECOND-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
             elif choice == "6":
-                return ["BM-THIRD-YEAR-FIRST-SEMESTER"]
+                return ["M-THIRD-YEAR-FIRST-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
             elif choice == "7":
-                return ["BM-THIRD-YEAR-SECOND-SEMESTER"]
+                return ["M-THIRD-YEAR-SECOND-SEMESTER"]  # FIXED: Changed BM- prefix to M- prefix
             elif choice == "8":
                 return get_custom_semester_selection()
             else:
-                print("❌ Invalid choice. Please enter a number between 1-8.")
+                logger.error("❌ Invalid choice. Please enter a number between 1-8.")
         except KeyboardInterrupt:
-            print("\n👋 Operation cancelled by user.")
+            logger.info("\n👋 Operation cancelled by user.")
             sys.exit(0)
         except Exception as e:
-            print(f"❌ Error: {e}. Please try again.")
+            logger.error(f"❌ Error: {e}. Please try again.")
 
 def get_custom_semester_selection():
     """
     Allow user to select multiple semesters for processing.
     """
-    print("\n📚 AVAILABLE SEMESTERS:")
+    logger.info("\n📚 AVAILABLE SEMESTERS:")
     for i, semester in enumerate(SEMESTER_ORDER, 1):
         year, sem_num, level, sem_display, set_code = get_semester_display_info(
             semester)
-        print(f"{i}. {level} - {sem_display}")
+        logger.info(f"{i}. {level} - {sem_display}")
 
-    print(f"{len(SEMESTER_ORDER) + 1}. Select all")
+    logger.info(f"{len(SEMESTER_ORDER) + 1}. Select all")
 
     selected = []
     while True:
@@ -1299,7 +1763,7 @@ def get_custom_semester_selection():
             choices = input(
                 f"\nEnter semester numbers separated by commas (1-{len(SEMESTER_ORDER) + 1}): ").strip()
             if not choices:
-                print("❌ Please enter at least one semester number.")
+                logger.error("❌ Please enter at least one semester number.")
                 continue
 
             choice_list = [c.strip() for c in choices.split(',')]
@@ -1312,29 +1776,57 @@ def get_custom_semester_selection():
             valid_choices = []
             for choice in choice_list:
                 if not choice.isdigit():
-                    print(f"❌ '{choice}' is not a valid number.")
+                    logger.error(f"❌ '{choice}' is not a valid number.")
                     continue
 
                 choice_num = int(choice)
                 if 1 <= choice_num <= len(SEMESTER_ORDER):
                     valid_choices.append(choice_num)
                 else:
-                    print(f"❌ '{choice}' is not a valid semester number.")
+                    logger.error(f"❌ '{choice}' is not a valid semester number.")
 
             if valid_choices:
                 selected_semesters = [SEMESTER_ORDER[i - 1]
                                       for i in valid_choices]
-                print(
+                logger.info(
                     f"✅ Selected semesters: {[get_semester_display_info(sem)[3] for sem in selected_semesters]}")
                 return selected_semesters
             else:
-                print("❌ No valid semesters selected. Please try again.")
+                logger.error("❌ No valid semesters selected. Please try again.")
 
         except KeyboardInterrupt:
-            print("\n👋 Operation cancelled by user.")
+            logger.info("\n👋 Operation cancelled by user.")
             sys.exit(0)
         except Exception as e:
-            print(f"❌ Error: {e}. Please try again.")
+            logger.error(f"❌ Error: {e}. Please try again.")
+
+# ----------------------------
+# File Validation
+# ----------------------------
+
+def validate_raw_file(file_path):
+    """Validate raw Excel file before processing."""
+    if not os.path.exists(file_path):
+        return False, "File does not exist"
+    
+    if os.path.getsize(file_path) == 0:
+        return False, "File is empty"
+    
+    try:
+        xl = pd.ExcelFile(file_path)
+        if not xl.sheet_names:
+            return False, "No sheets in Excel file"
+        
+        expected_sheets = ['CA', 'OBJ', 'EXAM']
+        found_sheets = [s for s in expected_sheets if s in xl.sheet_names]
+        
+        if not found_sheets:
+            return False, f"No expected sheets found. Has: {xl.sheet_names}"
+        
+        return True, f"Valid file with sheets: {found_sheets}"
+        
+    except Exception as e:
+        return False, f"Cannot open file: {e}"
 
 # ----------------------------
 # PDF Generation - Individual Student Report
@@ -1439,7 +1931,7 @@ def generate_individual_student_pdf(
                     width=0.8 * inch,
                     height=0.8 * inch)
             except Exception as e:
-                print(f"Warning: Could not load logo: {e}")
+                logger.warning(f"Warning: Could not load logo: {e}")
 
         # Header table with logo and title
         if logo_img:
@@ -1547,7 +2039,6 @@ def generate_individual_student_pdf(
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ]))
-
         elems.append(combined_table)
         elems.append(Spacer(1, 12))
 
@@ -1585,7 +2076,7 @@ def generate_individual_student_pdf(
                     # Use the upgraded score for PDF display
                     score_val = 50.0
                     score_display = "50"
-                    print(f"🔼 PDF: Upgraded score for {exam_no} - {code}: → 50")
+                    logger.info(f"🔼 PDF: Upgraded score for {exam_no} - {code}: → 50")
                 else:
                     score_display = str(int(round(score_val)))
                 # -----------------------
@@ -1662,14 +2153,14 @@ def generate_individual_student_pdf(
                 current_gpa,
                 total_units_passed)
 
-        print(f"📊 PDF GENERATION for {exam_no}:")
-        print(f"   Current GPA: {current_gpa}")
-        print(f"   Previous GPA available: {previous_gpa is not None}")
-        print(f"   CGPA available: {cgpa is not None}")
+        logger.info(f"📊 PDF GENERATION for {exam_no}:")
+        logger.info(f"   Current GPA: {current_gpa}")
+        logger.info(f"   Previous GPA available: {previous_gpa is not None}")
+        logger.info(f"   CGPA available: {cgpa is not None}")
         if previous_gpa is not None:
-            print(f"   Previous GPA value: {previous_gpa}")
+            logger.info(f"   Previous GPA value: {previous_gpa}")
         if cgpa is not None:
-            print(f"   CGPA value: {cgpa}")
+            logger.info(f"   CGPA value: {cgpa}")
 
         # Get values from dataframe
         tcpe = round(total_grade_points, 1)
@@ -1691,7 +2182,7 @@ def generate_individual_student_pdf(
         final_remarks_lines = []
 
         # For withdrawn students in their withdrawal semester, show appropriate
-        # metrics
+        # remarks
         if previously_withdrawn and withdrawal_history['withdrawn_semester'] == semester_key:
             # This is the actual withdrawal semester - show normal withdrawal
             # remarks
@@ -1759,7 +2250,7 @@ def generate_individual_student_pdf(
         # Add previous GPA if available (from first year second semester
         # upward)
         if previous_gpa is not None:
-            print(f"✅ ADDING PREVIOUS GPA to PDF: {previous_gpa}")
+            logger.info(f"✅ ADDING PREVIOUS GPA to PDF: {previous_gpa}")
             summary_data.append([
                 Paragraph("<b>TCUP:</b>", styles['Normal']), str(tcup),
                 Paragraph("<b>PREVIOUS GPA:</b>", styles['Normal']), str(previous_gpa)
@@ -1771,7 +2262,7 @@ def generate_individual_student_pdf(
 
         # Add CGPA if available (from second semester onward)
         if cgpa is not None:
-            print(f"✅ ADDING CGPA to PDF: {cgpa}")
+            logger.info(f"✅ ADDING CGPA to PDF: {cgpa}")
             summary_data.append([
                 Paragraph("<b>TCUF:</b>", styles['Normal']), str(tcuf),
                 Paragraph("<b>OVERALL GPA:</b>", styles['Normal']), str(display_cgpa)
@@ -1850,7 +2341,7 @@ def generate_individual_student_pdf(
             elems.append(PageBreak())
 
     doc.build(elems)
-    print(f"✅ Individual student PDF written: {out_pdf_path}")
+    logger.info(f"✅ Individual student PDF written: {out_pdf_path}")
 
 # ----------------------------
 # Main file processing
@@ -1874,9 +2365,9 @@ def process_semester_files(
     """
     Process all files for a specific semester.
     """
-    print(f"\n{'='*60}")
-    print(f"PROCESSING SEMESTER: {semester_key}")
-    print(f"{'='*60}")
+    logger.info(f"\n{'='*60}")
+    logger.info(f"PROCESSING SEMESTER: {semester_key}")
+    logger.info(f"{'='*60}")
 
     # Filter files for this semester
     semester_files = []
@@ -1886,16 +2377,23 @@ def process_semester_files(
             semester_files.append(rf)
 
     if not semester_files:
-        print(f"⚠️ No files found for semester {semester_key}")
+        logger.warning(f"⚠️ No files found for semester {semester_key}")
         return None
 
-    print(
+    logger.info(
         f"📁 Found {len(semester_files)} files for {semester_key}: {semester_files}")
 
     # Process each file for this semester
+    files_processed = 0
     for rf in semester_files:
         raw_path = os.path.join(raw_dir, rf)
-        print(f"\n📄 Processing: {rf}")
+        logger.info(f"\n📄 Processing: {rf}")
+
+        # Validate file before processing
+        is_valid, validation_msg = validate_raw_file(raw_path)
+        if not is_valid:
+            logger.error(f"❌ File validation failed: {validation_msg}")
+            continue
 
         try:
             # Load previous GPAs for this specific semester
@@ -1924,14 +2422,39 @@ def process_semester_files(
                 upgrade_min_threshold)
 
             if result is not None:
-                print(f"✅ Successfully processed {rf}")
+                logger.info(f"✅ Successfully processed {rf}")
+                files_processed += 1
             else:
-                print(f"❌ Failed to process {rf}")
+                logger.error(f"❌ Failed to process {rf}")
 
         except Exception as e:
-            print(f"❌ Error processing {rf}: {e}")
-            import traceback
+            logger.error(f"❌ Error processing {rf}: {e}")
             traceback.print_exc()
+
+    # NEW: Create CGPA and Analysis sheets after processing files
+    if files_processed > 0:
+        try:
+            mastersheet_path = os.path.join(clean_dir, f"{set_name}_RESULT-{ts}", f"mastersheet_{ts}.xlsx")
+            if os.path.exists(mastersheet_path):
+                create_bm_cgpa_summary_sheet(mastersheet_path, ts)
+                create_bm_analysis_sheet(mastersheet_path, ts)
+                logger.info("✅ Created CGPA and Analysis sheets for BM")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not create summary sheets: {e}")
+
+    # Return proper result dictionary
+    if files_processed > 0:
+        return {
+            'success': True,
+            'files_processed': files_processed,
+            'semester': semester_key
+        }
+    else:
+        return {
+            'success': False,
+            'files_processed': 0,
+            'error': 'No files processed'
+        }
 
 def process_single_file(
         path,
@@ -1953,10 +2476,15 @@ def process_single_file(
     """
     fname = os.path.basename(path)
 
+    # FIX: Initialize output_subdir EARLY to avoid UnboundLocalError
+    output_subdir = os.path.join(output_dir, f"{set_name}_RESULT-{ts}")
+    os.makedirs(output_subdir, exist_ok=True)
+    logger.info(f"📁 Created output directory: {output_subdir}")
+
     try:
         xl = pd.ExcelFile(path)
     except Exception as e:
-        print(f"Error opening excel {path}: {e}")
+        logger.error(f"Error opening excel {path}: {e}")
         return None
 
     expected_sheets = ['CA', 'OBJ', 'EXAM']
@@ -1965,24 +2493,24 @@ def process_single_file(
         if s in xl.sheet_names:
             dfs[s] = pd.read_excel(path, sheet_name=s, dtype=str)
     if not dfs:
-        print("No CA/OBJ/EXAM sheets detected — skipping file.")
+        logger.error("No CA/OBJ/EXAM sheets detected — skipping file.")
         return None
 
     # Use the provided semester key
     sem = semester_key
     year, semester_num, level_display, semester_display, set_code = get_semester_display_info(
         sem)
-    print(
+    logger.info(
         f"📁 Processing: {level_display} - {semester_display} - Set: {set_code}")
-    print(f"📊 Using course sheet: {sem}")
+    logger.info(f"📊 Using course sheet: {sem}")
 
-    print(f"📊 Previous GPAs provided: {len(previous_gpas)} students")
-    print(
+    logger.info(f"📊 Previous GPAs provided: {len(previous_gpas)} students")
+    logger.info(
         f"📊 CGPA data available for: {len(cgpa_data) if cgpa_data else 0} students")
 
     # Check if semester exists in course maps
     if sem not in semester_course_maps:
-        print(
+        logger.error(
             f"❌ Semester '{sem}' not found in course data. Available semesters: {list(semester_course_maps.keys())}")
         return None
 
@@ -2021,7 +2549,7 @@ def process_single_file(
             namecol = df.columns[1]
 
         if regcol is None:
-            print(f"Skipping sheet {s}: no reg column found")
+            logger.warning(f"Skipping sheet {s}: no reg column found")
             continue
 
         df["REG. No"] = df[regcol].astype(str).str.strip()
@@ -2070,7 +2598,7 @@ def process_single_file(
                 merged.drop(columns=["NAME_dup"], inplace=True)
 
     if merged is None or merged.empty:
-        print("No data merged from sheets — skipping file.")
+        logger.error("No data merged from sheets — skipping file.")
         return None
 
     mastersheet = merged[["REG. No", "NAME"]].copy()
@@ -2114,7 +2642,7 @@ def process_single_file(
         # In non-interactive mode, use the provided threshold or None
         upgraded_scores_count = 0
         if upgrade_min_threshold is not None:
-            print(f"🔄 Applying upgrade rule from parameters: {upgrade_min_threshold}–49 → 50")
+            logger.info(f"🔄 Applying upgrade rule from parameters: {upgrade_min_threshold}–49 → 50")
     
     if upgrade_min_threshold is not None:
         mastersheet, upgraded_scores_count = apply_upgrade_rule(mastersheet, ordered_codes, upgrade_min_threshold)
@@ -2191,11 +2719,20 @@ def process_single_file(
             exam_no = str(row["EXAMS NUMBER"]).strip()
             withdrawn_students.append(exam_no)
             mark_student_withdrawn(exam_no, semester_key)
-            print(f"🚫 Student {exam_no} marked as withdrawn in {semester_key}")
+            logger.info(f"🚫 Student {exam_no} marked as withdrawn in {semester_key}")
 
     # Update student tracker with current semester's students (after filtering)
     exam_numbers = mastersheet["EXAMS NUMBER"].astype(str).str.strip().tolist()
     update_student_tracker(semester_key, exam_numbers, withdrawn_students)
+
+    # NEW: IDENTIFY CARRYOVER STUDENTS FOR BM
+    carryover_students = identify_carryover_students(mastersheet, semester_key, set_name, pass_threshold)
+    
+    if carryover_students:
+        carryover_dir = save_carryover_records(
+            carryover_students, output_subdir, set_name, semester_key
+        )
+        logger.info("✅ Saved {} BM carryover records".format(len(carryover_students)))
 
     def sort_key(remark):
         if remark == "Passed":
@@ -2225,9 +2762,8 @@ def process_single_file(
             mastersheet[c] = pd.NA
     mastersheet = mastersheet[out_cols]
 
-    # FIXED: Create proper output directory structure
-    output_subdir = os.path.join(output_dir, f"BM_RESULT-{ts}")
-    os.makedirs(output_subdir, exist_ok=True)
+    # FIXED: Create proper output directory structure with dynamic naming
+    # output_subdir is already created at the beginning of the function
     out_xlsx = os.path.join(output_subdir, f"mastersheet_{ts}.xlsx")
 
     if not os.path.exists(out_xlsx):
@@ -2256,7 +2792,7 @@ def process_single_file(
             img.width, img.height = 110, 110
             ws.add_image(img, "A1")
         except Exception as e:
-            print(f"⚠ Could not place logo: {e}")
+            logger.warning(f"⚠ Could not place logo: {e}")
 
     ws.merge_cells("C1:Q1")
     title_cell = ws["C1"]
@@ -2329,8 +2865,8 @@ def process_single_file(
             left=Side(
                 style="thin"), right=Side(
                 style="thin"), top=Side(
-                style="thin"), bottom=Side(
-                    style="thin"))
+                    style="thin"), bottom=Side(
+                        style="thin"))
 
     for _, r in mastersheet.iterrows():
         rowvals = [r[col] for col in headers]
@@ -2409,60 +2945,6 @@ def process_single_file(
                 cell.alignment = Alignment(
                     horizontal="center", vertical="center")
 
-    # Calculate optimal column widths with special handling for REMARKS column
-    longest_name_len = max([len(str(x)) for x in mastersheet["NAME"].fillna(
-        "")]) if "NAME" in mastersheet.columns else 10
-    name_col_width = min(max(longest_name_len + 2, 10), NAME_WIDTH_CAP)
-
-    # Enhanced REMARKS column width calculation
-    longest_remark_len = 0
-    for remark in mastersheet["REMARKS"].fillna(""):
-        remark_str = str(remark)
-        # For "Failed" remarks, calculate the length considering all course
-        # codes
-        if remark_str.startswith("Failed:"):
-            # Count the total characters in failed courses list
-            failed_courses = remark_str.replace("Failed: ", "")
-            # Estimate width needed for the course codes
-            failed_length = len(failed_courses)
-            # Add some padding for the "Failed: " prefix and spacing
-            total_length = failed_length + 15
-        else:
-            total_length = len(remark_str)
-
-        if total_length > longest_remark_len:
-            longest_remark_len = total_length
-
-    # Set REMARKS column width based on the longest content, with reasonable
-    # limits
-    # Expanded range for REMARKS
-    remarks_col_width = min(max(longest_remark_len + 4, 40), 80)
-
-    # Apply text wrapping and left alignment to REMARKS column
-    remarks_col_idx = headers.index("REMARKS") + 1
-    for row_idx in range(start_row + 3, ws.max_row + 1):
-        cell = ws.cell(row=row_idx, column=remarks_col_idx)
-        cell.alignment = Alignment(
-            horizontal="left",
-            vertical="center",
-            wrap_text=True)
-
-    for col_idx, col in enumerate(ws.columns, start=1):
-        column_letter = get_column_letter(col_idx)
-        if col_idx == 1:  # S/N
-            ws.column_dimensions[column_letter].width = 6
-        elif column_letter == "B" or headers[col_idx - 1] in ["EXAMS NUMBER", "EXAM NO"]:
-            ws.column_dimensions[column_letter].width = 18
-        elif headers[col_idx - 1] == "NAME":
-            ws.column_dimensions[column_letter].width = name_col_width
-        elif 4 <= col_idx < 4 + len(ordered_codes):  # course columns
-            ws.column_dimensions[column_letter].width = 8
-        elif headers[col_idx - 1] in ["REMARKS"]:
-            # Dynamic width for REMARKS
-            ws.column_dimensions[column_letter].width = remarks_col_width
-        else:
-            ws.column_dimensions[column_letter].width = 12
-
     # Fails per course row
     fails_per_course = mastersheet[ordered_codes].apply(
         lambda x: (x < pass_threshold).sum()).tolist()
@@ -2526,7 +3008,7 @@ def process_single_file(
         ws.append(
             [f"NOTE: {len(removed_students)} previously withdrawn students were removed from this semester's results as they should not be processed."])
 
-    ws.append(["The above decisions are in line with the provisions of the General Information Section of the NMCN/NBTE Examinations Regulations (Pg 4) adopted by the College."])
+    ws.append(["The above decisions are in line with the provisions of the General Information Section of the General NMCN/NBTE Examinations Regulations (Pg 4) adopted by the College."])
     ws.append([])
     ws.append(["________________________", "", "",
               "________________________", "", "", "", "", "", "", "", "", ""])
@@ -2547,7 +3029,7 @@ def process_single_file(
                ""])
 
     wb.save(out_xlsx)
-    print(f"✅ Mastersheet saved: {out_xlsx}")
+    logger.info(f"✅ Mastersheet saved: {out_xlsx}")
 
     # Generate individual student PDF with previous GPAs and CGPA
     safe_sem = re.sub(r'[^\w\-]', '_', sem)
@@ -2555,13 +3037,13 @@ def process_single_file(
         output_subdir,
         f"mastersheet_students_{ts}_{safe_sem}.pdf")
 
-    print(f"📊 FINAL CHECK before PDF generation:")
-    print(f"   Previous GPAs loaded: {len(previous_gpas)}")
-    print(
+    logger.info(f"📊 FINAL CHECK before PDF generation:")
+    logger.info(f"   Previous GPAs loaded: {len(previous_gpas)}")
+    logger.info(
         f"   CGPA data available for: {len(cgpa_data) if cgpa_data else 0} students")
     if previous_gpas:
         sample = list(previous_gpas.items())[:3]
-        print(f"   Sample GPAs: {sample}")
+        logger.info(f"   Sample GPAs: {sample}")
 
     try:
         generate_individual_student_pdf(
@@ -2578,10 +3060,9 @@ def process_single_file(
             total_cu=total_cu,
             pass_threshold=pass_threshold,
             upgrade_min_threshold=upgrade_min_threshold)  # PASS THE UPGRADE THRESHOLD TO PDF
-        print(f"✅ PDF generated successfully for {sem}")
+        logger.info(f"✅ PDF generated successfully for {sem}")
     except Exception as e:
-        print(f"❌ Failed to generate student PDF for {sem}: {e}")
-        import traceback
+        logger.error(f"❌ Failed to generate student PDF for {sem}: {e}")
         traceback.print_exc()
 
     return mastersheet
@@ -2591,179 +3072,212 @@ def process_single_file(
 # ----------------------------
 
 def main():
-    print("Starting BM Examination Results Processing...")
-    ts = datetime.now().strftime(TIMESTAMP_FMT)
+    """Main entry point with comprehensive error handling."""
+    try:
+        logger.info("Starting BM Examination Results Processing...")
+        ts = datetime.now().strftime(TIMESTAMP_FMT)
 
-    # Initialize student tracker
-    initialize_student_tracker()
+        # Initialize trackers
+        initialize_student_tracker()
+        initialize_carryover_tracker()  # NEW: Initialize carryover tracker
 
-    # Check if running in web mode
-    if is_web_mode():
-        uploaded_file_path = get_uploaded_file_path()
-        if uploaded_file_path and os.path.exists(uploaded_file_path):
-            print("🔧 Running in WEB MODE with uploaded file")
-            success = process_uploaded_file(uploaded_file_path, normalize_path(BASE_DIR))
-            if success:
-                print("✅ Uploaded file processing completed successfully")
+        # Check if running in web mode
+        if is_web_mode():
+            uploaded_file_path = get_uploaded_file_path()
+            if uploaded_file_path and os.path.exists(uploaded_file_path):
+                logger.info("🔧 Running in WEB MODE with uploaded file")
+                success = process_uploaded_file(uploaded_file_path, normalize_path(BASE_DIR))
+                if success:
+                    logger.info("✅ Uploaded file processing completed successfully")
+                else:
+                    logger.error("❌ Uploaded file processing failed")
+                return
             else:
-                print("❌ Uploaded file processing failed")
-            return
-        else:
-            print("❌ No uploaded file found in web mode")
-            return
+                logger.error("❌ No uploaded file found in web mode")
+                return
 
-    # Get parameters from form
-    params = get_form_parameters()
-    
-    # Use the parameters
-    global DEFAULT_PASS_THRESHOLD
-    DEFAULT_PASS_THRESHOLD = params['pass_threshold']
-    
-    base_dir_norm = normalize_path(BASE_DIR)
-    print(f"Using base directory: {base_dir_norm}")
-
-    # Check if we should use interactive or non-interactive mode
-    if should_use_interactive_mode():
-        print("🔧 Running in INTERACTIVE mode (CLI)")
+        # Get parameters from form
+        params = get_form_parameters()
         
-        try:
-            semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
-        except Exception as e:
-            print(f"❌ Could not load course data: {e}")
-            return
+        # Use the parameters
+        global DEFAULT_PASS_THRESHOLD
+        DEFAULT_PASS_THRESHOLD = params['pass_threshold']
+        
+        base_dir_norm = normalize_path(BASE_DIR)
+        logger.info(f"Using base directory: {base_dir_norm}")
 
-        # Get available sets and let user choose
-        available_sets = get_available_sets(base_dir_norm)
+        # Check if we should use interactive or non-interactive mode
+        if should_use_interactive_mode():
+            logger.info("🔧 Running in INTERACTIVE mode (CLI)")
+            
+            try:
+                semester_course_maps, semester_credit_units, semester_lookup, semester_course_titles = load_course_data()
+            except Exception as e:
+                logger.error(f"❌ Could not load course data: {e}")
+                return
 
-        if not available_sets:
-            print(
-                f"No BM-* directories found in {base_dir_norm}. Nothing to process.")
-            print(f"Available directories: {os.listdir(base_dir_norm)}")
-            return
+            # Get available sets and let user choose
+            available_sets = get_available_sets(base_dir_norm)
 
-        print(f"📚 Found {len(available_sets)} available sets: {available_sets}")
+            if not available_sets:
+                logger.error(
+                    f"No BM-* directories found in {base_dir_norm}. Nothing to process.")
+                logger.error(f"Available directories: {os.listdir(base_dir_norm)}")
+                return
 
-        # Let user choose which set(s) to process
-        sets_to_process = get_user_set_choice(available_sets)
+            logger.info(f"📚 Found {len(available_sets)} available sets: {available_sets}")
 
-        print(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
+            # Let user choose which set(s) to process
+            sets_to_process = get_user_set_choice(available_sets)
 
-        for bm_set in sets_to_process:
-            print(f"\n{'='*60}")
-            print(f"PROCESSING SET: {bm_set}")
-            print(f"{'='*60}")
+            logger.info(f"\n🎯 PROCESSING SELECTED SETS: {sets_to_process}")
 
-            # BM: Raw and clean directories under BM folder
-            raw_dir = normalize_path(
-                os.path.join(
-                    base_dir_norm, "BM", bm_set, "RAW_RESULTS"))
-            clean_dir = normalize_path(
-                os.path.join(
-                    base_dir_norm, "BM", bm_set, "CLEAN_RESULTS"))
+            for bm_set in sets_to_process:
+                logger.info(f"\n{'='*60}")
+                logger.info(f"PROCESSING SET: {bm_set}")
+                logger.info(f"{'='*60}")
 
-            # Create directories if they don't exist
-            os.makedirs(raw_dir, exist_ok=True)
-            os.makedirs(clean_dir, exist_ok=True)
+                # BM: Raw and clean directories under BM folder
+                raw_dir = normalize_path(
+                    os.path.join(
+                        base_dir_norm, "BM", bm_set, "RAW_RESULTS"))
+                clean_dir = normalize_path(
+                    os.path.join(
+                        base_dir_norm, "BM", bm_set, "CLEAN_RESULTS"))
 
-            # Check if raw directory exists and has files
-            if not os.path.exists(raw_dir):
-                print(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
-                continue
+                # Create directories if they don't exist
+                os.makedirs(raw_dir, exist_ok=True)
+                os.makedirs(clean_dir, exist_ok=True)
 
-            raw_files = [
-                f for f in os.listdir(raw_dir) if f.lower().endswith(
-                    (".xlsx", ".xls")) and not f.startswith("~$")]
-            if not raw_files:
-                print(f"⚠️ No raw files in {raw_dir}; skipping {bm_set}")
-                print(f"   Available files: {os.listdir(raw_dir)}")
-                continue
-
-            print(f"📁 Found {len(raw_files)} raw files in {bm_set}: {raw_files}")
-
-            # Get user choice for which semesters to process
-            semesters_to_process = get_user_semester_choice()
-
-            print(
-                f"\n🎯 PROCESSING SELECTED SEMESTERS for {bm_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
-
-            # Process selected semesters in the correct order
-            for semester_key in semesters_to_process:
-                if semester_key not in SEMESTER_ORDER:
-                    print(f"⚠️ Skipping unknown semester: {semester_key}")
+                # Check if raw directory exists and has files
+                if not os.path.exists(raw_dir):
+                    logger.warning(f"⚠️ RAW_RESULTS directory not found: {raw_dir}")
                     continue
 
-                # Check if there are files for this semester
-                semester_files_exist = False
-                for rf in raw_files:
-                    detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
-                    if detected_sem == semester_key:
-                        semester_files_exist = True
-                        break
+                raw_files = [
+                    f for f in os.listdir(raw_dir) if f.lower().endswith(
+                        (".xlsx", ".xls")) and not f.startswith("~$")]
+                if not raw_files:
+                    logger.warning(f"⚠️ No raw files in {raw_dir}; skipping {bm_set}")
+                    logger.info(f"   Available files: {os.listdir(raw_dir)}")
+                    continue
 
-                if semester_files_exist:
-                    print(f"\n🎯 Processing {semester_key} in {bm_set}...")
-                    process_semester_files(
-                        semester_key,
-                        raw_files,
-                        raw_dir,
-                        clean_dir,
-                        ts,
-                        DEFAULT_PASS_THRESHOLD,
-                        semester_course_maps,
-                        semester_credit_units,
-                        semester_lookup,
-                        semester_course_titles,
-                        DEFAULT_LOGO_PATH,
-                        bm_set)
-                else:
-                    print(
-                        f"⚠️ No files found for {semester_key} in {bm_set}, skipping...")
+                logger.info(f"📁 Found {len(raw_files)} raw files in {bm_set}: {raw_files}")
 
-        # Print student tracking summary
-        print(f"\n📊 STUDENT TRACKING SUMMARY:")
-        print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
-        print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+                # Get user choice for which semesters to process
+                semesters_to_process = get_user_semester_choice()
 
-        # Print withdrawn students who reappeared
-        reappeared_count = 0
-        for exam_no, data in WITHDRAWN_STUDENTS.items():
-            if data['reappeared_semesters']:
-                reappeared_count += 1
-                print(
-                    f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
+                logger.info(
+                    f"\n🎯 PROCESSING SELECTED SEMESTERS for {bm_set}: {[get_semester_display_info(sem)[3] for sem in semesters_to_process]}")
 
-        if reappeared_count > 0:
-            print(
-                f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
+                # Process selected semesters in the correct order
+                for semester_key in semesters_to_process:
+                    if semester_key not in SEMESTER_ORDER:
+                        logger.warning(f"⚠️ Skipping unknown semester: {semester_key}")
+                        continue
 
-        # Analyze student progression
-        sem_counts = {}
-        for student_data in STUDENT_TRACKER.values():
-            sem_count = len(student_data['semesters_present'])
-            if sem_count not in sem_counts:
-                sem_counts[sem_count] = 0
-            sem_counts[sem_count] += 1
+                    # Check if there are files for this semester
+                    semester_files_exist = False
+                    for rf in raw_files:
+                        detected_sem, _, _, _, _, _ = detect_semester_from_filename(rf)
+                        if detected_sem == semester_key:
+                            semester_files_exist = True
+                            break
 
-        for sem_count, student_count in sorted(sem_counts.items()):
-            print(f"Students present in {sem_count} semester(s): {student_count}")
+                    if semester_files_exist:
+                        logger.info(f"\n🎯 Processing {semester_key} in {bm_set}...")
+                        result = process_semester_files(
+                            semester_key,
+                            raw_files,
+                            raw_dir,
+                            clean_dir,
+                            ts,
+                            DEFAULT_PASS_THRESHOLD,
+                            semester_course_maps,
+                            semester_credit_units,
+                            semester_lookup,
+                            semester_course_titles,
+                            DEFAULT_LOGO_PATH,
+                            bm_set)
+                        
+                        if result is not None and result.get('success', False):
+                            logger.info(f"✅ Successfully processed {semester_key}")
+                        else:
+                            logger.error(f"❌ Failed to process {semester_key}")
+                    else:
+                        logger.warning(
+                            f"⚠️ No files found for {semester_key} in {bm_set}, skipping...")
+                
+                # Zip the results after processing all semesters for this set
+                result_folder = os.path.join(clean_dir, f"{bm_set}_RESULT-{ts}")
+                if os.path.exists(result_folder):
+                    zip_path = os.path.join(clean_dir, f"{bm_set}_RESULT-{ts}.zip")
+                    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                        for root, _, files in os.walk(result_folder):
+                            for file in files:
+                                file_path = os.path.join(root, file)
+                                arcname = os.path.relpath(file_path, result_folder)
+                                zipf.write(file_path, arcname)
+                    logger.info(f"✅ Zipped results: {zip_path}")
+                    # Remove the folder after zipping to clean up
+                    shutil.rmtree(result_folder)
 
-        print("\n✅ BM Examination Results Processing completed successfully.")
-    else:
-        print("🔧 Running in NON-INTERACTIVE mode (Web)")
-        success = process_in_non_interactive_mode(params, base_dir_norm)
-        if success:
-            print("✅ BM Examination Results Processing completed successfully")
+            # Print student tracking summary
+            logger.info(f"\n📊 STUDENT TRACKING SUMMARY:")
+            logger.info(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
+            logger.info(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+
+            # NEW: Print carryover summary
+            if CARRYOVER_STUDENTS:
+                logger.info(f"\n📋 BM CARRYOVER STUDENT SUMMARY:")
+                logger.info(f"Total BM carryover students: {len(CARRYOVER_STUDENTS)}")
+
+            # Print withdrawn students who reappeared
+            reappeared_count = 0
+            for exam_no, data in WITHDRAWN_STUDENTS.items():
+                if data['reappeared_semesters']:
+                    reappeared_count += 1
+                    logger.warning(
+                        f"🚨 {exam_no}: Withdrawn in {data['withdrawn_semester']}, reappeared in {data['reappeared_semesters']}")
+
+            if reappeared_count > 0:
+                logger.warning(
+                    f"🚨 ALERT: {reappeared_count} previously withdrawn students have reappeared in later semesters!")
+
+            # Analyze student progression
+            sem_counts = {}
+            for student_data in STUDENT_TRACKER.values():
+                sem_count = len(student_data['semesters_present'])
+                if sem_count not in sem_counts:
+                    sem_counts[sem_count] = 0
+                sem_counts[sem_count] += 1
+
+            for sem_count, student_count in sorted(sem_counts.items()):
+                logger.info(f"Students present in {sem_count} semester(s): {student_count}")
+
+            logger.info("\n✅ BM Examination Results Processing completed successfully.")
         else:
-            print("❌ BM Examination Results Processing failed")
-        return
+            logger.info("🔧 Running in NON-INTERACTIVE mode (Web)")
+            success = process_in_non_interactive_mode(params, base_dir_norm)
+            if success:
+                logger.info("✅ BM Examination Results Processing completed successfully")
+            else:
+                logger.error("❌ BM Examination Results Processing failed")
+            return
+
+    except KeyboardInterrupt:
+        logger.info("\n👋 Process interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"❌ Fatal error: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+    finally:
+        # Cleanup
+        logger.info("\n📊 Final Summary:")
+        logger.info(f"   Students tracked: {len(STUDENT_TRACKER)}")
+        logger.info(f"   Carryover students: {len(CARRYOVER_STUDENTS)}")
+        logger.info(f"   Withdrawn students: {len(WITHDRAWN_STUDENTS)}")
 
 if __name__ == "__main__":
-    try:
-        main()
-        print("✅ BM Examination Results Processing completed successfully")
-        print(
-            f"✅ Mastersheet saved: mastersheet_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.xlsx")
-    except Exception as e:
-        print(f"❌ Error during processing: {e}")
-        import traceback
-        traceback.print_exc()
+    main()
