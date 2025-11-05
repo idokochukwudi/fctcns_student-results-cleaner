@@ -79,7 +79,6 @@ DEPARTMENT = os.getenv("DEPARTMENT", "Examinations Office")
 # ============================================================================
 # FIX: Move login_required decorator to the top before any routes use it
 # ============================================================================
-
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -95,71 +94,142 @@ BM_SETS = ["SET2023", "SET2024", "SET2025"]
 PROGRAMS = ["ND", "BN", "BM"]
 
 # ============================================================================
-# ENHANCED: Universal ZIP Creation and Cleanup Functions
+# ENHANCED: Universal ZIP Creation and Cleanup Functions - STRICT ENFORCEMENT
 # ============================================================================
-
 def create_zip_from_directory(source_dir, zip_filename, remove_original=True):
-    """Create ZIP file from directory contents and optionally remove original files"""
+    """Create ZIP file from directory contents and remove ALL original files"""
     try:
         if not os.path.exists(source_dir):
             logger.error(f"Source directory doesn't exist: {source_dir}")
             return False
-        
+       
         zip_path = os.path.join(os.path.dirname(source_dir), zip_filename)
-        
-        # Collect all files to zip
+       
+        # Collect ALL files to zip (no filtering)
         all_files = []
         for root, dirs, files in os.walk(source_dir):
             for file in files:
-                if file.lower().endswith(('.xlsx', '.csv', '.pdf', '.txt', '.json')):
+                if not file.startswith('~') and not file.startswith('.'):
                     file_path = os.path.join(root, file)
                     all_files.append(file_path)
-        
+       
         if not all_files:
             logger.warning(f"No files found to zip in: {source_dir}")
             return False
-        
+       
         # Create ZIP file
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_f:
             for file_path in all_files:
-                # Create archive name relative to source directory
                 arcname = os.path.relpath(file_path, source_dir)
                 zip_f.write(file_path, arcname)
                 logger.info(f"Added to ZIP: {arcname}")
-        
+       
         # Verify ZIP file
         if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
             logger.info(f"✅ Created ZIP: {zip_path} with {len(all_files)} files")
-            
-            # Remove original files if requested
+           
+            # Remove ALL original files and folders
             if remove_original:
                 cleanup_directory(source_dir, keep_files=[zip_filename])
-            
+           
             return True
         else:
             logger.error(f"❌ ZIP file created but appears empty: {zip_path}")
             return False
-            
+           
     except Exception as e:
         logger.error(f"❌ Failed to create ZIP: {e}")
         return False
 
-def cleanup_directory(directory, keep_files=None):
-    """Remove all files and subdirectories except specified files"""
-    if keep_files is None:
-        keep_files = []
-    
+def enforce_zip_only_policy(clean_dir, zip_base_name):
+    """ENFORCE ZIP-ONLY POLICY: Remove all non-ZIP files and create ZIP if needed"""
+    try:
+        if not os.path.exists(clean_dir):
+            return False
+           
+        logger.info(f"🔒 Enforcing ZIP-only policy in: {clean_dir}")
+       
+        # Check for existing ZIP files
+        zip_files = [f for f in os.listdir(clean_dir) if f.lower().endswith('.zip')]
+       
+        # Check for scattered files and directories
+        scattered_files = []
+        scattered_dirs = []
+       
+        for item in os.listdir(clean_dir):
+            item_path = os.path.join(clean_dir, item)
+           
+            if item.lower().endswith('.zip'):
+                continue # Skip ZIP files
+               
+            if os.path.isdir(item_path):
+                scattered_dirs.append(item)
+            elif os.path.isfile(item_path) and not item.startswith('~'):
+                scattered_files.append(item)
+       
+        logger.info(f"📊 ZIP enforcement - ZIPs: {len(zip_files)}, Dirs: {len(scattered_dirs)}, Files: {len(scattered_files)}")
+       
+        # If we have scattered content but no ZIP, create a ZIP
+        if (scattered_dirs or scattered_files) and not zip_files:
+            logger.info(f"🔄 Creating ZIP from scattered content")
+           
+            # Create a temporary directory to consolidate files
+            temp_consolidate_dir = os.path.join(clean_dir, f"TEMP_CONSOLIDATE_{int(time.time())}")
+            os.makedirs(temp_consolidate_dir, exist_ok=True)
+           
+            # Move all files and directories to temp directory
+            moved_count = 0
+            for item in scattered_files + scattered_dirs:
+                src_path = os.path.join(clean_dir, item)
+                dest_path = os.path.join(temp_consolidate_dir, item)
+               
+                try:
+                    if os.path.isdir(src_path):
+                        shutil.move(src_path, dest_path)
+                    else:
+                        shutil.move(src_path, dest_path)
+                    moved_count += 1
+                    logger.info(f"Moved to temp: {item}")
+                except Exception as e:
+                    logger.error(f"Error moving {item}: {e}")
+           
+            if moved_count > 0:
+                # Create ZIP from temp directory
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                zip_filename = f"{zip_base_name}_{timestamp}.zip"
+               
+                if create_zip_from_directory(temp_consolidate_dir, zip_filename, remove_original=True):
+                    # Remove temp directory
+                    shutil.rmtree(temp_consolidate_dir, ignore_errors=True)
+                    logger.info(f"✅ Successfully created ZIP and cleaned scattered files")
+                else:
+                    logger.error(f"❌ Failed to create ZIP from temp directory")
+            else:
+                # Clean up temp directory if no files were moved
+                shutil.rmtree(temp_consolidate_dir, ignore_errors=True)
+       
+        # Final cleanup: Remove any remaining non-ZIP files
+        cleanup_scattered_files_strict(clean_dir)
+       
+        return True
+       
+    except Exception as e:
+        logger.error(f"❌ Error enforcing ZIP-only policy: {e}")
+        return False
+
+def cleanup_scattered_files_strict(clean_dir):
+    """STRICT CLEANUP: Remove ALL non-ZIP files and folders"""
     try:
         files_removed = 0
         folders_removed = 0
-        
-        for item in os.listdir(directory):
-            item_path = os.path.join(directory, item)
-            
-            # Skip files in keep list
-            if item in keep_files:
+       
+        for item in os.listdir(clean_dir):
+            item_path = os.path.join(clean_dir, item)
+           
+            # Keep ONLY ZIP files
+            if item.lower().endswith('.zip'):
                 continue
-                
+               
             if os.path.isdir(item_path):
                 shutil.rmtree(item_path, ignore_errors=True)
                 folders_removed += 1
@@ -168,10 +238,44 @@ def cleanup_directory(directory, keep_files=None):
                 os.remove(item_path)
                 files_removed += 1
                 logger.info(f"🗑️ Removed file: {item}")
-        
+       
+        if files_removed > 0 or folders_removed > 0:
+            logger.info(f"🧹 STRICT Cleanup completed: {folders_removed} folders, {files_removed} files removed. ONLY ZIP files remain.")
+       
+        return True
+       
+    except Exception as e:
+        logger.error(f"❌ Error during strict cleanup: {e}")
+        return False
+
+def cleanup_directory(directory, keep_files=None):
+    """Remove all files and subdirectories except specified files"""
+    if keep_files is None:
+        keep_files = []
+   
+    try:
+        files_removed = 0
+        folders_removed = 0
+       
+        for item in os.listdir(directory):
+            item_path = os.path.join(directory, item)
+           
+            # Skip files in keep list
+            if item in keep_files:
+                continue
+               
+            if os.path.isdir(item_path):
+                shutil.rmtree(item_path, ignore_errors=True)
+                folders_removed += 1
+                logger.info(f"🗑️ Removed directory: {item}")
+            elif os.path.isfile(item_path):
+                os.remove(item_path)
+                files_removed += 1
+                logger.info(f"🗑️ Removed file: {item}")
+       
         logger.info(f"🧹 Cleanup completed: {folders_removed} folders, {files_removed} files removed")
         return True
-        
+       
     except Exception as e:
         logger.error(f"❌ Error during directory cleanup: {e}")
         return False
@@ -180,11 +284,11 @@ def create_result_zip(clean_dir, set_name, result_folder):
     """Create ZIP file - FIXED with proper cleanup."""
     try:
         folder_path = os.path.join(clean_dir, result_folder)
-        
+       
         if not os.path.exists(folder_path):
             logger.error(f"Result folder doesn't exist: {folder_path}")
             return False
-        
+       
         # Collect all files
         all_files = []
         for root, dirs, files in os.walk(folder_path):
@@ -192,14 +296,14 @@ def create_result_zip(clean_dir, set_name, result_folder):
                 if file.lower().endswith(('.xlsx', '.csv', '.pdf', '.txt', '.json')):
                     file_path = os.path.join(root, file)
                     all_files.append(file_path)
-        
+       
         if not all_files:
             logger.warning(f"⚠️ No files found to zip in: {folder_path}")
             return False
-        
+       
         zip_filename = f"{set_name}_RESULT-{result_folder.split('-')[-1]}.zip"
         zip_path = os.path.join(clean_dir, zip_filename)
-        
+       
         # Create ZIP with explicit close
         zip_file = None
         try:
@@ -211,7 +315,7 @@ def create_result_zip(clean_dir, set_name, result_folder):
         finally:
             if zip_file:
                 zip_file.close()
-        
+       
         # Verify ZIP
         if os.path.exists(zip_path):
             zip_size = os.path.getsize(zip_path)
@@ -226,16 +330,16 @@ def create_result_zip(clean_dir, set_name, result_folder):
                 except zipfile.BadZipFile:
                     logger.error(f"❌ ZIP file is corrupted: {zip_path}")
                     return False
-                
+               
                 logger.info(f"✅ Created ZIP: {zip_path} ({zip_size:,} bytes, {len(all_files)} files)")
-                
+               
                 # Safe cleanup
                 try:
                     shutil.rmtree(folder_path, ignore_errors=True)
                     logger.info(f"🗑️ Removed original folder: {result_folder}")
                 except Exception as e:
                     logger.warning(f"⚠️ Could not remove folder: {e}")
-                
+               
                 return True
             else:
                 logger.error(f"❌ ZIP file too small: {zip_size} bytes")
@@ -243,7 +347,7 @@ def create_result_zip(clean_dir, set_name, result_folder):
         else:
             logger.error(f"❌ ZIP file not created: {zip_path}")
             return False
-            
+           
     except Exception as e:
         logger.error(f"❌ Failed to create ZIP: {e}")
         import traceback
@@ -255,20 +359,20 @@ def cleanup_scattered_files(clean_dir, zip_filename):
     try:
         files_removed = 0
         folders_removed = 0
-        
+       
         # Remove any result directories (except the ZIP we just created)
         for item in os.listdir(clean_dir):
             item_path = os.path.join(clean_dir, item)
-            
+           
             # Skip the ZIP file we just created
             if item == zip_filename:
                 continue
-                
+               
             if os.path.isdir(item_path) and ("RESULT" in item or "RESIT" in item):
                 shutil.rmtree(item_path, ignore_errors=True)
                 folders_removed += 1
                 logger.info(f"🗑️ Removed scattered folder: {item}")
-            
+           
             # Remove individual result files (keep only ZIP files)
             elif os.path.isfile(item_path) and not item.lower().endswith('.zip'):
                 # Skip course files and other important files
@@ -276,10 +380,10 @@ def cleanup_scattered_files(clean_dir, zip_filename):
                     os.remove(item_path)
                     files_removed += 1
                     logger.info(f"🗑️ Removed scattered file: {item}")
-                
+               
         logger.info(f"🧹 Cleanup completed: {folders_removed} folders, {files_removed} files removed. Only ZIP files remain.")
         return True
-        
+       
     except Exception as e:
         logger.error(f"❌ Error during cleanup: {e}")
         return False
@@ -287,32 +391,31 @@ def cleanup_scattered_files(clean_dir, zip_filename):
 # ============================================================================
 # ENHANCED: Universal File Processing with ZIP Enforcement
 # ============================================================================
-
 def ensure_zipped_results(clean_dir, script_name, set_name=None):
     """Ensure all results are properly zipped and scattered files are removed"""
     try:
         logger.info(f"🔍 Checking ZIP status in: {clean_dir}")
-        
+       
         if not os.path.exists(clean_dir):
             logger.warning(f"Clean directory doesn't exist: {clean_dir}")
             return False
-        
+       
         # Check for existing ZIP files
         zip_files = [f for f in os.listdir(clean_dir) if f.lower().endswith('.zip')]
-        
+       
         # Check for scattered result directories
-        result_dirs = [d for d in os.listdir(clean_dir) 
-                     if os.path.isdir(os.path.join(clean_dir, d)) and 
+        result_dirs = [d for d in os.listdir(clean_dir)
+                     if os.path.isdir(os.path.join(clean_dir, d)) and
                      ("RESULT" in d or "RESIT" in d)]
-        
+       
         # Check for scattered files
-        scattered_files = [f for f in os.listdir(clean_dir) 
-                          if os.path.isfile(os.path.join(clean_dir, f)) and 
+        scattered_files = [f for f in os.listdir(clean_dir)
+                          if os.path.isfile(os.path.join(clean_dir, f)) and
                           not f.lower().endswith('.zip') and
                           not f.startswith('~')]
-        
+       
         logger.info(f"📊 Cleanup status - ZIPs: {len(zip_files)}, Dirs: {len(result_dirs)}, Files: {len(scattered_files)}")
-        
+       
         # If we have result directories but no ZIPs, create ZIPs
         if result_dirs and not zip_files:
             logger.info(f"🔄 Creating ZIPs from {len(result_dirs)} result directories")
@@ -323,14 +426,14 @@ def ensure_zipped_results(clean_dir, script_name, set_name=None):
                     # Extract set name from directory name or use generic
                     dir_set_name = extract_set_from_directory(result_dir) or "RESULTS"
                     create_result_zip(clean_dir, dir_set_name, result_dir)
-        
+       
         # Clean up any remaining scattered files
         if scattered_files:
             logger.info(f"🧹 Cleaning up {len(scattered_files)} scattered files")
             cleanup_scattered_files(clean_dir, "dummy_zip.zip" if not zip_files else zip_files[0])
-        
+       
         return True
-        
+       
     except Exception as e:
         logger.error(f"❌ Error ensuring zipped results: {e}")
         return False
@@ -339,17 +442,17 @@ def extract_set_from_directory(dir_name):
     """Extract set name from directory name"""
     patterns = [
         r'(ND-\d{4})',
-        r'(SET\d+)', 
+        r'(SET\d+)',
         r'(SET\d{4})',
         r'(BN-\w+)',
         r'(BM-\w+)'
     ]
-    
+   
     for pattern in patterns:
         match = re.search(pattern, dir_name)
         if match:
             return match.group(1)
-    
+   
     return None
 
 # ============================================================================
@@ -359,27 +462,27 @@ def create_result_zip(clean_dir, set_name, result_folder):
     """Create ZIP file for a specific result folder and clean up scattered files"""
     try:
         folder_path = os.path.join(clean_dir, result_folder)
-        
+       
         # Collect all files from the result folder
         all_files = []
         for root, dirs, files in os.walk(folder_path):
             for file in files:
                 if file.lower().endswith(('.xlsx', '.csv', '.pdf')):
                     all_files.append(os.path.join(root, file))
-        
+       
         if all_files:
             zip_filename = f"{set_name}_RESULT-{result_folder.split('-')[-1]}.zip"
             zip_path = os.path.join(clean_dir, zip_filename)
-            
+           
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_f:
                 for file_path in all_files:
                     arcname = os.path.relpath(file_path, folder_path)
                     zip_f.write(file_path, arcname)
-            
+           
             # Verify ZIP file
             if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
                 logger.info(f"✅ Created ZIP: {zip_path} with {len(all_files)} files")
-                
+               
                 # Clean up scattered files and folders
                 cleanup_scattered_files(clean_dir, zip_filename)
                 return True
@@ -389,7 +492,7 @@ def create_result_zip(clean_dir, set_name, result_folder):
         else:
             logger.warning(f"⚠️ No files found to zip in: {folder_path}")
             return False
-            
+           
     except Exception as e:
         logger.error(f"❌ Failed to create ZIP: {e}")
         return False
@@ -402,20 +505,20 @@ def cleanup_scattered_files(clean_dir, zip_filename):
     try:
         files_removed = 0
         folders_removed = 0
-        
+       
         # Remove any result directories (except the ZIP we just created)
         for item in os.listdir(clean_dir):
             item_path = os.path.join(clean_dir, item)
-            
+           
             # Skip the ZIP file we just created
             if item == zip_filename:
                 continue
-                
+               
             if os.path.isdir(item_path) and ("RESULT" in item or "RESIT" in item):
                 shutil.rmtree(item_path, ignore_errors=True)
                 folders_removed += 1
                 logger.info(f"🗑️ Removed scattered folder: {item}")
-            
+           
             # Remove individual result files (keep only ZIP files)
             elif os.path.isfile(item_path) and not item.lower().endswith('.zip'):
                 # Skip course files and other important files
@@ -423,10 +526,10 @@ def cleanup_scattered_files(clean_dir, zip_filename):
                     os.remove(item_path)
                     files_removed += 1
                     logger.info(f"🗑️ Removed scattered file: {item}")
-                
+               
         logger.info(f"🧹 Cleanup completed: {folders_removed} folders, {files_removed} files removed. Only ZIP files remain.")
         return True
-        
+       
     except Exception as e:
         logger.error(f"❌ Error during cleanup: {e}")
         return False
@@ -434,7 +537,6 @@ def cleanup_scattered_files(clean_dir, zip_filename):
 # ============================================================================
 # UPDATED: Route Names and Functions with Individual Semester Selection
 # ============================================================================
-
 # Update existing BN form route with individual semester selection
 @app.route("/bn_regular_exam_processor")
 @login_required
@@ -442,7 +544,7 @@ def bn_regular_exam_processor():
     """Basic Nursing regular exam processor form"""
     try:
         bn_sets = get_available_sets("BN")
-        
+       
         # Define BN semesters
         bn_semesters = [
             {"key": "N-FIRST-YEAR-FIRST-SEMESTER", "display": "Year 1 - First Semester"},
@@ -452,7 +554,7 @@ def bn_regular_exam_processor():
             {"key": "N-THIRD-YEAR-FIRST-SEMESTER", "display": "Year 3 - First Semester"},
             {"key": "N-THIRD-YEAR-SECOND-SEMESTER", "display": "Year 3 - Second Semester"},
         ]
-        
+       
         return render_template(
             "bn_regular_exam_processor.html",
             college=COLLEGE,
@@ -466,14 +568,14 @@ def bn_regular_exam_processor():
         flash(f"Error loading BN exam processor: {str(e)}", "error")
         return redirect(url_for("dashboard"))
 
-# Update existing BM form route with individual semester selection  
+# Update existing BM form route with individual semester selection
 @app.route("/bm_regular_exam_processor")
 @login_required
 def bm_regular_exam_processor():
     """Basic Midwifery regular exam processor form"""
     try:
         bm_sets = get_available_sets("BM")
-        
+       
         # Define BM semesters
         bm_semesters = [
             {"key": "M-FIRST-YEAR-FIRST-SEMESTER", "display": "Year 1 - First Semester"},
@@ -483,7 +585,7 @@ def bm_regular_exam_processor():
             {"key": "M-THIRD-YEAR-FIRST-SEMESTER", "display": "Year 3 - First Semester"},
             {"key": "M-THIRD-YEAR-SECOND-SEMESTER", "display": "Year 3 - Second Semester"},
         ]
-        
+       
         return render_template(
             "bm_regular_exam_processor.html",
             college=COLLEGE,
@@ -506,7 +608,7 @@ def nd_regular_exam_processor():
     """National Diploma regular exam processor form"""
     try:
         nd_sets = get_available_sets("ND")
-        
+       
         # Define ND semesters
         nd_semesters = [
             {"key": "ND-FIRST-YEAR-FIRST-SEMESTER", "display": "Year 1 - First Semester"},
@@ -514,7 +616,7 @@ def nd_regular_exam_processor():
             {"key": "ND-SECOND-YEAR-FIRST-SEMESTER", "display": "Year 2 - First Semester"},
             {"key": "ND-SECOND-YEAR-SECOND-SEMESTER", "display": "Year 2 - Second Semester"},
         ]
-        
+       
         return render_template(
             "nd_regular_exam_processor.html",
             college=COLLEGE,
@@ -539,37 +641,37 @@ def process_bn_resit():
         logger.info("BN RESIT: Route called")
         logger.info(f"Form data: {request.form}")
         logger.info(f"Files: {request.files}")
-        
+       
         # ✅ FIX: Accept both naming conventions
         resit_set = request.form.get("resit_set") or request.form.get("bn_resit_set")
-        resit_semester = request.form.get("resit_semester") or request.form.get("bn_resit_semester") 
+        resit_semester = request.form.get("resit_semester") or request.form.get("bn_resit_semester")
         resit_file = request.files.get("resit_file") or request.files.get("bn_resit_file")
-        
+       
         logger.info(f"BN RESIT: Set={resit_set}, Semester={resit_semester}, File={resit_file}")
-        
+       
         # Validation
         if not all([resit_set, resit_semester, resit_file]):
             flash("All fields are required for carryover processing", "error")
             return redirect(url_for("bn_regular_exam_processor"))
-        
+       
         # ✅ FIX: Save uploaded file to correct directory - RAW_RESULTS/CARRYOVER
         upload_dir = os.path.join(BASE_DIR, "BN", resit_set, "RAW_RESULTS", "CARRYOVER")
         os.makedirs(upload_dir, exist_ok=True)
-        
+       
         filename = f"bn_resit_{resit_semester}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         file_path = os.path.join(upload_dir, filename)
         resit_file.save(file_path)
-        
+       
         # Process BN carryover results
         result = process_carryover_results("BN", resit_set, resit_semester, file_path)
-        
+       
         if result["success"]:
             flash(f"BN carryover results processed successfully! {result.get('message', '')}", "success")
         else:
             flash(f"BN carryover processing failed: {result.get('message', 'Unknown error')}", "error")
-            
+           
         return redirect(url_for("bn_carryover"))
-        
+       
     except Exception as e:
         logger.error(f"BN carryover processing error: {e}")
         flash(f"Error processing BN carryover results: {str(e)}", "error")
@@ -586,37 +688,37 @@ def process_bm_resit():
         logger.info("BM RESIT: Route called")
         logger.info(f"Form data: {request.form}")
         logger.info(f"Files: {request.files}")
-        
+       
         # ✅ FIX: Accept both naming conventions
         resit_set = request.form.get("resit_set") or request.form.get("bm_resit_set")
         resit_semester = request.form.get("resit_semester") or request.form.get("bm_resit_semester")
         resit_file = request.files.get("resit_file") or request.files.get("bm_resit_file")
-        
+       
         logger.info(f"BM RESIT: Set={resit_set}, Semester={resit_semester}, File={resit_file}")
-        
+       
         # Validation
         if not all([resit_set, resit_semester, resit_file]):
             flash("All fields are required for carryover processing", "error")
             return redirect(url_for("bm_regular_exam_processor"))
-        
+       
         # ✅ FIX: Save uploaded file to correct directory - RAW_RESULTS/CARRYOVER
         upload_dir = os.path.join(BASE_DIR, "BM", resit_set, "RAW_RESULTS", "CARRYOVER")
         os.makedirs(upload_dir, exist_ok=True)
-        
+       
         filename = f"bm_resit_{resit_semester}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         file_path = os.path.join(upload_dir, filename)
         resit_file.save(file_path)
-        
+       
         # Process BM carryover results
         result = process_carryover_results("BM", resit_set, resit_semester, file_path)
-        
+       
         if result["success"]:
             flash(f"BM carryover results processed successfully! {result.get('message', '')}", "success")
         else:
             flash(f"BM carryover processing failed: {result.get('message', 'Unknown error')}", "error")
-            
+           
         return redirect(url_for("bm_carryover"))
-        
+       
     except Exception as e:
         logger.error(f"BM carryover processing error: {e}")
         flash(f"Error processing BM carryover results: {str(e)}", "error")
@@ -639,9 +741,9 @@ def detect_program_from_set(set_name):
     """Enhanced program detection from set name with fallback strategies"""
     if not set_name or set_name == "all":
         return None
-    
+   
     set_upper = set_name.upper()
-    
+   
     # Check against defined sets first
     if set_name in ND_SETS:
         return "ND"
@@ -649,7 +751,7 @@ def detect_program_from_set(set_name):
         return "BN"
     elif set_name in BM_SETS:
         return "BM"
-    
+   
     # Fallback: Check for explicit program indicators in set name
     if any(x in set_upper for x in ['BN', 'NURSING', 'N-']):
         return "BN"
@@ -657,16 +759,16 @@ def detect_program_from_set(set_name):
         return "BM"
     elif any(x in set_upper for x in ['ND', 'DIPLOMA']):
         return "ND"
-    
+   
     # Check SET number patterns
-    if set_upper.startswith("SET4"):  # SET47, SET48
+    if set_upper.startswith("SET4"): # SET47, SET48
         return "BN"
     elif set_upper.startswith("SET") and any(c.isdigit() for c in set_upper):
         # Assume other numbered SETs are BM unless proven otherwise
         return "BM"
     elif set_upper.startswith("ND-"):
         return "ND"
-    
+   
     # Final fallback
     logger.warning(f"⚠️ Could not determine program from set '{set_name}', defaulting to ND")
     return "ND"
@@ -678,10 +780,10 @@ def standardize_semester_key_nd(semester_key):
     """Standardize semester key to canonical format for ND ONLY."""
     if not semester_key:
         return None
-    
+   
     key_upper = semester_key.upper()
-    prefix = "ND-"  # Always ND prefix for ND
-    
+    prefix = "ND-" # Always ND prefix for ND
+   
     # Define canonical mappings for ND
     canonical_mappings = {
         # First Year First Semester variants
@@ -690,25 +792,25 @@ def standardize_semester_key_nd(semester_key):
         ("YEAR", "1", "SEMESTER", "1"): f"{prefix}FIRST-YEAR-FIRST-SEMESTER",
         ("FIRST", "SEMESTER"): f"{prefix}FIRST-YEAR-FIRST-SEMESTER",
         ("SEMESTER", "1"): f"{prefix}FIRST-YEAR-FIRST-SEMESTER",
-        
+       
         # First Year Second Semester variants
         ("FIRST", "YEAR", "SECOND", "SEMESTER"): f"{prefix}FIRST-YEAR-SECOND-SEMESTER",
         ("1ST", "YEAR", "2ND", "SEMESTER"): f"{prefix}FIRST-YEAR-SECOND-SEMESTER",
         ("YEAR", "1", "SEMESTER", "2"): f"{prefix}FIRST-YEAR-SECOND-SEMESTER",
         ("SECOND", "SEMESTER"): f"{prefix}FIRST-YEAR-SECOND-SEMESTER",
         ("SEMESTER", "2"): f"{prefix}FIRST-YEAR-SECOND-SEMESTER",
-        
+       
         # Second Year First Semester variants
         ("SECOND", "YEAR", "FIRST", "SEMESTER"): f"{prefix}SECOND-YEAR-FIRST-SEMESTER",
         ("2ND", "YEAR", "1ST", "SEMESTER"): f"{prefix}SECOND-YEAR-FIRST-SEMESTER",
         ("YEAR", "2", "SEMESTER", "1"): f"{prefix}SECOND-YEAR-FIRST-SEMESTER",
-        
+       
         # Second Year Second Semester variants
         ("SECOND", "YEAR", "SECOND", "SEMESTER"): f"{prefix}SECOND-YEAR-SECOND-SEMESTER",
         ("2ND", "YEAR", "2ND", "SEMESTER"): f"{prefix}SECOND-YEAR-SECOND-SEMESTER",
         ("YEAR", "2", "SEMESTER", "2"): f"{prefix}SECOND-YEAR-SECOND-SEMESTER",
     }
-    
+   
     # Extract key components using regex
     patterns = [
         r'(FIRST|1ST|YEAR.?1).*?(FIRST|1ST|SEMESTER.?1)',
@@ -716,7 +818,7 @@ def standardize_semester_key_nd(semester_key):
         r'(SECOND|2ND|YEAR.?2).*?(FIRST|1ST|SEMESTER.?1)',
         r'(SECOND|2ND|YEAR.?2).*?(SECOND|2ND|SEMESTER.?2)',
     ]
-    
+   
     for pattern_idx, pattern in enumerate(patterns):
         if re.search(pattern, key_upper):
             if pattern_idx == 0:
@@ -727,16 +829,16 @@ def standardize_semester_key_nd(semester_key):
                 return f"{prefix}SECOND-YEAR-FIRST-SEMESTER"
             elif pattern_idx == 3:
                 return f"{prefix}SECOND-YEAR-SECOND-SEMESTER"
-    
+   
     # Check for direct matches in canonical mappings
     for key_components, canonical_key in canonical_mappings.items():
         if all(component in key_upper for component in key_components):
             return canonical_key
-    
+   
     # If no match but contains ND prefix, return as-is
     if key_upper.startswith("ND-"):
         return semester_key.upper()
-    
+   
     # If no match, try to construct from known patterns
     if "FIRST" in key_upper and "FIRST" in key_upper:
         return f"{prefix}FIRST-YEAR-FIRST-SEMESTER"
@@ -746,7 +848,7 @@ def standardize_semester_key_nd(semester_key):
         return f"{prefix}SECOND-YEAR-FIRST-SEMESTER"
     elif "SECOND" in key_upper and "SECOND" in key_upper:
         return f"{prefix}SECOND-YEAR-SECOND-SEMESTER"
-    
+   
     # If no match, return original with ND prefix
     logger.warning(f"Could not standardize ND semester key: {semester_key}, using prefix: {prefix}")
     return f"{prefix}{semester_key.replace('-', ' ').upper().replace(' ', '-')}"
@@ -756,9 +858,9 @@ def standardize_semester_key(semester_key, program=None):
     """Universal semester key standardization."""
     if not semester_key:
         return None
-    
+   
     key_upper = semester_key.upper()
-    
+   
     # Determine program and prefix
     if program == "ND" or key_upper.startswith("ND-") or "-ND-" in key_upper:
         prefix = "ND-"
@@ -773,8 +875,8 @@ def standardize_semester_key(semester_key, program=None):
         elif "MIDWIFE" in key_upper:
             prefix = "M-"
         else:
-            prefix = "ND-"  # Default
-    
+            prefix = "ND-" # Default
+   
     # Pattern matching for year and semester
     patterns = {
         r'FIRST.*FIRST': f'{prefix}FIRST-YEAR-FIRST-SEMESTER',
@@ -790,16 +892,16 @@ def standardize_semester_key(semester_key, program=None):
         r'(3|III).*1': f'{prefix}THIRD-YEAR-FIRST-SEMESTER',
         r'(3|III).*2': f'{prefix}THIRD-YEAR-SECOND-SEMESTER',
     }
-    
+   
     for pattern, result in patterns.items():
         if re.search(pattern, key_upper):
             logger.info(f"✅ Standardized '{semester_key}' → '{result}' (regex match)")
             return result
-    
+   
     # If already in correct format, return as-is
     if key_upper.startswith((prefix,)):
         return key_upper
-    
+   
     # Last resort: add prefix
     logger.warning(f"⚠️ Could not parse '{semester_key}', adding prefix: {prefix}")
     return f"{prefix}{key_upper.replace('-', ' ').replace('_', ' ').strip()}"
@@ -808,14 +910,14 @@ def standardize_semester_key(semester_key, program=None):
 def get_previous_semesters_for_display(current_semester_key):
     """Get list of previous semesters for GPA display in mastersheet."""
     current_standard = standardize_semester_key(current_semester_key)
-    
+   
     semester_mapping = {
         "ND-FIRST-YEAR-FIRST-SEMESTER": [],
         "ND-FIRST-YEAR-SECOND-SEMESTER": ["Semester 1"],
-        "ND-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"], 
+        "ND-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"],
         "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"]
     }
-    
+   
     return semester_mapping.get(current_standard, [])
 
 # Jinja2 filters
@@ -825,6 +927,7 @@ def datetimeformat(timestamp):
         return dt.strftime("%b %d, %Y %I:%M %p")
     except Exception:
         return "Unknown"
+
 app.jinja_env.filters["datetimeformat"] = datetimeformat
 
 def filesizeformat(size):
@@ -833,6 +936,7 @@ def filesizeformat(size):
             return f"{size:.1f} {unit}"
         size /= 1024
     return f"{size:.1f} TB"
+
 app.jinja_env.filters["filesizeformat"] = filesizeformat
 
 def is_local_environment():
@@ -859,33 +963,33 @@ required_dirs = [
     os.path.join(BASE_DIR, "ND", "ND-COURSES"),
     os.path.join(BASE_DIR, "ND", "ND-2024", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "ND", "ND-2024", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "ND", "ND-2024", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
+    os.path.join(BASE_DIR, "ND", "ND-2024", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
     os.path.join(BASE_DIR, "ND", "ND-2025", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "ND", "ND-2025", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "ND", "ND-2025", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
-    
+    os.path.join(BASE_DIR, "ND", "ND-2025", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
+   
     # BN Structure
     os.path.join(BASE_DIR, "BN", "BN-COURSES"),
     os.path.join(BASE_DIR, "BN", "SET47", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "BN", "SET47", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "BN", "SET47", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
+    os.path.join(BASE_DIR, "BN", "SET47", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
     os.path.join(BASE_DIR, "BN", "SET48", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "BN", "SET48", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "BN", "SET48", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
-    
+    os.path.join(BASE_DIR, "BN", "SET48", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
+   
     # BM Structure (if applicable)
     os.path.join(BASE_DIR, "BM", "BM-COURSES"),
     os.path.join(BASE_DIR, "BM", "SET2023", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "BM", "SET2023", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "BM", "SET2023", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
+    os.path.join(BASE_DIR, "BM", "SET2023", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
     # ... etc for other BM sets
     os.path.join(BASE_DIR, "BM", "SET2024", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "BM", "SET2024", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "BM", "SET2024", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
+    os.path.join(BASE_DIR, "BM", "SET2024", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
     os.path.join(BASE_DIR, "BM", "SET2025", "RAW_RESULTS"),
     os.path.join(BASE_DIR, "BM", "SET2025", "CLEAN_RESULTS"),
-    os.path.join(BASE_DIR, "BM", "SET2025", "CLEAN_RESULTS", "CARRYOVER_RECORDS"),  # NEW!
-    
+    os.path.join(BASE_DIR, "BM", "SET2025", "CLEAN_RESULTS", "CARRYOVER_RECORDS"), # NEW!
+   
     # Other Results Structure
     os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
     os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT"),
@@ -921,7 +1025,7 @@ SCRIPT_MAP = {
     "exam_processor_nd": "exam_result_processor.py",
     "exam_processor_bn": "exam_processor_bn.py",
     "exam_processor_bm": "exam_processor_bm.py",
-    "nd_carryover_processor": "nd_carryover_processor.py"  # CHANGED: ND-specific
+    "nd_carryover_processor": "nd_carryover_processor.py" # CHANGED: ND-specific
 }
 
 # ============================================================================
@@ -990,7 +1094,7 @@ SUCCESS_INDICATORS = {
         r"Processing resit results for.*",
         r"Updated \d+ scores for \d+ students",
     ],
-    "nd_carryover_processor": [  # CHANGED: ND-specific key
+    "nd_carryover_processor": [ # CHANGED: ND-specific key
         r"Updated \d+ scores for \d+ students",
         r"ND CARRYOVER PROCESSING COMPLETED",
         r"Saved updated mastersheet",
@@ -1006,14 +1110,14 @@ def allowed_file(filename):
 def get_raw_directory(script_name, program=None, set_name=None):
     """Get the RAW_RESULTS directory for a specific script/program/set"""
     logger.info(f"Getting raw directory for: script={script_name}, program={program}, set={set_name}")
-    
+   
     if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"] or script_name == "nd_carryover_processor":
         if program and set_name:
             raw_dir = os.path.join(BASE_DIR, program, set_name, "RAW_RESULTS")
             logger.info(f"Exam processor raw directory: {raw_dir}")
             return raw_dir
         return BASE_DIR
-    
+   
     raw_paths = {
         "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT"),
         "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT"),
@@ -1030,7 +1134,7 @@ def get_clean_directory(script_name, program=None, set_name=None):
         if program and set_name:
             return os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         return BASE_DIR
-    
+   
     clean_paths = {
         "utme": os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT"),
         "caosce": os.path.join(BASE_DIR, "CAOSCE_RESULT", "CLEAN_CAOSCE_RESULT"),
@@ -1045,7 +1149,7 @@ def get_clean_directory(script_name, program=None, set_name=None):
 def get_input_directory(script_name, program=None, set_name=None):
     """Returns the correct input directory for raw results"""
     logger.info(f"Getting input directory for: {script_name}, program={program}, set={set_name}")
-    
+   
     # ND carryover processor - specific handling
     if script_name == "nd_carryover_processor":
         if set_name and set_name != "all":
@@ -1055,7 +1159,7 @@ def get_input_directory(script_name, program=None, set_name=None):
         else:
             logger.error(f"ND carryover requires specific set, got: {set_name}")
             return os.path.join(BASE_DIR, "ND")
-    
+   
     # Regular exam processors
     if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
         if program and set_name and set_name != "all":
@@ -1065,7 +1169,7 @@ def get_input_directory(script_name, program=None, set_name=None):
         input_dir = os.path.join(BASE_DIR, program) if program else BASE_DIR
         logger.info(f"Exam processor general input directory: {input_dir}")
         return input_dir
-    
+   
     # Other scripts
     input_dir = get_raw_directory(script_name)
     logger.info(f"Other script input directory: {input_dir}")
@@ -1075,24 +1179,23 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
     """Check if exam processor files exist, optionally filtering by selected set"""
     logger.info(f"Checking exam processor files in: {input_dir}")
     logger.info(f"Program: {program}, Selected Set: {selected_set}")
-    
+   
     if not os.path.isdir(input_dir):
         logger.error(f"Input directory doesn't exist: {input_dir}")
         return False
-
     course_dir = os.path.join(BASE_DIR, program, f"{program}-COURSES")
     course_file = None
     course_file_found = False
-    
+   
     if os.path.exists(course_dir):
         course_patterns = [
             "N-course-code-creditUnit.xlsx",
-            "M-course-code-creditUnit.xlsx", 
+            "M-course-code-creditUnit.xlsx",
             "course-code-creditUnit.xlsx",
             "*course*.xlsx",
             "*credit*.xlsx"
         ]
-        
+       
         for pattern in course_patterns:
             for file in os.listdir(course_dir):
                 if file.lower().endswith('.xlsx') and any(keyword in file.lower() for keyword in ['course', 'credit']):
@@ -1102,17 +1205,15 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
                     break
             if course_file:
                 break
-    
+   
     if not course_file_found:
         logger.warning(f"Course file not found in: {course_dir}")
-
     program_dir = os.path.join(BASE_DIR, program)
     if not os.path.exists(program_dir):
         logger.error(f"Program directory not found: {program_dir}")
         return False
-
     valid_sets = BN_SETS if program == "BN" else (BM_SETS if program == "BM" else ND_SETS)
-    
+   
     if selected_set and selected_set != "all":
         if selected_set in valid_sets:
             program_sets = [selected_set]
@@ -1127,42 +1228,39 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
             if os.path.isdir(item_path) and item in valid_sets:
                 program_sets.append(item)
         logger.info(f"Processing all sets: {program_sets}")
-
     if not program_sets:
         logger.error(f"No {program} sets found in {program_dir} (valid sets: {valid_sets})")
         return False
-
     total_files_found = 0
     files_found = []
-    
+   
     for program_set in program_sets:
         raw_results_path = os.path.join(program_dir, program_set, "RAW_RESULTS")
         logger.info(f"Checking raw results path: {raw_results_path}")
-        
+       
         if not os.path.exists(raw_results_path):
             logger.warning(f"RAW_RESULTS not found in {raw_results_path}")
             continue
-            
+           
         files = []
         for f in os.listdir(raw_results_path):
             file_path = os.path.join(raw_results_path, f)
-            if (os.path.isfile(file_path) and 
+            if (os.path.isfile(file_path) and
                 f.lower().endswith((".xlsx", ".xls")) and
                 not f.startswith("~$") and
                 not f.startswith(".")):
                 files.append(f)
                 files_found.append(f"{program_set}/{f}")
-        
+       
         total_files_found += len(files)
-        
+       
         if files:
             logger.info(f"Found {len(files)} files in {raw_results_path}: {files}")
         else:
             logger.warning(f"No Excel files found in {raw_results_path}")
-
     logger.info(f"Total Excel files found for {program}: {total_files_found}")
     logger.info(f"Files found: {files_found}")
-    
+   
     return total_files_found > 0
 
 def check_putme_files(input_dir):
@@ -1178,30 +1276,30 @@ def check_internal_exam_files(input_dir):
     if not os.path.isdir(input_dir):
         logger.error(f"Directory doesn't exist: {input_dir}")
         return False
-    
+   
     # Get all valid files (same as processing script)
     csv_files = glob.glob(os.path.join(input_dir, "*.csv"))
     xls_files = glob.glob(os.path.join(input_dir, "*.xls")) + glob.glob(os.path.join(input_dir, "*.xlsx"))
     all_files = [f for f in (csv_files + xls_files) if not os.path.basename(f).startswith("~$")]
-    
+   
     # Also check for files with patterns that indicate internal exam results
     pattern_files = [
-        f for f in os.listdir(input_dir) 
-        if f.lower().endswith((".xlsx", ".xls", ".csv")) 
+        f for f in os.listdir(input_dir)
+        if f.lower().endswith((".xlsx", ".xls", ".csv"))
         and not f.startswith("~")
         and (
-            f.startswith("Set") or  # Original pattern
-            "ND" in f.upper() and "SET" in f.upper() or  # New pattern like ND2024-SET1
-            "OBJ" in f.upper() or  # Objective results
-            "RESULT" in f.upper()  # General result files
+            f.startswith("Set") or # Original pattern
+            "ND" in f.upper() and "SET" in f.upper() or # New pattern like ND2024-SET1
+            "OBJ" in f.upper() or # Objective results
+            "RESULT" in f.upper() # General result files
         )
     ]
-    
+   
     # Use whichever method gives us more files
     final_files = list(set(all_files + [os.path.join(input_dir, f) for f in pattern_files]))
-    
+   
     logger.info(f"Internal exam files found in {input_dir}: {len(final_files)} files")
-    
+   
     return len(final_files) > 0
 
 def check_caosce_files(input_dir):
@@ -1219,15 +1317,15 @@ def check_split_files(input_dir):
 def check_input_files(input_dir, script_name, selected_set=None):
     """Check input files with optional set filtering"""
     logger.info(f"Checking input files for {script_name} in {input_dir} (selected_set: {selected_set})")
-    
+   
     if not os.path.isdir(input_dir):
         logger.error(f"Input directory doesn't exist: {input_dir}")
         return False
-        
+       
     if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm", "nd_carryover_processor"]:
         program = script_name.split("_")[-1].upper()
         if script_name == "nd_carryover_processor":
-            program = "ND"  # ND-specific processor
+            program = "ND" # ND-specific processor
             if program:
                 logger.info(f"Set program to {program} for carryover based on set {selected_set}")
             else:
@@ -1253,14 +1351,14 @@ def check_input_files(input_dir, script_name, selected_set=None):
 def get_exam_processor_status(program, selected_set=None):
     """Get detailed status for exam processor including file counts"""
     logger.info(f"Getting status for {program}, set: {selected_set}")
-    
+   
     if program == "PROCESSOR" and selected_set:
         program = detect_program_from_set(selected_set)
         if program:
             logger.info(f"Overrode program to {program} based on set {selected_set}")
         else:
             logger.warning(f"Could not determine program from set {selected_set}")
-    
+   
     status_info = {
         'ready': False,
         'course_file': False,
@@ -1268,59 +1366,59 @@ def get_exam_processor_status(program, selected_set=None):
         'raw_files_list': [],
         'sets_ready': {}
     }
-    
+   
     course_dir = os.path.join(BASE_DIR, program, f"{program}-COURSES")
     if os.path.exists(course_dir):
         for file in os.listdir(course_dir):
             if file.lower().endswith('.xlsx') and any(keyword in file.lower() for keyword in ['course', 'credit']):
                 status_info['course_file'] = True
                 break
-    
+   
     program_dir = os.path.join(BASE_DIR, program)
     if not os.path.exists(program_dir):
         logger.error(f"Program directory not found: {program_dir}")
         return status_info
-    
+   
     valid_sets = BN_SETS if program == "BN" else (BM_SETS if program == "BM" else ND_SETS)
-    
+   
     sets_to_check = []
     if selected_set and selected_set != "all":
         if selected_set in valid_sets:
             sets_to_check = [selected_set]
     else:
         sets_to_check = valid_sets
-    
+   
     total_files = 0
     for set_name in sets_to_check:
         raw_results_path = os.path.join(program_dir, set_name, "RAW_RESULTS")
         set_files = []
-        
+       
         if os.path.exists(raw_results_path):
             for f in os.listdir(raw_results_path):
                 file_path = os.path.join(raw_results_path, f)
-                if (os.path.isfile(file_path) and 
+                if (os.path.isfile(file_path) and
                     f.lower().endswith((".xlsx", ".xls")) and
                     not f.startswith("~$") and
                     not f.startswith(".")):
                     set_files.append(f)
-        
+       
         status_info['sets_ready'][set_name] = len(set_files) > 0
         status_info['raw_files_count'] += len(set_files)
         status_info['raw_files_list'].extend([f"{set_name}/{f}" for f in set_files])
         total_files += len(set_files)
-    
+   
     status_info['ready'] = status_info['course_file'] and total_files > 0
-    
+   
     logger.info(f"Status for {program}: course_file={status_info['course_file']}, raw_files={total_files}, ready={status_info['ready']}")
     return status_info
-    
+   
 def count_processed_files(output_lines, script_name, selected_set=None):
     success_indicators = SUCCESS_INDICATORS.get(script_name, [])
     processed_files_set = set()
     logger.info(f"Raw output lines for {script_name}:")
     for line in output_lines:
         if line.strip():
-            logger.info(f"  OUTPUT: {line}")
+            logger.info(f" OUTPUT: {line}")
     for line in output_lines:
         for indicator in success_indicators:
             match = re.search(indicator, line, re.IGNORECASE)
@@ -1381,7 +1479,7 @@ def get_success_message(script_name, processed_files, output_lines, selected_set
         carryover_info = ""
         resit_info = ""
         resit_updates = ""
-        
+       
         for line in output_lines:
             if "Applying upgrade rule:" in line:
                 upgrade_match = re.search(r"Applying upgrade rule: (\d+)–49 → 50", line)
@@ -1406,7 +1504,7 @@ def get_success_message(script_name, processed_files, output_lines, selected_set
             elif "Processing resit results for" in line:
                 resit_info = " Resit processing completed"
                 break
-        
+       
         if resit_updates:
             return f"{program_name} Examination processing completed!{resit_updates}{upgrade_info}{upgrade_count}{carryover_info}"
         elif any(f"{program_name} Examination Results Processing completed successfully" in line for line in output_lines):
@@ -1455,9 +1553,8 @@ def _get_script_path(script_name):
 # ENHANCED: get_files_by_category - ONLY SHOW ZIP FILES
 # ============================================================================
 def get_files_by_category():
-    """Get files organized by category - ENHANCED with error handling."""
+    """Get files organized by category - STRICTLY ONLY ZIP FILES"""
     from dataclasses import dataclass
-
     @dataclass
     class FileInfo:
         name: str
@@ -1468,7 +1565,6 @@ def get_files_by_category():
         modified: int
         semester: str = ""
         set_name: str = ""
-
     files_by_category = {
         "nd_results": {},
         "bn_results": {},
@@ -1478,62 +1574,71 @@ def get_files_by_category():
         "internal_results": [],
         "jamb_results": [],
     }
-
-    # Ensure all results are zipped first
-    logger.info("🔄 Ensuring all results are properly zipped...")
+    # 🔒 ENFORCE ZIP-ONLY POLICY ACROSS ALL DIRECTORIES
+    logger.info("🔒 Enforcing ZIP-only policy across all directories...")
+   
+    # Enforce for program directories
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
         if not os.path.exists(program_dir):
-            logger.warning(f"⚠️ Program directory not found: {program_dir}")
             continue
-        
+       
         sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
         for set_name in sets:
             clean_dir = os.path.join(program_dir, set_name, "CLEAN_RESULTS")
             if os.path.exists(clean_dir):
-                try:
-                    ensure_zipped_results(clean_dir, f"exam_processor_{program.lower()}", set_name)
-                except Exception as e:
-                    logger.error(f"Error ensuring zipped results for {program}/{set_name}: {e}")
-
-    # Process program results
+                zip_base_name = f"{set_name}_RESULTS"
+                enforce_zip_only_policy(clean_dir, zip_base_name)
+    # Enforce for other result directories
+    other_dirs = {
+        "putme_results": os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT"),
+        "caosce_results": os.path.join(BASE_DIR, "CAOSCE_RESULT", "CLEAN_CAOSCE_RESULT"),
+        "internal_results": os.path.join(BASE_DIR, "OBJ_RESULT", "CLEAN_OBJ"),
+        "jamb_results": os.path.join(BASE_DIR, "JAMB_DB", "CLEAN_JAMB_DB"),
+    }
+   
+    for category, dir_path in other_dirs.items():
+        if os.path.exists(dir_path):
+            zip_base_name = f"{category.upper().replace('_', ' ')}"
+            enforce_zip_only_policy(dir_path, zip_base_name)
+    # Process program results - ONLY ZIP FILES
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
-        
+       
         logger.info(f"📁 Scanning {program} directory: {program_dir}")
-        
+       
         if not os.path.exists(program_dir):
             logger.warning(f"⚠️ {program} directory not found")
             continue
-        
+       
         try:
             sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
-            
+           
             for set_name in sets:
                 clean_dir = os.path.join(program_dir, set_name, "CLEAN_RESULTS")
-                
+               
                 if not os.path.exists(clean_dir):
                     logger.debug(f"⚠️ CLEAN_RESULTS not found for {program}/{set_name}")
                     continue
-                
+               
                 category = f"{program.lower()}_results"
                 if set_name not in files_by_category[category]:
                     files_by_category[category][set_name] = []
-                
-                # Only include ZIP files
+               
+                # 🔒 STRICT: Only include ZIP files
                 try:
                     for file in os.listdir(clean_dir):
                         if not file.lower().endswith(".zip"):
                             continue
-                        
+                       
                         if file.startswith("~$") or file.startswith("."):
                             continue
-                        
+                       
                         file_path = os.path.join(clean_dir, file)
-                        
+                       
                         try:
                             semester = extract_semester_from_filename(file)
-                            
+                           
                             file_info = FileInfo(
                                 name=file,
                                 relative_path=os.path.relpath(file_path, BASE_DIR),
@@ -1549,8 +1654,8 @@ def get_files_by_category():
                         except Exception as e:
                             logger.error(f"Error processing file {file}: {e}")
                             continue
-                    
-                    # Sort by modified time
+                   
+                    # Sort by modified time (newest first)
                     if files_by_category[category][set_name]:
                         files_by_category[category][set_name] = sorted(
                             files_by_category[category][set_name],
@@ -1559,13 +1664,63 @@ def get_files_by_category():
                         )
                 except Exception as e:
                     logger.error(f"Error listing files in {clean_dir}: {e}")
-                    
+                   
         except Exception as e:
             logger.error(f"Error processing {program} directory: {e}")
-
-    # Log summary
+    # Process other result types - ONLY ZIP FILES
+    other_result_dirs = {
+        "caosce_results": os.path.join(BASE_DIR, "CAOSCE_RESULT", "CLEAN_CAOSCE_RESULT"),
+        "internal_results": os.path.join(BASE_DIR, "OBJ_RESULT", "CLEAN_OBJ"),
+        "jamb_results": os.path.join(BASE_DIR, "JAMB_DB", "CLEAN_JAMB_DB"),
+        "putme_results": os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT")
+    }
+   
+    for category, result_dir in other_result_dirs.items():
+        logger.info(f"📁 Scanning {category} directory: {result_dir}")
+       
+        if not os.path.exists(result_dir):
+            logger.warning(f"⚠️ Directory not found: {result_dir}")
+            continue
+           
+        try:
+            # 🔒 STRICT: Only include ZIP files
+            for file in os.listdir(result_dir):
+                if not file.lower().endswith('.zip'):
+                    continue
+               
+                if file.startswith("~$") or file.startswith("."):
+                    continue
+               
+                file_path = os.path.join(result_dir, file)
+               
+                try:
+                    file_info = FileInfo(
+                        name=file,
+                        relative_path=os.path.relpath(file_path, BASE_DIR),
+                        folder=os.path.basename(result_dir),
+                        subfolder="",
+                        size=os.path.getsize(file_path),
+                        modified=os.path.getmtime(file_path)
+                    )
+                    files_by_category[category].append(file_info)
+                    logger.debug(f"✅ Found {category} ZIP: {file}")
+                except Exception as e:
+                    logger.error(f"Error processing {category} file {file}: {e}")
+                    continue
+           
+            # Sort by modified time (newest first)
+            if files_by_category[category]:
+                files_by_category[category] = sorted(
+                    files_by_category[category],
+                    key=lambda x: x.modified,
+                    reverse=True
+                )
+               
+        except Exception as e:
+            logger.error(f"Error scanning {result_dir}: {e}")
+    # Log summary - ONLY ZIP FILES
     logger.info("="*60)
-    logger.info("📊 DOWNLOAD CENTER FILE SUMMARY:")
+    logger.info("📊 DOWNLOAD CENTER FILE SUMMARY (ZIP FILES ONLY):")
     logger.info("="*60)
     for category, files in files_by_category.items():
         if isinstance(files, dict):
@@ -1574,8 +1729,45 @@ def get_files_by_category():
         else:
             logger.info(f"{category}: {len(files)} ZIP files")
     logger.info("="*60)
-    
+   
     return files_by_category
+
+# ============================================================================
+# NEW: Manual ZIP Creation Route
+# ============================================================================
+@app.route("/create_zip_manually/<category>/<set_name>")
+@login_required
+def create_zip_manually(category, set_name):
+    """Manually create ZIP file for a category/set"""
+    try:
+        if category in ["nd_results", "bn_results", "bm_results"]:
+            program = category.split('_')[0].upper()
+            clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
+            zip_base_name = f"{set_name}_RESULTS"
+        else:
+            dir_map = {
+                "putme_results": os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT"),
+                "caosce_results": os.path.join(BASE_DIR, "CAOSCE_RESULT", "CLEAN_CAOSCE_RESULT"),
+                "internal_results": os.path.join(BASE_DIR, "OBJ_RESULT", "CLEAN_OBJ"),
+                "jamb_results": os.path.join(BASE_DIR, "JAMB_DB", "CLEAN_JAMB_DB"),
+            }
+            clean_dir = dir_map.get(category)
+            zip_base_name = f"{category.upper().replace('_', ' ')}"
+       
+        if clean_dir and os.path.exists(clean_dir):
+            if enforce_zip_only_policy(clean_dir, zip_base_name):
+                flash(f"✅ Successfully created ZIP file for {set_name or category}", "success")
+            else:
+                flash(f"❌ Failed to create ZIP file for {set_name or category}", "error")
+        else:
+            flash(f"❌ Directory not found for {set_name or category}", "error")
+       
+        return redirect(url_for("download_center"))
+       
+    except Exception as e:
+        logger.error(f"Manual ZIP creation error: {e}")
+        flash(f"Error creating ZIP: {str(e)}", "error")
+        return redirect(url_for("download_center"))
 
 # ============================================================================
 # NEW: Debug route for BM files
@@ -1588,7 +1780,7 @@ def debug_bm_files():
         "bm_directories": {},
         "all_files_found": []
     }
-    
+   
     for set_name in BM_SETS:
         set_dir = os.path.join(BASE_DIR, "BM", set_name)
         debug_info["bm_directories"][set_name] = {
@@ -1596,16 +1788,16 @@ def debug_bm_files():
             "clean_results_exists": False,
             "clean_results_files": []
         }
-        
+       
         if os.path.exists(set_dir):
             clean_dir = os.path.join(set_dir, "CLEAN_RESULTS")
             debug_info["bm_directories"][set_name]["clean_results_exists"] = os.path.exists(clean_dir)
-            
+           
             if os.path.exists(clean_dir):
                 files = os.listdir(clean_dir)
                 debug_info["bm_directories"][set_name]["clean_results_files"] = files
                 debug_info["all_files_found"].extend([f"{set_name}/{f}" for f in files])
-    
+   
     return jsonify(debug_info)
 
 # ============================================================================
@@ -1614,53 +1806,48 @@ def debug_bm_files():
 def get_sets_and_folders():
     """Get sets and their result folders from CLEAN_RESULTS directories - ONLY ZIP FILES"""
     from dataclasses import dataclass
-
     @dataclass
     class FileInfo:
         name: str
         relative_path: str
         size: int
         modified: int
-
     @dataclass
     class FolderInfo:
         name: str
         files: list
-
     sets = {}
     logger.info(f"Scanning BASE_DIR for ZIP files only: {BASE_DIR}")
-
     # First ensure all results are properly zipped
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
         if not os.path.exists(program_dir):
             continue
-            
+           
         valid_sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
         for set_name in valid_sets:
             clean_dir = os.path.join(program_dir, set_name, "CLEAN_RESULTS")
             if os.path.exists(clean_dir):
                 ensure_zipped_results(clean_dir, f"exam_processor_{program.lower()}", set_name)
-
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
         if not os.path.exists(program_dir):
             logger.warning(f"Program directory not found: {program_dir}")
             continue
-            
+           
         logger.info(f"Scanning program: {program_dir}")
         valid_sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
-        
+       
         for set_name in os.listdir(program_dir):
             set_path = os.path.join(program_dir, set_name)
             if not os.path.isdir(set_path) or set_name not in valid_sets:
                 logger.warning(f"Skipping invalid set {set_name} for program {program}")
                 continue
-                
+               
             logger.info(f"Scanning set: {set_path}")
             folders = []
             clean_results_path = os.path.join(set_path, "CLEAN_RESULTS")
-            
+           
             if os.path.exists(clean_results_path):
                 logger.info(f"Found CLEAN_RESULTS: {clean_results_path}")
                 try:
@@ -1680,18 +1867,17 @@ def get_sets_and_folders():
                                 logger.info(f"Found ZIP file: {file} in {clean_results_path}")
                             except Exception as e:
                                 logger.error(f"Error processing file {file}: {e}")
-                    
+                   
                     if zip_files:
                         folders.append(FolderInfo(name="ZIP Results", files=zip_files))
                         logger.info(f"Added ZIP files folder with {len(zip_files)} files")
                 except Exception as e:
                     logger.error(f"Error scanning {clean_results_path}: {e}")
-                    
+                   
             if folders:
                 set_key = f"{program}_{set_name}"
                 sets[set_key] = folders
                 logger.info(f"Added set {set_key} with {len(folders)} folders")
-
     # Other result types - only show ZIP files
     result_mappings = {
         "PUTME_RESULT": {
@@ -1699,7 +1885,7 @@ def get_sets_and_folders():
             "base_dir": "PUTME_RESULT"
         },
         "CAOSCE_RESULT": {
-            "clean_dir": "CLEAN_CAOSCE_RESULT", 
+            "clean_dir": "CLEAN_CAOSCE_RESULT",
             "base_dir": "CAOSCE_RESULT"
         },
         "INTERNAL_RESULT": {
@@ -1711,21 +1897,21 @@ def get_sets_and_folders():
             "base_dir": "JAMB_DB"
         }
     }
-    
+   
     for result_type, mapping in result_mappings.items():
         clean_dir_name = mapping["clean_dir"]
         base_dir_name = mapping["base_dir"]
-        
+       
         result_path = os.path.join(BASE_DIR, base_dir_name, clean_dir_name)
         logger.info(f"Scanning {result_type} at: {result_path}")
-        
+       
         if not os.path.exists(result_path):
             logger.warning(f"Directory not found: {result_path}")
             continue
-            
+           
         # Ensure results are zipped
         ensure_zipped_results(result_path, "other_processor")
-            
+           
         folders = []
         try:
             # Only show ZIP files
@@ -1744,31 +1930,29 @@ def get_sets_and_folders():
                         logger.info(f"Found ZIP file: {file} in {result_path}")
                     except Exception as e:
                         logger.error(f"Error processing file {file}: {e}")
-            
+           
             if zip_files:
                 folders.append(FolderInfo(name="ZIP Results", files=zip_files))
                 logger.info(f"Added ZIP files folder with {len(zip_files)} files")
-                    
+                   
         except Exception as e:
             logger.error(f"Error scanning {result_path}: {e}")
-            
+           
         if folders:
             sets[result_type] = folders
             logger.info(f"Added result type {result_type} with {len(folders)} folders")
         else:
             logger.info(f"No ZIP folders found for {result_type}")
-
     logger.info(f"Total sets found with ZIP files: {len(sets)}")
     for set_name, folders in sets.items():
         total_files = sum(len(folder.files) for folder in folders)
         logger.info(f"{set_name}: {total_files} ZIP files in {len(folders)} folders")
-        
+       
     return sets
 
 # ============================================================================
 # UPDATED: Helper Functions
 # ============================================================================
-
 def get_available_sets(program):
     """Get available academic sets for a program"""
     if program == "BN":
@@ -1788,38 +1972,38 @@ def get_nd_carryover_records(set_name, semester_key=None):
         if semester_key:
             semester_key = standardize_semester_key_nd(semester_key)
             logger.info(f"🔑 Standardized semester key: {semester_key}")
-        
+       
         # Direct path to CLEAN_RESULTS
         clean_dir = os.path.join(BASE_DIR, "ND", set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
             logger.warning(f"❌ CLEAN_RESULTS not found: {clean_dir}")
             return []
-        
+       
         # Check centralized CARRYOVER_RECORDS first (NEW structure)
         carryover_dir = os.path.join(clean_dir, "CARRYOVER_RECORDS")
         if os.path.exists(carryover_dir):
             logger.info(f"✅ Found centralized CARRYOVER_RECORDS: {carryover_dir}")
             return load_carryover_json_files(carryover_dir, semester_key, "ND")
-        
+       
         # Fallback: Check inside latest result folder/ZIP (OLD structure)
         logger.info(f"⚠️ No centralized folder, checking results...")
-        
+       
         # Get all result items (folders and ZIPs)
         result_items = []
         for item in os.listdir(clean_dir):
             if item.startswith(f"{set_name}_RESULT-") and not item.startswith("CARRYOVER_"):
                 result_items.append(item)
-        
+       
         if not result_items:
             logger.warning(f"❌ No result files found in: {clean_dir}")
             return []
-        
+       
         # Use latest result
         latest_item = sorted(result_items)[-1]
         latest_path = os.path.join(clean_dir, latest_item)
-        
+       
         logger.info(f"✅ Using latest result: {latest_item}")
-        
+       
         if latest_item.endswith('.zip'):
             return get_carryover_records_from_zip(latest_path, set_name, semester_key, "ND")
         else:
@@ -1830,7 +2014,7 @@ def get_nd_carryover_records(set_name, semester_key=None):
             else:
                 logger.warning(f"❌ No CARRYOVER_RECORDS in: {latest_path}")
                 return []
-                
+               
     except Exception as e:
         logger.error(f"❌ Error getting carryover records: {e}")
         import traceback
@@ -1842,32 +2026,32 @@ def get_nd_carryover_records_from_zip(zip_path, semester_key=None):
     try:
         logger.info(f"📦 Extracting ND carryover records from ZIP: {zip_path}")
         carryover_files = []
-        
+       
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             # List all files in ZIP for debugging
             all_files = zip_ref.namelist()
             logger.info(f"📁 Files in ZIP: {len(all_files)} files")
-            
+           
             # Look for carryover JSON files
             json_files = []
             for f in all_files:
                 if f.endswith('.json') and ('CARRYOVER' in f.upper() or 'CO_STUDENT' in f.upper()):
                     json_files.append(f)
-            
+           
             logger.info(f"📁 Found {len(json_files)} potential carryover JSON files")
-            
+           
             if not json_files:
                 logger.info(f"❌ No carryover JSON files found in ZIP")
                 return []
-                
+               
             for json_file in json_files:
                 file_semester = extract_semester_from_filename(json_file)
                 file_semester_standardized = standardize_semester_key_nd(file_semester)
-                
+               
                 if semester_key and file_semester_standardized != semester_key:
-                    logger.info(f"   ⏭️ Skipping {json_file} (doesn't match target {semester_key})")
+                    logger.info(f" ⏭️ Skipping {json_file} (doesn't match target {semester_key})")
                     continue
-                    
+                   
                 try:
                     with zip_ref.open(json_file) as f:
                         data = json.load(f)
@@ -1881,10 +2065,10 @@ def get_nd_carryover_records_from_zip(zip_path, semester_key=None):
                         logger.info(f"✅ Loaded carryover record: {json_file} ({len(data)} students)")
                 except Exception as e:
                     logger.error(f"Error loading carryover file {json_file}: {e}")
-        
+       
         logger.info(f"✅ Loaded {len(carryover_files)} carryover records from ZIP")
         return carryover_files
-        
+       
     except Exception as e:
         logger.error(f"Error extracting carryover records from ZIP: {e}")
         return []
@@ -1892,42 +2076,42 @@ def get_nd_carryover_records_from_zip(zip_path, semester_key=None):
 def load_nd_carryover_json_files(carryover_dir, semester_key=None):
     """Load carryover JSON files from directory for ND"""
     carryover_files = []
-    
+   
     # Standardize the target semester key
     if semester_key:
         semester_key = standardize_semester_key_nd(semester_key)
-    
+   
     for file in os.listdir(carryover_dir):
         if file.startswith("co_student_") and file.endswith(".json"):
             # Extract semester from filename and standardize it
             file_semester = extract_semester_from_filename(file)
             file_semester_standardized = standardize_semester_key_nd(file_semester)
-            
+           
             logger.info(f"📄 Found ND carryover file: {file}")
-            logger.info(f"   Original semester: {file_semester}")
-            logger.info(f"   Standardized: {file_semester_standardized}")
-            logger.info(f"   Target semester: {semester_key}")
-            
+            logger.info(f" Original semester: {file_semester}")
+            logger.info(f" Standardized: {file_semester_standardized}")
+            logger.info(f" Target semester: {semester_key}")
+           
             # If semester_key is specified, only load matching files
             if semester_key and file_semester_standardized != semester_key:
-                logger.info(f"   ⏭️ Skipping (doesn't match target)")
+                logger.info(f" ⏭️ Skipping (doesn't match target)")
                 continue
-            
+           
             file_path = os.path.join(carryover_dir, file)
             try:
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                     carryover_files.append({
                         'filename': file,
-                        'semester': file_semester_standardized,  # Use standardized key
+                        'semester': file_semester_standardized, # Use standardized key
                         'data': data,
                         'count': len(data),
                         'file_path': file_path
                     })
-                    logger.info(f"   ✅ Loaded: {len(data)} records")
+                    logger.info(f" ✅ Loaded: {len(data)} records")
             except Exception as e:
                 logger.error(f"Error loading {file}: {e}")
-    
+   
     logger.info(f"📊 Total ND carryover files loaded: {len(carryover_files)}")
     return carryover_files
 
@@ -1938,38 +2122,38 @@ def get_carryover_records(program, set_name, semester_key=None):
         if semester_key:
             semester_key = standardize_semester_key(semester_key, program)
             logger.info(f"🔑 Standardized semester key: {semester_key}")
-        
+       
         # Direct path to CLEAN_RESULTS
         clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
             logger.warning(f"❌ CLEAN_RESULTS not found: {clean_dir}")
             return []
-        
+       
         # Check centralized CARRYOVER_RECORDS first (NEW structure)
         carryover_dir = os.path.join(clean_dir, "CARRYOVER_RECORDS")
         if os.path.exists(carryover_dir):
             logger.info(f"✅ Found centralized CARRYOVER_RECORDS: {carryover_dir}")
             return load_carryover_json_files(carryover_dir, semester_key, program)
-        
+       
         # Fallback: Check inside latest result folder/ZIP (OLD structure)
         logger.info(f"⚠️ No centralized folder, checking results...")
-        
+       
         # Get all result items (folders and ZIPs)
         result_items = []
         for item in os.listdir(clean_dir):
             if item.startswith(f"{set_name}_RESULT-") and not item.startswith("CARRYOVER_"):
                 result_items.append(item)
-        
+       
         if not result_items:
             logger.warning(f"❌ No result files found in: {clean_dir}")
             return []
-        
+       
         # Use latest result
         latest_item = sorted(result_items)[-1]
         latest_path = os.path.join(clean_dir, latest_item)
-        
+       
         logger.info(f"✅ Using latest result: {latest_item}")
-        
+       
         if latest_item.endswith('.zip'):
             return get_carryover_records_from_zip(latest_path, set_name, semester_key, program)
         else:
@@ -1980,7 +2164,7 @@ def get_carryover_records(program, set_name, semester_key=None):
             else:
                 logger.warning(f"❌ No CARRYOVER_RECORDS in: {latest_path}")
                 return []
-                
+               
     except Exception as e:
         logger.error(f"❌ Error getting carryover records: {e}")
         import traceback
@@ -1992,7 +2176,7 @@ def process_carryover_results(program, set_name, semester, file_path):
     try:
         # Your existing carryover processing logic here
         # This should integrate with your existing carryover processing system
-        
+       
         return {
             "success": True,
             "message": f"Processed {program} carryover results for {set_name}, {semester}"
@@ -2012,32 +2196,32 @@ def get_carryover_records_from_zip(zip_path, set_name, semester_key=None, progra
     try:
         logger.info(f"📦 Extracting carryover records from ZIP: {zip_path}")
         carryover_files = []
-        
+       
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             # List all files in ZIP for debugging
             all_files = zip_ref.namelist()
             logger.info(f"📁 Files in ZIP: {len(all_files)} files")
-            
+           
             # Look for carryover JSON files - FIXED: Also check in CARRYOVER_* directories
             json_files = []
             for f in all_files:
                 if f.endswith('.json') and ('CARRYOVER' in f.upper() or 'CO_STUDENT' in f.upper()):
                     json_files.append(f)
-            
+           
             logger.info(f"📁 Found {len(json_files)} potential carryover JSON files")
-            
+           
             if not json_files:
                 logger.info(f"❌ No carryover JSON files found in ZIP")
                 return []
-                
+               
             for json_file in json_files:
                 file_semester = extract_semester_from_filename(json_file)
                 file_semester_standardized = standardize_semester_key(file_semester, program)
-                
+               
                 if semester_key and file_semester_standardized != semester_key:
-                    logger.info(f"   ⏭️ Skipping {json_file} (doesn't match target {semester_key})")
+                    logger.info(f" ⏭️ Skipping {json_file} (doesn't match target {semester_key})")
                     continue
-                    
+                   
                 try:
                     with zip_ref.open(json_file) as f:
                         data = json.load(f)
@@ -2051,10 +2235,10 @@ def get_carryover_records_from_zip(zip_path, set_name, semester_key=None, progra
                         logger.info(f"✅ Loaded carryover record: {json_file} ({len(data)} students)")
                 except Exception as e:
                     logger.error(f"Error loading carryover file {json_file}: {e}")
-        
+       
         logger.info(f"✅ Loaded {len(carryover_files)} carryover records from ZIP")
         return carryover_files
-        
+       
     except Exception as e:
         logger.error(f"Error extracting carryover records from ZIP: {e}")
         return []
@@ -2065,42 +2249,42 @@ def get_carryover_records_from_zip(zip_path, set_name, semester_key=None, progra
 def load_carryover_json_files(carryover_dir, semester_key=None, program=None):
     """Load carryover JSON files from directory - FIXED."""
     carryover_files = []
-    
+   
     # Standardize the target semester key
     if semester_key:
         semester_key = standardize_semester_key(semester_key, program)
-    
+   
     for file in os.listdir(carryover_dir):
         if file.startswith("co_student_") and file.endswith(".json"):
             # Extract semester from filename and standardize it
             file_semester = extract_semester_from_filename(file)
             file_semester_standardized = standardize_semester_key(file_semester, program)
-            
+           
             logger.info(f"📄 Found carryover file: {file}")
-            logger.info(f"   Original semester: {file_semester}")
-            logger.info(f"   Standardized: {file_semester_standardized}")
-            logger.info(f"   Target semester: {semester_key}")
-            
+            logger.info(f" Original semester: {file_semester}")
+            logger.info(f" Standardized: {file_semester_standardized}")
+            logger.info(f" Target semester: {semester_key}")
+           
             # If semester_key is specified, only load matching files
             if semester_key and file_semester_standardized != semester_key:
-                logger.info(f"   ⏭️ Skipping (doesn't match target)")
+                logger.info(f" ⏭️ Skipping (doesn't match target)")
                 continue
-            
+           
             file_path = os.path.join(carryover_dir, file)
             try:
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                     carryover_files.append({
                         'filename': file,
-                        'semester': file_semester_standardized,  # Use standardized key
+                        'semester': file_semester_standardized, # Use standardized key
                         'data': data,
                         'count': len(data),
                         'file_path': file_path
                     })
-                    logger.info(f"   ✅ Loaded: {len(data)} records")
+                    logger.info(f" ✅ Loaded: {len(data)} records")
             except Exception as e:
                 logger.error(f"Error loading {file}: {e}")
-    
+   
     logger.info(f"📊 Total carryover files loaded: {len(carryover_files)}")
     return carryover_files
 
@@ -2110,14 +2294,14 @@ def load_carryover_json_files(carryover_dir, semester_key=None, program=None):
 def extract_semester_from_filename(filename):
     """Extract semester from filename using comprehensive pattern matching - FIXED."""
     filename_upper = filename.upper()
-    
+   
     # Remove possible prefix first to normalize
     filename_upper = re.sub(r'^(N|M|ND|BN|BM|SET|YEAR|SEMESTER)[-_]?', '', filename_upper)
-    
+   
     # Initial regex match (prefix optional)
     semester_pattern = r'((?:N|M|ND)?[-_]?(?:FIRST|SECOND|THIRD|1ST|2ND|3RD)[-_]?YEAR[-_]?(?:FIRST|SECOND|1ST|2ND)[-_]?SEMESTER)'
     match = re.search(semester_pattern, filename_upper, re.IGNORECASE)
-    
+   
     if match:
         extracted = match.group(1)
         # Remove archive prefix from extracted
@@ -2125,7 +2309,7 @@ def extract_semester_from_filename(filename):
         standardized = standardize_semester_key(extracted)
         logger.info(f"✅ Extracted and standardized: '{filename}' → '{standardized}' (regex match)")
         return standardized
-    
+   
     # Fallback to comprehensive pattern matching without prefix
     semester_patterns = {
         "FIRST-YEAR-FIRST-SEMESTER": [
@@ -2254,14 +2438,14 @@ def extract_semester_from_filename(filename):
             "ND YEAR3.SEMESTER2", "ND-YEAR-3-SEMESTER-2", "ND_YEAR_3_SEMESTER_2"
         ]
     }
-    
+   
     for semester_key, patterns in semester_patterns.items():
         for pattern in patterns:
             flexible_pattern = pattern.replace('.', '[ ._ -]?')
             if re.search(flexible_pattern, filename_upper, re.IGNORECASE):
                 logger.info(f"✅ Matched semester '{semester_key}' for filename: {filename}")
                 return semester_key
-    
+   
     logger.warning(f"❌ Could not determine semester for filename: {filename}")
     return "UNKNOWN_SEMESTER"
 
@@ -2281,7 +2465,7 @@ def get_carryover_summary(program, set_name):
             'recent_semester': None,
             'recent_count': 0
         }
-    
+   
     carryover_records = get_carryover_records(program, set_name)
     summary = {
         'total_students': 0,
@@ -2290,45 +2474,45 @@ def get_carryover_summary(program, set_name):
         'recent_semester': None,
         'recent_count': 0
     }
-    
+   
     logger.info(f"📊 Carryover summary for {program}/{set_name}: {len(carryover_records)} records found")
-    
+   
     for record in carryover_records:
         semester = record['semester']
         if semester not in summary['by_semester']:
             summary['by_semester'][semester] = 0
-        
+       
         summary['by_semester'][semester] += record['count']
         summary['total_students'] += record['count']
         summary['total_courses'] += sum(len(student['failed_courses']) for student in record['data'])
-    
+   
     if summary['by_semester']:
-        summary['recent_semester'] = max(summary['by_semester'].keys(), 
+        summary['recent_semester'] = max(summary['by_semester'].keys(),
                                        key=lambda x: summary['by_semester'][x])
         summary['recent_count'] = summary['by_semester'][summary['recent_semester']]
-    
+   
     logger.info(f"📊 Final summary: {summary}")
     return summary
 
 def rename_carryover_files(carryover_output_dir, semester_key, resit_timestamp):
     """Rename files in carryover output directory to include CARRYOVER prefix"""
     renamed_files = []
-    
+   
     for root, dirs, files in os.walk(carryover_output_dir):
         for file in files:
             if file.lower().endswith(('.xlsx', '.csv', '.pdf')):
                 old_path = os.path.join(root, file)
-                
+               
                 if file.startswith('CARRYOVER_'):
                     renamed_files.append(old_path)
                     continue
-                
+               
                 file_extension = os.path.splitext(file)[1]
                 file_base = os.path.splitext(file)[0]
-                
+               
                 new_filename = f"CARRYOVER_{semester_key}_{resit_timestamp}_{file_base}{file_extension}"
                 new_path = os.path.join(root, new_filename)
-                
+               
                 try:
                     os.rename(old_path, new_path)
                     renamed_files.append(new_path)
@@ -2336,7 +2520,7 @@ def rename_carryover_files(carryover_output_dir, semester_key, resit_timestamp):
                 except Exception as e:
                     logger.error(f"Failed to rename {file}: {e}")
                     renamed_files.append(old_path)
-    
+   
     return renamed_files
 
 def debug_resit_processing_details(program_code, set_name, semester_key, resit_file_path, clean_dir):
@@ -2352,23 +2536,23 @@ def debug_resit_processing_details(program_code, set_name, semester_key, resit_f
         'timestamp_folders': [],
         'carryover_records': []
     }
-    
+   
     if os.path.exists(clean_dir):
-        debug_info['timestamp_folders'] = [f for f in os.listdir(clean_dir) 
+        debug_info['timestamp_folders'] = [f for f in os.listdir(clean_dir)
                                          if f.startswith(f"{set_name}_RESULT-") and os.path.isdir(os.path.join(clean_dir, f))]
-    
+   
     latest_folder = sorted(debug_info['timestamp_folders'])[-1] if debug_info['timestamp_folders'] else None
     if latest_folder:
         output_dir = os.path.join(clean_dir, latest_folder)
         carryover_dir = os.path.join(output_dir, "CARRYOVER_RECORDS")
         if os.path.exists(carryover_dir):
-            debug_info['carryover_records'] = [f for f in os.listdir(carryover_dir) 
+            debug_info['carryover_records'] = [f for f in os.listdir(carryover_dir)
                                              if f.startswith("co_student_") and semester_key in f and f.endswith('.json')]
-    
+   
     logger.info("RESIT PROCESSING DEBUG INFO:")
     for key, value in debug_info.items():
-        logger.info(f"  {key}: {value}")
-    
+        logger.info(f" {key}: {value}")
+   
     return debug_info
 
 # ============================================================================
@@ -2378,39 +2562,38 @@ def verify_set_specific_processing(program, selected_set, clean_dir):
     """Verify that processing only affected the selected set"""
     try:
         if selected_set == "all":
-            return True  # All sets were intended to be processed
-            
+            return True # All sets were intended to be processed
+           
         # Check if any files were created for other sets
         all_sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
         other_sets = [s for s in all_sets if s != selected_set]
-        
+       
         affected_other_sets = []
         for other_set in other_sets:
             other_clean_dir = os.path.join(BASE_DIR, program, other_set, "CLEAN_RESULTS")
             if os.path.exists(other_clean_dir):
                 # Check for new result directories in other sets
-                new_dirs = [d for d in os.listdir(other_clean_dir) 
+                new_dirs = [d for d in os.listdir(other_clean_dir)
                            if d.startswith(f"{other_set}_RESULT-") and os.path.isdir(os.path.join(other_clean_dir, d))]
                 if new_dirs:
                     affected_other_sets.append(other_set)
-        
+       
         if affected_other_sets:
             logger.warning(f"⚠️ Processing for {selected_set} affected other sets: {affected_other_sets}")
             return False
         else:
             logger.info(f"✅ Processing correctly limited to {selected_set}")
             return True
-            
+           
     except Exception as e:
         logger.error(f"❌ Error verifying set-specific processing: {e}")
-        return True  # Don't block processing due to verification error
+        return True # Don't block processing due to verification error
 
 # ============================================================================
-# ENHANCED: Script Processing with ZIP Enforcement
+# ENHANCED: Script Processing with STRICT ZIP Enforcement
 # ============================================================================
-
-def process_script_with_zip_enforcement(script_name, program, selected_set, env, script_path):
-    """Process script with enforced ZIP creation and cleanup"""
+def process_script_with_strict_zip_enforcement(script_name, program, selected_set, env, script_path):
+    """Process script with STRICT ZIP enforcement - NO SCATTERED FILES ALLOWED"""
     try:
         # Run the script
         result = subprocess.run(
@@ -2420,54 +2603,49 @@ def process_script_with_zip_enforcement(script_name, program, selected_set, env,
             capture_output=True,
             timeout=600,
         )
-        
+       
         output_lines = result.stdout.splitlines()
         error_lines = result.stderr.splitlines()
-
         # Log output
         logger.info("=== SCRIPT STDOUT ===")
         for line in output_lines:
             logger.info(line)
-            
+           
         if error_lines:
             logger.info("=== SCRIPT STDERR ===")
             for line in error_lines:
                 logger.error(line)
-
         if result.returncode != 0:
             error_msg = "Script failed. Check logs for details."
             if error_lines:
                 error_msg += f" Error: {error_lines[-1]}"
             return {"success": False, "error": error_msg, "output": output_lines}
-
-        # ENHANCED: Enforce ZIP creation and cleanup
+        # 🔒 STRICT ZIP ENFORCEMENT for ALL scripts
         clean_dir = get_clean_directory(script_name, program, selected_set)
+       
+        # Determine zip base name based on script type
+        if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
+            zip_base_name = f"{selected_set}_RESULTS"
+        elif script_name == "nd_carryover_processor":
+            zip_base_name = f"{selected_set}_CARRYOVER_RESULTS"
+        elif script_name == "utme":
+            zip_base_name = "PUTME_RESULTS"
+        elif script_name == "caosce":
+            zip_base_name = "CAOSCE_RESULTS"
+        elif script_name == "clean":
+            zip_base_name = "INTERNAL_EXAM_RESULTS"
+        elif script_name == "split":
+            zip_base_name = "JAMB_DB_RESULTS"
+        else:
+            zip_base_name = f"{script_name.upper()}_RESULTS"
+       
+        # Enforce ZIP-only policy
         if os.path.exists(clean_dir):
-            logger.info(f"🔄 Enforcing ZIP creation in: {clean_dir}")
-            
-            # Check if script already created a ZIP
-            existing_zips = [f for f in os.listdir(clean_dir) 
-                            if f.startswith(f"{selected_set}_RESULT-") and f.endswith('.zip')]
-            
-            if not existing_zips:
-                # No ZIP exists - create one from result directories
-                result_dirs = [d for d in os.listdir(clean_dir) 
-                             if d.startswith(f"{selected_set}_RESULT-") and os.path.isdir(os.path.join(clean_dir, d))]
-                
-                if result_dirs:
-                    latest = sorted(result_dirs)[-1]
-                    if create_result_zip(clean_dir, selected_set, latest):
-                        logger.info(f"✅ Created ZIP for {selected_set}")
-                    else:
-                        logger.warning(f"⚠️ ZIP creation failed for {selected_set}")
-                else:
-                    logger.warning(f"⚠️ No result directories found for {selected_set}")
-            
-            # Final cleanup to ensure no scattered files
-            ensure_zipped_results(clean_dir, script_name, selected_set)
-        
+            logger.info(f"🔒 Enforcing STRICT ZIP-only policy for {script_name}")
+            enforce_zip_only_policy(clean_dir, zip_base_name)
+       
         return {"success": True, "output": output_lines}
-        
+       
     except subprocess.TimeoutExpired:
         error_msg = f"Script timed out after 10 minutes: {script_name}"
         logger.error(error_msg)
@@ -2480,7 +2658,6 @@ def process_script_with_zip_enforcement(script_name, program, selected_set, env,
 # ============================================================================
 # NEW: Debug route to check ZIP status
 # ============================================================================
-
 @app.route("/debug_zip_status")
 @login_required
 def debug_zip_status():
@@ -2490,18 +2667,18 @@ def debug_zip_status():
         "scan_summary": {},
         "problems_found": []
     }
-    
+   
     # Scan all program directories
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
         debug_info["scan_summary"][program] = {}
-        
+       
         if not os.path.exists(program_dir):
             debug_info["scan_summary"][program]["error"] = "Directory not found"
             continue
-            
+           
         sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
-        
+       
         for set_name in sets:
             clean_dir = os.path.join(program_dir, set_name, "CLEAN_RESULTS")
             debug_info["scan_summary"][program][set_name] = {
@@ -2511,54 +2688,54 @@ def debug_zip_status():
                 "scattered_dirs": [],
                 "scattered_files": []
             }
-            
+           
             if os.path.exists(clean_dir):
                 # Check for ZIP files
                 zip_files = [f for f in os.listdir(clean_dir) if f.endswith('.zip')]
                 debug_info["scan_summary"][program][set_name]["zip_files"] = zip_files
-                
+               
                 # Check for scattered directories
-                scattered_dirs = [d for d in os.listdir(clean_dir) 
-                                if os.path.isdir(os.path.join(clean_dir, d)) and 
+                scattered_dirs = [d for d in os.listdir(clean_dir)
+                                if os.path.isdir(os.path.join(clean_dir, d)) and
                                 ("RESULT" in d or "RESIT" in d)]
                 debug_info["scan_summary"][program][set_name]["scattered_dirs"] = scattered_dirs
-                
+               
                 # Check for scattered files
-                scattered_files = [f for f in os.listdir(clean_dir) 
-                                 if os.path.isfile(os.path.join(clean_dir, f)) and 
+                scattered_files = [f for f in os.listdir(clean_dir)
+                                 if os.path.isfile(os.path.join(clean_dir, f)) and
                                  not f.endswith('.zip') and not f.startswith('~')]
                 debug_info["scan_summary"][program][set_name]["scattered_files"] = scattered_files
-                
+               
                 # Record problems
                 if scattered_dirs or scattered_files:
                     problem_msg = f"{program}/{set_name}: {len(scattered_dirs)} dirs, {len(scattered_files)} files need cleanup"
                     debug_info["problems_found"].append(problem_msg)
-    
+   
     return jsonify(debug_info)
 
 @app.route("/fix_scattered_files")
-@login_required 
+@login_required
 def fix_scattered_files():
     """Route to manually fix scattered files by creating ZIPs"""
     try:
         fixed_count = 0
-        
+       
         for program in ["ND", "BN", "BM"]:
             program_dir = os.path.join(BASE_DIR, program)
             if not os.path.exists(program_dir):
                 continue
-                
+               
             sets = ND_SETS if program == "ND" else (BN_SETS if program == "BN" else BM_SETS)
-            
+           
             for set_name in sets:
                 clean_dir = os.path.join(program_dir, set_name, "CLEAN_RESULTS")
                 if os.path.exists(clean_dir):
                     if ensure_zipped_results(clean_dir, f"exam_processor_{program.lower()}", set_name):
                         fixed_count += 1
-        
+       
         flash(f"Fixed scattered files in {fixed_count} directories", "success")
         return redirect(url_for("download_center"))
-        
+       
     except Exception as e:
         logger.error(f"Error fixing scattered files: {e}")
         flash(f"Error fixing scattered files: {str(e)}", "error")
@@ -2567,7 +2744,6 @@ def fix_scattered_files():
 # ============================================================================
 # UPDATED: Dashboard Route
 # ============================================================================
-
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -2575,7 +2751,7 @@ def dashboard():
     try:
         # Get carryover summaries for all programs
         carryover_summaries = {}
-        
+       
         # ND Carryover Summary
         nd_carryover_data = {}
         for set_name in ND_SETS:
@@ -2587,7 +2763,7 @@ def dashboard():
                 }
         if nd_carryover_data:
             carryover_summaries['ND'] = nd_carryover_data
-        
+       
         # BN Carryover Summary
         bn_carryover_data = {}
         for set_name in BN_SETS:
@@ -2599,7 +2775,7 @@ def dashboard():
                 }
         if bn_carryover_data:
             carryover_summaries['BN'] = bn_carryover_data
-        
+       
         # BM Carryover Summary
         bm_carryover_data = {}
         for set_name in BM_SETS:
@@ -2611,7 +2787,7 @@ def dashboard():
                 }
         if bm_carryover_data:
             carryover_summaries['BM'] = bm_carryover_data
-        
+       
         return render_template(
             "dashboard.html",
             college=COLLEGE,
@@ -2720,17 +2896,17 @@ def debug_internal_files():
         'files_found': [],
         'check_internal_exam_files_result': check_internal_exam_files(input_dir)
     }
-    
+   
     if os.path.exists(input_dir):
         # Method 1: glob method (same as processing script)
         csv_files = glob.glob(os.path.join(input_dir, "*.csv"))
         xls_files = glob.glob(os.path.join(input_dir, "*.xls")) + glob.glob(os.path.join(input_dir, "*.xlsx"))
         all_files = [f for f in (csv_files + xls_files) if not os.path.basename(f).startswith("~$")]
-        
+       
         # Method 2: Pattern-based method
         pattern_files = [
-            f for f in os.listdir(input_dir) 
-            if f.lower().endswith((".xlsx", ".xls", ".csv")) 
+            f for f in os.listdir(input_dir)
+            if f.lower().endswith((".xlsx", ".xls", ".csv"))
             and not f.startswith("~")
             and (
                 f.startswith("Set") or
@@ -2739,16 +2915,16 @@ def debug_internal_files():
                 "RESULT" in f.upper()
             )
         ]
-        
+       
         files_info['glob_method_files'] = [os.path.basename(f) for f in all_files]
         files_info['pattern_method_files'] = pattern_files
         files_info['all_files_in_dir'] = os.listdir(input_dir)
-        
+       
         # Final combined list
         final_files = list(set(all_files + [os.path.join(input_dir, f) for f in pattern_files]))
         files_info['final_files'] = [os.path.basename(f) for f in final_files]
         files_info['files_found'] = files_info['final_files']
-    
+   
     return jsonify(files_info)
 
 @app.route("/debug_dir_contents")
@@ -2759,7 +2935,7 @@ def debug_dir_contents():
         for dir_path in [BASE_DIR]:
             contents = {}
             if os.path.exists(dir_path):
-                for root, _, files in os.walk(dir_path):
+                for root, dirs, files in os.walk(dir_path):
                     relative_path = os.path.relpath(root, dir_path)
                     contents[relative_path or "."] = {
                         "dirs": dirs,
@@ -2804,27 +2980,27 @@ def handle_upload():
     try:
         program = request.form.get("program")
         files = request.files.getlist("files")
-        
+       
         if not program:
             flash("Please select a program.", "error")
             return redirect(url_for("upload_center"))
-            
+           
         if not files or all(file.filename == '' for file in files):
             flash("Please select at least one file to upload.", "error")
             return redirect(url_for("upload_center"))
-        
+       
         program_map = {
             "nd": ("exam_processor_nd", "ND"),
-            "bn": ("exam_processor_bn", "BN"), 
+            "bn": ("exam_processor_bn", "BN"),
             "bm": ("exam_processor_bm", "BM")
         }
-        
+       
         if program not in program_map:
             flash("Invalid program selected.", "error")
             return redirect(url_for("upload_center"))
-            
+           
         script_name, program_code = program_map[program]
-        
+       
         set_name = None
         if program == "nd":
             set_name = request.form.get("nd_set")
@@ -2832,28 +3008,28 @@ def handle_upload():
             set_name = request.form.get("bn_set")
         elif program == "bm":
             set_name = request.form.get("bm_set")
-            
+           
         if not set_name:
             flash(f"Please select a {program.upper()} set.", "error")
             return redirect(url_for("upload_center"))
-        
+       
         raw_dir = get_raw_directory(script_name, program_code, set_name)
         logger.info(f"Uploading to directory: {raw_dir}")
-        
+       
         os.makedirs(raw_dir, exist_ok=True)
-        
+       
         saved_files = []
         skipped_files = []
-        
+       
         for file in files:
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(raw_dir, filename)
-                
+               
                 file.save(file_path)
                 saved_files.append(filename)
                 logger.info(f"Saved file: {file_path}")
-                
+               
                 if filename.lower().endswith(".zip"):
                     try:
                         with zipfile.ZipFile(file_path, "r") as zip_ref:
@@ -2868,7 +3044,7 @@ def handle_upload():
                         skipped_files.append(f"{filename} (extraction error)")
             else:
                 skipped_files.append(file.filename if file.filename else "unknown file")
-        
+       
         if saved_files:
             success_msg = f"Successfully uploaded {len(saved_files)} file(s) to {program_code}/{set_name}/RAW_RESULTS"
             if skipped_files:
@@ -2877,12 +3053,12 @@ def handle_upload():
             logger.info(f"Upload completed: {success_msg}")
         else:
             flash("No valid files were uploaded. Please check file formats.", "error")
-        
+       
         if skipped_files:
             flash(f"Skipped files: {', '.join(skipped_files)}", "warning")
-            
+           
         return redirect(url_for("upload_center"))
-        
+       
     except Exception as e:
         app.logger.error(f"Upload error: {e}")
         flash(f"Upload failed: {str(e)}", "error")
@@ -2897,51 +3073,51 @@ def handle_resit_upload():
     """Handle ND resit file uploads - CHANGED: Simplified for ND only"""
     try:
         logger.info("ND CARRYOVER UPLOAD: Route called")
-        
+       
         # Get form data - simplified for ND only
         set_name = request.form.get("nd_set")
         selected_semesters = request.form.getlist("selected_semesters")
         resit_file = request.files.get("resit_file")
-        
+       
         logger.info(f"Received - Set: {set_name}, Semesters: {selected_semesters}, File: {resit_file.filename if resit_file else 'None'}")
-        
+       
         # Validation
         if not resit_file or resit_file.filename == '':
             flash("Please select a file", "error")
             return redirect(url_for("upload_center"))
-        
+       
         if not set_name or set_name not in ND_SETS:
             flash(f"Please select a valid ND set from {ND_SETS}", "error")
             return redirect(url_for("upload_center"))
-        
+       
         if not selected_semesters:
             flash("Please select at least one semester", "error")
             return redirect(url_for("upload_center"))
-        
+       
         # Save file to ND carryover directory
         raw_dir = os.path.join(BASE_DIR, "ND", set_name, "RAW_RESULTS", "CARRYOVER")
         os.makedirs(raw_dir, exist_ok=True)
-        
+       
         from werkzeug.utils import secure_filename
         filename = secure_filename(resit_file.filename)
         file_path = os.path.join(raw_dir, filename)
         resit_file.save(file_path)
-        
+       
         logger.info(f"File saved: {file_path}")
-        
+       
         # Verify
         if os.path.exists(file_path):
             file_size = os.path.getsize(file_path)
             logger.info(f"✅ ND resit file saved: {file_path} ({file_size} bytes)")
-            
+           
             semester_display = ", ".join(selected_semesters)
             flash(f"Successfully uploaded ND carryover file to {set_name}/CARRYOVER for semesters: {semester_display}", "success")
         else:
             logger.error(f"❌ File was not saved: {file_path}")
             flash("Failed to save resit file", "error")
-        
+       
         return redirect(url_for("upload_center"))
-        
+       
     except Exception as e:
         logger.error(f"ERROR in ND resit upload: {str(e)}")
         flash(f"Upload failed: {str(e)}", "error")
@@ -2984,11 +3160,11 @@ def download_center():
 def file_browser():
     try:
         sets = get_sets_and_folders()
-        
+       
         nd_sets = []
         bn_sets = []
         bm_sets = []
-        
+       
         for key in sets.keys():
             if key.startswith('ND_'):
                 nd_sets.append(key.replace('ND_', ''))
@@ -2996,14 +3172,14 @@ def file_browser():
                 bn_sets.append(key.replace('BN_', ''))
             elif key.startswith('BM_'):
                 bm_sets.append(key.replace('BM_', ''))
-        
+       
         app.logger.info(f"File browser - ND sets: {nd_sets}, BN sets: {bn_sets}, BM sets: {bm_sets}")
         app.logger.info(f"File browser - Total sets: {len(sets)}")
-        
+       
         for set_key, folders in sets.items():
             total_files = sum(len(folder.files) for folder in folders)
             app.logger.info(f"Set '{set_key}': {total_files} ZIP files across {len(folders)} folders")
-        
+       
         return render_template(
             "file_browser.html",
             college=COLLEGE,
@@ -3046,12 +3222,12 @@ def bn_carryover():
     """Basic Nursing carryover management dashboard"""
     try:
         bn_carryover_data = {}
-        
+       
         for set_name in BN_SETS:
             clean_dir = os.path.join(BASE_DIR, "BN", set_name, "CLEAN_RESULTS")
             if not os.path.exists(clean_dir):
                 continue
-            
+           
             records = get_carryover_records("BN", set_name)
             if records:
                 bn_carryover_data[set_name] = {
@@ -3059,7 +3235,7 @@ def bn_carryover():
                     'total_students': sum(record['count'] for record in records),
                     'total_semesters': len(records)
                 }
-        
+       
         return render_template(
             "bn_carryover_management.html",
             college=COLLEGE,
@@ -3067,7 +3243,7 @@ def bn_carryover():
             environment="Railway Production" if not is_local_environment() else "Local Development",
             logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
             bn_carryover_data=bn_carryover_data,
-            bn_sets=BN_SETS  # ✅ FIX: Added this line
+            bn_sets=BN_SETS # ✅ FIX: Added this line
         )
     except Exception as e:
         logger.error(f"BN carryover management error: {e}")
@@ -3075,7 +3251,7 @@ def bn_carryover():
         return redirect(url_for("dashboard"))
 
 # ============================================================================
-# FIXED: BM Carryover Management Route - ADDED bm_sets  
+# FIXED: BM Carryover Management Route - ADDED bm_sets
 # ============================================================================
 @app.route("/bm_carryover")
 @login_required
@@ -3083,12 +3259,12 @@ def bm_carryover():
     """Basic Midwifery carryover management dashboard"""
     try:
         bm_carryover_data = {}
-        
+       
         for set_name in BM_SETS:
             clean_dir = os.path.join(BASE_DIR, "BM", set_name, "CLEAN_RESULTS")
             if not os.path.exists(clean_dir):
                 continue
-            
+           
             records = get_carryover_records("BM", set_name)
             if records:
                 bm_carryover_data[set_name] = {
@@ -3096,7 +3272,7 @@ def bm_carryover():
                     'total_students': sum(record['count'] for record in records),
                     'total_semesters': len(records)
                 }
-        
+       
         return render_template(
             "bm_carryover_management.html",
             college=COLLEGE,
@@ -3104,7 +3280,7 @@ def bm_carryover():
             environment="Railway Production" if not is_local_environment() else "Local Development",
             logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
             bm_carryover_data=bm_carryover_data,
-            bm_sets=BM_SETS  # ✅ FIX: Added this line
+            bm_sets=BM_SETS # ✅ FIX: Added this line
         )
     except Exception as e:
         logger.error(f"BM carryover management error: {e}")
@@ -3114,19 +3290,18 @@ def bm_carryover():
 # ============================================================================
 # NEW ROUTE: ND Carryover Management
 # ============================================================================
-
 @app.route("/nd_carryover")
 @login_required
 def nd_carryover():
     """National Diploma carryover management dashboard"""
     try:
         nd_carryover_data = {}
-        
+       
         for set_name in ND_SETS:
             clean_dir = os.path.join(BASE_DIR, "ND", set_name, "CLEAN_RESULTS")
             if not os.path.exists(clean_dir):
                 continue
-            
+           
             records = get_carryover_records("ND", set_name)
             if records:
                 nd_carryover_data[set_name] = {
@@ -3134,7 +3309,7 @@ def nd_carryover():
                     'total_students': sum(record['count'] for record in records),
                     'total_semesters': len(records)
                 }
-        
+       
         return render_template(
             "nd_carryover_management.html",
             college=COLLEGE,
@@ -3157,7 +3332,7 @@ def debug_carryover_files_detail(program, set_name):
         clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
             return jsonify({'error': f"Clean directory not found: {clean_dir}"})
-        
+       
         debug_info = {
             'clean_dir': clean_dir,
             'items': [],
@@ -3166,40 +3341,40 @@ def debug_carryover_files_detail(program, set_name):
             'carryover_records': [],
             'available_files': os.listdir(clean_dir)
         }
-        
+       
         # List all items with detailed classification
         for item in os.listdir(clean_dir):
             item_path = os.path.join(clean_dir, item)
             item_info = {
                 'name': item,
                 'type': 'dir' if os.path.isdir(item_path) else 'file',
-                'is_regular_result': (item.startswith(f"{set_name}_RESULT-") and 
-                                    "RESULT" in item.upper() and 
+                'is_regular_result': (item.startswith(f"{set_name}_RESULT-") and
+                                    "RESULT" in item.upper() and
                                     not "CARRYOVER" in item.upper()),
                 'is_carryover_result': 'CARRYOVER' in item.upper(),
                 'is_zip': item.endswith('.zip')
             }
             debug_info['items'].append(item_info)
-            
+           
             if item_info['is_regular_result']:
                 debug_info['regular_results'].append(item)
             elif item_info['is_carryover_result']:
                 debug_info['carryover_results'].append(item)
-        
+       
         # Check carryover records in latest REGULAR result (not carryover result)
         if debug_info['regular_results']:
             latest_regular = sorted(debug_info['regular_results'])[-1]
             debug_info['latest_regular'] = latest_regular
             latest_path = os.path.join(clean_dir, latest_regular)
-            
+           
             if latest_regular.endswith('.zip'):
                 # Extract from ZIP
                 try:
                     with zipfile.ZipFile(latest_path, 'r') as zip_ref:
                         # Look for carryover JSON files
-                        json_files = [f for f in zip_ref.namelist() 
+                        json_files = [f for f in zip_ref.namelist()
                                     if f.startswith("CARRYOVER_RECORDS/") and f.endswith('.json')]
-                        
+                       
                         for json_file in json_files:
                             extracted = extract_semester_from_filename(json_file)
                             standardized = standardize_semester_key(extracted, program)
@@ -3225,9 +3400,9 @@ def debug_carryover_files_detail(program, set_name):
                                 'standardized_semester': standardized,
                                 'source': f'DIR: {latest_regular}'
                             })
-        
+       
         return jsonify(debug_info)
-        
+       
     except Exception as e:
         return jsonify({'error': str(e)})
 
@@ -3240,14 +3415,14 @@ def process_resit():
     """Process resit results - FIXED with proper env vars."""
     try:
         logger.info("🎯 RESIT PROCESSING: Starting")
-        
+       
         # Get form data
         set_name = request.form.get("resit_set", "").strip()
         semester_key = request.form.get("resit_semester", "").strip()
         resit_file = request.files.get("resit_file")
-        
+       
         logger.info(f"📥 Received - Set: {set_name}, Semester: {semester_key}")
-        
+       
         # Validation
         if not all([set_name, semester_key, resit_file]):
             missing = []
@@ -3256,7 +3431,7 @@ def process_resit():
             if not resit_file: missing.append("file")
             flash(f"Missing fields: {', '.join(missing)}", "error")
             return redirect(url_for("nd_carryover"))
-        
+       
         # Determine program from set name
         if set_name in ND_SETS:
             program = "ND"
@@ -3270,45 +3445,45 @@ def process_resit():
         else:
             flash(f"Invalid set: {set_name}", "error")
             return redirect(url_for("nd_carryover"))
-        
+       
         # Save resit file
         resit_dir = os.path.join(BASE_DIR, program, set_name, "RAW_RESULTS", "CARRYOVER")
         os.makedirs(resit_dir, exist_ok=True)
-        
+       
         filename = secure_filename(resit_file.filename)
         resit_file_path = os.path.join(resit_dir, filename)
         resit_file.save(resit_file_path)
-        
+       
         if not os.path.exists(resit_file_path):
             flash("Failed to save resit file", "error")
             return redirect(url_for("nd_carryover"))
-        
+       
         logger.info(f"✅ Resit file saved: {resit_file_path}")
-        
+       
         # Find base results
         clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
             flash(f"No results found for {set_name}. Process regular results first.", "error")
             return redirect(url_for("nd_carryover"))
-        
+       
         # Get latest regular result (exclude CARRYOVER_*)
         regular_results = []
         for item in os.listdir(clean_dir):
-            if (item.startswith(f"{set_name}_RESULT-") and 
+            if (item.startswith(f"{set_name}_RESULT-") and
                 not item.startswith("CARRYOVER_")):
                 if os.path.isdir(os.path.join(clean_dir, item)) or item.endswith('.zip'):
                     regular_results.append(item)
-        
+       
         if not regular_results:
             flash(f"No regular results found for {set_name}.", "error")
             return redirect(url_for("nd_carryover"))
-        
+       
         latest_regular = sorted(regular_results)[-1]
         base_result_path = os.path.join(clean_dir, latest_regular)
-        
+       
         logger.info(f"📁 Base result: {latest_regular}")
         logger.info(f"📁 Semester: {semester_key}")
-        
+       
         # Setup environment for processor
         env = os.environ.copy()
         env["BASE_DIR"] = BASE_DIR
@@ -3317,15 +3492,15 @@ def process_resit():
         env["RESIT_FILE_PATH"] = resit_file_path
         env["BASE_RESULT_PATH"] = base_result_path
         env["OUTPUT_DIR"] = clean_dir
-        env["PROCESS_RESIT"] = "true"  # Flag for resit mode
-        
+        env["PROCESS_RESIT"] = "true" # Flag for resit mode
+       
         # Get script path
         script_path = os.path.join(SCRIPT_DIR, processor_script)
-        
+       
         logger.info(f"🚀 Running processor: {script_path}")
         for key in ["BASE_DIR", "SELECTED_SET", "SELECTED_SEMESTERS", "RESIT_FILE_PATH"]:
-            logger.info(f"   {key}: {env.get(key)}")
-        
+            logger.info(f" {key}: {env.get(key)}")
+       
         # Run processor
         result = subprocess.run(
             [sys.executable, script_path],
@@ -3334,32 +3509,32 @@ def process_resit():
             capture_output=True,
             timeout=600,
         )
-        
+       
         # Parse results
         output_lines = result.stdout.splitlines()
         error_lines = result.stderr.splitlines()
-        
+       
         # Log output
         logger.info("="*60)
         logger.info("PROCESSOR OUTPUT:")
         logger.info("="*60)
         for line in output_lines:
             logger.info(line)
-        
+       
         if error_lines:
             logger.info("="*60)
             logger.info("PROCESSOR ERRORS:")
             logger.info("="*60)
             for line in error_lines:
                 logger.error(line)
-        
+       
         # Check success
         success_indicators = [
             "CARRYOVER PROCESSING COMPLETED" in " ".join(output_lines),
             "Updated" in " ".join(output_lines) and "scores" in " ".join(output_lines),
             result.returncode == 0
         ]
-        
+       
         if any(success_indicators):
             # Extract update message
             update_msg = None
@@ -3367,23 +3542,23 @@ def process_resit():
                 if "Updated" in line and "scores for" in line and "students" in line:
                     update_msg = line.strip()
                     break
-            
+           
             msg = f"✅ Resit processing completed! {update_msg}" if update_msg else "✅ Resit processing completed"
             flash(msg, "success")
             logger.info(f"✅ SUCCESS: {msg}")
         else:
             error_msg = "❌ Resit processing failed"
-            
+           
             # Find specific error
             if error_lines:
                 for line in reversed(error_lines):
-                    if line.strip() and not line.startswith(("File", "Traceback", "  ")):
+                    if line.strip() and not line.startswith(("File", "Traceback", " ")):
                         error_msg += f": {line.strip()}"
                         break
-            
+           
             flash(error_msg, "error")
             logger.error(error_msg)
-        
+       
         # Redirect based on program
         if program == "ND":
             return redirect(url_for("nd_carryover"))
@@ -3391,7 +3566,7 @@ def process_resit():
             return redirect(url_for("bn_carryover"))
         else:
             return redirect(url_for("bm_carryover"))
-        
+       
     except subprocess.TimeoutExpired:
         logger.error("RESIT PROCESSING TIMEOUT")
         flash("Resit processing timed out", "error")
@@ -3411,16 +3586,16 @@ def debug_resit_files(program, set_name):
         clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
             return jsonify({'error': f"Clean directory not found: {clean_dir}"})
-        
-        resit_folders = [f for f in os.listdir(clean_dir) 
+       
+        resit_folders = [f for f in os.listdir(clean_dir)
                         if f.startswith("RESIT_") and os.path.isdir(os.path.join(clean_dir, f))]
-        
+       
         debug_info = {
             'clean_dir': clean_dir,
             'resit_folders': [],
             'resit_zips': []
         }
-        
+       
         for folder in resit_folders:
             folder_path = os.path.join(clean_dir, folder)
             files = []
@@ -3436,10 +3611,10 @@ def debug_resit_files(program, set_name):
                 'name': folder,
                 'files': files
             })
-        
-        zip_files = [f for f in os.listdir(clean_dir) 
+       
+        zip_files = [f for f in os.listdir(clean_dir)
                     if f.startswith("RESIT_") and f.endswith('.zip')]
-        
+       
         for zip_file in zip_files:
             zip_path = os.path.join(clean_dir, zip_file)
             debug_info['resit_zips'].append({
@@ -3447,9 +3622,9 @@ def debug_resit_files(program, set_name):
                 'size': os.path.getsize(zip_path),
                 'path': zip_path
             })
-        
+       
         return jsonify(debug_info)
-        
+       
     except Exception as e:
         return jsonify({'error': str(e)})
 
@@ -3461,7 +3636,7 @@ def debug_resit_files(program, set_name):
 def delete(filename):
     try:
         critical_dirs = [SCRIPT_DIR, TEMPLATE_DIR, STATIC_DIR, PROJECT_ROOT]
-        
+       
         file_path = None
         for root, _, files in os.walk(BASE_DIR):
             if os.path.basename(filename) in files:
@@ -3469,7 +3644,7 @@ def delete(filename):
                 if os.path.exists(candidate):
                     file_path = candidate
                     break
-        
+       
         if not file_path:
             for root, dirs, _ in os.walk(BASE_DIR):
                 if os.path.basename(filename) in dirs:
@@ -3477,26 +3652,26 @@ def delete(filename):
                     if os.path.exists(candidate):
                         file_path = candidate
                         break
-        
+       
         if not file_path:
             flash(f"Path '{filename}' not found.", "error")
             logger.warning(f"Deletion failed: Path not found - {filename}")
             return redirect(request.referrer or url_for("file_browser"))
-        
+       
         abs_file_path = os.path.abspath(file_path)
         for critical_dir in critical_dirs:
             abs_critical_dir = os.path.abspath(critical_dir)
-            if (abs_file_path == abs_critical_dir or 
+            if (abs_file_path == abs_critical_dir or
                 os.path.dirname(abs_file_path) == abs_critical_dir):
                 flash(f"Cannot delete critical system path: {filename}", "error")
                 logger.warning(f"Deletion blocked: Attempted to delete critical system path - {filename}")
                 return redirect(request.referrer or url_for("file_browser"))
-        
+       
         if request.form.get("confirm") != "true":
             flash(f"Deletion of '{filename}' requires confirmation.", "warning")
             logger.info(f"Deletion of {filename} requires confirmation")
             return redirect(request.referrer or url_for("file_browser"))
-        
+       
         if os.path.isfile(file_path):
             os.remove(file_path)
             flash(f"File '{filename}' deleted successfully.", "success")
@@ -3508,7 +3683,7 @@ def delete(filename):
         else:
             flash(f"Path '{filename}' does not exist.", "error")
             logger.warning(f"Deletion failed: Path does not exist - {file_path}")
-        
+       
         return redirect(request.referrer or url_for("file_browser"))
     except Exception as e:
         app.logger.error(f"Delete error: {e}")
@@ -3535,32 +3710,32 @@ def get_form_parameters():
     all_env_vars = dict(os.environ)
     for key, value in all_env_vars.items():
         if any(kw in key for kw in ['SELECTED', 'PROCESSING', 'SEMESTER', 'THRESHOLD', 'UPGRADE']):
-            print(f"  {key}: {value}")
-    
+            print(f" {key}: {value}")
+   
     print("🎯 DEBUG - FORM PARAMETERS:")
-    print("   SELECTED_SET: {}".format(os.getenv('SELECTED_SET')))
-    print("   PROCESSING_MODE: {}".format(os.getenv('PROCESSING_MODE')))
-    print("   SELECTED_SEMESTERS: {}".format(os.getenv('SELECTED_SEMESTERS')))
-    print("   UPGRADE_THRESHOLD: {}".format(os.getenv('UPGRADE_THRESHOLD')))
-    
+    print(" SELECTED_SET: {}".format(os.getenv('SELECTED_SET')))
+    print(" PROCESSING_MODE: {}".format(os.getenv('PROCESSING_MODE')))
+    print(" SELECTED_SEMESTERS: {}".format(os.getenv('SELECTED_SEMESTERS')))
+    print(" UPGRADE_THRESHOLD: {}".format(os.getenv('UPGRADE_THRESHOLD')))
+   
     selected_set = os.getenv('SELECTED_SET', 'all')
     processing_mode = os.getenv('PROCESSING_MODE', 'auto')
     selected_semesters_str = os.getenv('SELECTED_SEMESTERS', '')
     pass_threshold = float(os.getenv('PASS_THRESHOLD', '50.0'))
     generate_pdf = os.getenv('GENERATE_PDF', 'True').lower() == 'true'
     track_withdrawn = os.getenv('TRACK_WITHDRAWN', 'True').lower() == 'true'
-    
+   
     # Convert semester string to list
     selected_semesters = []
     if selected_semesters_str:
         selected_semesters = selected_semesters_str.split(',')
-    
+   
     print("🎯 FINAL PARAMETERS:")
-    print("   Selected Set: {}".format(selected_set))
-    print("   Processing Mode: {}".format(processing_mode))
-    print("   Selected Semesters: {}".format(selected_semesters))
-    print("   Pass Threshold: {}".format(pass_threshold))
-    
+    print(" Selected Set: {}".format(selected_set))
+    print(" Processing Mode: {}".format(processing_mode))
+    print(" Selected Semesters: {}".format(selected_semesters))
+    print(" Pass Threshold: {}".format(pass_threshold))
+   
     return {
         'selected_set': selected_set,
         'processing_mode': processing_mode,
@@ -3577,7 +3752,7 @@ def get_form_parameters():
 @login_required
 def run_script(script_name):
     """Handle both GET (redirect to form) and POST (process form) requests"""
-    
+   
     if request.method == "GET":
         # Redirect to appropriate processor page
         if script_name == 'exam_processor_nd':
@@ -3592,11 +3767,11 @@ def run_script(script_name):
         else:
             flash("Invalid script", "error")
             return redirect(url_for("dashboard"))
-    
+   
     # Handle POST - process form submission
     try:
         logger.info(f"Processing {script_name} with POST data")
-        
+       
         # Handle exam processors
         if script_name in ['exam_processor_bn', 'exam_processor_bm', 'exam_processor_nd']:
             # Extract common parameters
@@ -3609,19 +3784,19 @@ def run_script(script_name):
             elif script_name == 'exam_processor_nd':
                 selected_set = request.form.get('selected_set')
                 program = 'ND'
-            
+           
             processing_mode = request.form.get('processing_mode', 'auto')
             selected_semesters = request.form.getlist('selected_semesters')
             pass_threshold = request.form.get('pass_threshold', '50.0')
             upgrade_threshold = request.form.get('upgrade_threshold', '0')
             generate_pdf = request.form.get('generate_pdf') == 'on'
             track_withdrawn = request.form.get('track_withdrawn') == 'on'
-            
+           
             # Validation
             if not selected_set:
                 flash("Please select an academic set", "error")
                 return redirect(request.referrer or url_for("dashboard"))
-            
+           
             # Setup environment variables for script
             env = os.environ.copy()
             env["BASE_DIR"] = BASE_DIR
@@ -3631,29 +3806,29 @@ def run_script(script_name):
             env["UPGRADE_THRESHOLD"] = str(upgrade_threshold)
             env["GENERATE_PDF"] = str(generate_pdf)
             env["TRACK_WITHDRAWN"] = str(track_withdrawn)
-            
+           
             if processing_mode == 'manual' and selected_semesters:
                 env["SELECTED_SEMESTERS"] = ','.join(selected_semesters)
-        
+       
         # Handle other scripts (PUTME, CAOSCE, Internal, JAMB)
         else:
             env = os.environ.copy()
             env["BASE_DIR"] = BASE_DIR
             program = None
             selected_set = None
-            
+           
             # Check if files exist
             input_dir = get_input_directory(script_name)
             if not check_input_files(input_dir, script_name):
                 flash(f"No input files found for {script_name}", "error")
                 return redirect(url_for("dashboard"))
-        
+       
         # Get script path
         script_path = _get_script_path(script_name)
-        
+       
         # Run script
         if script_name in ['exam_processor_bn', 'exam_processor_bm', 'exam_processor_nd']:
-            result = process_script_with_zip_enforcement(
+            result = process_script_with_strict_zip_enforcement(
                 script_name, program, selected_set, env, script_path
             )
         else:
@@ -3665,7 +3840,7 @@ def run_script(script_name):
                 capture_output=True,
                 timeout=600,
             )
-            
+           
             if result.returncode == 0:
                 output_lines = result.stdout.splitlines()
                 processed_files = count_processed_files(output_lines, script_name)
@@ -3674,16 +3849,16 @@ def run_script(script_name):
             else:
                 error_msg = result.stderr.splitlines()[-1] if result.stderr else "Unknown error"
                 flash(f"Processing failed: {error_msg}", "error")
-        
+       
         # Handle exam processor results
         if script_name in ['exam_processor_bn', 'exam_processor_bm', 'exam_processor_nd']:
             if result.get("success"):
                 flash(f"{program} examination processing completed successfully!", "success")
             else:
                 flash(f"Processing failed: {result.get('error', 'Unknown error')}", "error")
-        
+       
         return redirect(url_for("dashboard"))
-        
+       
     except subprocess.TimeoutExpired:
         flash("Processing timed out after 10 minutes", "error")
         return redirect(url_for("dashboard"))
@@ -3719,16 +3894,16 @@ def download_zip(set_name):
         if not program:
             flash(f"Could not determine program for set {set_name}", "error")
             return redirect(url_for("download_center"))
-        
+       
         clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
         if not os.path.exists(clean_dir):
             flash(f"No results found for {set_name}", "error")
             return redirect(url_for("download_center"))
-        
+       
         # Find existing ZIP file
-        zip_files = [f for f in os.listdir(clean_dir) 
+        zip_files = [f for f in os.listdir(clean_dir)
                     if f.startswith(f"{set_name}_RESULT-") and f.endswith('.zip')]
-        
+       
         if zip_files:
             latest_zip = sorted(zip_files)[-1]
             zip_path = os.path.join(clean_dir, latest_zip)
@@ -3736,11 +3911,134 @@ def download_zip(set_name):
         else:
             flash(f"No ZIP file found for {set_name}", "error")
             return redirect(url_for("download_center"))
-            
+           
     except Exception as e:
         logger.error(f"Download ZIP error: {e}")
         flash(f"Error downloading ZIP: {str(e)}", "error")
         return redirect(url_for("download_center"))
+
+# ============================================================================
+# NEW: PUTME Processing Route with Proper Form Handling
+# ============================================================================
+@app.route("/putme_processor", methods=["GET", "POST"])
+@login_required
+def putme_processor():
+    """PUTME Results processor form and handler"""
+    try:
+        if request.method == "GET":
+            return render_template(
+                "putme_processor.html",
+                college=COLLEGE,
+                department=DEPARTMENT,
+                environment="Railway Production" if not is_local_environment() else "Local Development"
+            )
+       
+        # POST - Handle form submission
+        convert_column = request.form.get("convert_column", "n")
+        convert_value = request.form.get("convert_value", "")
+       
+        # Validate input directory
+        input_dir = os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT")
+        candidate_dir = os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_CANDIDATE_BATCHES")
+       
+        if not check_putme_files(input_dir):
+            flash("No PUTME files found in RAW_PUTME_RESULT directory", "error")
+            return redirect(url_for("putme_processor"))
+       
+        # Setup environment
+        env = os.environ.copy()
+        env["BASE_DIR"] = BASE_DIR
+       
+        # Build command arguments
+        script_path = os.path.join(SCRIPT_DIR, "utme_result.py")
+        cmd = [sys.executable, script_path]
+       
+        # Add arguments
+        cmd.extend(["--input-dir", input_dir])
+        cmd.extend(["--candidate-dir", candidate_dir])
+        cmd.extend(["--output-dir", os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT")])
+       
+        # Handle conversion
+        if convert_column == "y" and convert_value:
+            try:
+                max_score = int(convert_value)
+                cmd.extend(["--non-interactive"])
+                cmd.extend(["--converted-score-max", str(max_score)])
+                logger.info(f"Adding score conversion: Score/{max_score}")
+            except ValueError:
+                flash(f"Invalid conversion value: {convert_value}", "warning")
+        else:
+            cmd.extend(["--non-interactive"])
+       
+        logger.info(f"Running PUTME command: {' '.join(cmd)}")
+       
+        # Run script
+        result = subprocess.run(
+            cmd,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=600,
+        )
+       
+        output_lines = result.stdout.splitlines()
+        error_lines = result.stderr.splitlines()
+       
+        # Log output
+        logger.info("=== PUTME PROCESSING OUTPUT ===")
+        for line in output_lines:
+            logger.info(line)
+       
+        if error_lines:
+            logger.error("=== PUTME PROCESSING ERRORS ===")
+            for line in error_lines:
+                logger.error(line)
+       
+        # Check success
+        if result.returncode == 0:
+            processed_files = count_processed_files(output_lines, "utme")
+            success_msg = get_success_message("utme", processed_files, output_lines)
+           
+            # Enforce ZIP-only policy
+            clean_dir = os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT")
+            if os.path.exists(clean_dir):
+                enforce_zip_only_policy(clean_dir, "PUTME_RESULTS")
+           
+            flash(success_msg or "PUTME processing completed successfully!", "success")
+        else:
+            error_msg = error_lines[-1] if error_lines else "Unknown error"
+            flash(f"PUTME processing failed: {error_msg}", "error")
+       
+        return redirect(url_for("putme_processor"))
+       
+    except subprocess.TimeoutExpired:
+        flash("PUTME processing timed out after 10 minutes", "error")
+        return redirect(url_for("putme_processor"))
+    except Exception as e:
+        logger.error(f"PUTME processing error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("putme_processor"))
+
+# ============================================================================
+# NEW: Debug route for PUTME files
+# ============================================================================
+@app.route("/debug_putme_files")
+@login_required
+def debug_putme_files():
+    """Debug route to check PUTME directory structure and files"""
+    input_dir = os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_PUTME_RESULT")
+    candidate_dir = os.path.join(BASE_DIR, "PUTME_RESULT", "RAW_CANDIDATE_BATCHES")
+   
+    return jsonify({
+        'input_dir': input_dir,
+        'input_exists': os.path.exists(input_dir),
+        'input_files': os.listdir(input_dir) if os.path.exists(input_dir) else [],
+        'candidate_dir': candidate_dir,
+        'candidate_exists': os.path.exists(candidate_dir),
+        'candidate_files': os.listdir(candidate_dir) if os.path.exists(candidate_dir) else []
+    })
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

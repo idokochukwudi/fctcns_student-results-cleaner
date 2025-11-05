@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PUTME Processing - {{ college }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <style>
+        .form-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .text-muted {
+            font-size: 12px;
+            color: #666;
+        }
+        .info-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .processing-indicator {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .processing-indicator.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+        <h2>FCTCNS</h2>
+        <a href="{{ url_for('dashboard') }}">🏠 Dashboard</a>
+        <a href="{{ url_for('upload_center') }}">📤 Upload Center</a>
+        <a href="{{ url_for('download_center') }}">📥 Download Center</a>
+        <a href="{{ url_for('file_browser') }}">📁 File Browser</a>
+        <a href="{{ url_for('debug_paths') }}">⚙️ System Tools</a>
+        <a href="{{ url_for('logout') }}">🚪 Logout</a>
+    </div>
+
+    <div class="main-content" id="main">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+        <div class="header-bar">
+            <div class="header-left">
+                <h1>{{ college }}</h1>
+                <h2>PUTME Results Processing</h2>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="max-width: 600px; margin: 20px auto;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}" style="padding: 15px; margin-bottom: 10px; border-radius: 5px; background: {% if category == 'success' %}#d4edda{% elif category == 'error' %}#f8d7da{% else %}#fff3cd{% endif %}; border: 1px solid {% if category == 'success' %}#c3e6cb{% elif category == 'error' %}#f5c6cb{% else %}#ffeeba{% endif %};">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="form-container">
+            <h3>🎓 Run PUTME Results Processing</h3>
+            <p class="text-muted">{{ department }}</p>
+
+            <form id="putmeForm" method="POST" action="{{ url_for('putme_processor') }}" onsubmit="showProcessing()">
+                <div class="form-group">
+                    <label class="form-label">Convert Score to Maximum</label>
+                    <select class="form-select" name="convert_column" id="convertColumn" onchange="toggleConvertInput()" required>
+                        <option value="n" selected>No - Use default Score/100</option>
+                        <option value="y">Yes - Convert to custom maximum</option>
+                    </select>
+                    <small class="text-muted">Convert Score/100 to Score/60 (or another value)</small>
+                </div>
+
+                <div class="form-group" id="convertValueGroup" style="display: none;">
+                    <label class="form-label">Target Maximum Score</label>
+                    <input type="number" class="form-control" name="convert_value" id="convertValue" placeholder="e.g., 60" min="1" max="100">
+                    <small class="text-muted">Example: Enter 60 to convert Score/100 to Score/60</small>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button type="submit" class="btn btn-success" id="submitBtn">🚀 Process PUTME Results</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+                </div>
+            </form>
+
+            <div class="processing-indicator" id="processingIndicator">
+                <div style="font-size: 24px; margin-bottom: 10px;">⏳</div>
+                <div style="font-weight: bold;">Processing PUTME Results...</div>
+                <div style="font-size: 12px; color: #666; margin-top: 10px;">This may take several minutes. Please wait.</div>
+            </div>
+
+            <div class="info-box">
+                <h5>📋 Requirements:</h5>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>PUTME Excel files must be in <code>PUTME_RESULT/RAW_PUTME_RESULT</code></li>
+                    <li>Candidate batch CSV files must be in <code>PUTME_RESULT/RAW_CANDIDATE_BATCHES</code></li>
+                    <li>File naming: <code>PUTME 2025-Batch1A Post-UTME Quiz-grades.xlsx</code></li>
+                </ul>
+                
+                <h5 style="margin-top: 20px;">📊 What This Does:</h5>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Processes all PUTME batches</li>
+                    <li>Matches candidates with registered batches</li>
+                    <li>Creates individual and combined result sheets</li>
+                    <li>Generates analysis and charts</li>
+                    <li>Identifies absent candidates</li>
+                    <li>Optionally converts scores to custom maximum</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main');
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('expanded');
+        }
+
+        function toggleConvertInput() {
+            const convertColumn = document.getElementById('convertColumn');
+            const convertValueGroup = document.getElementById('convertValueGroup');
+            const convertValue = document.getElementById('convertValue');
+            
+            if (convertColumn.value === 'y') {
+                convertValueGroup.style.display = 'block';
+                convertValue.required = true;
+            } else {
+                convertValueGroup.style.display = 'none';
+                convertValue.required = false;
+                convertValue.value = '';
+            }
+        }
+
+        function showProcessing() {
+            document.getElementById('processingIndicator').classList.add('active');
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').textContent = '⏳ Processing...';
+            return true;
+        }
+    </script>
+</body>
+</html>

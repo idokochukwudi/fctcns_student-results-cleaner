@@ -141,7 +141,7 @@ def find_grade_column(df):
     return None
 
 def to_numeric_safe(series):
-    return pd.to_numeric(series.astype(str).replace(",", "").str.strip(), errors="coerce")
+    return pd.to_numeric(series.astype(str).str.replace(",", "").str.strip(), errors="coerce")
 
 def clean_phone_value(s):
     if pd.isna(s):
@@ -813,7 +813,7 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
 
     if "FULL NAME" not in df.columns:
         df["FULL NAME"] = pd.NA
-    if "PHONE NUMBER" not in df.columns:
+    if "PHONE NUMBER" in df.columns:
         df["PHONE NUMBER"] = pd.NA
     if "STATE" not in df.columns:
         df["STATE"] = pd.NA
@@ -946,7 +946,7 @@ def process_file_for_unsorted(path):
 
     if "FULL NAME" not in df.columns:
         df["FULL NAME"] = pd.NA
-    if "PHONE NUMBER" not in df.columns:
+    if "PHONE NUMBER" in df.columns:
         df["PHONE NUMBER"] = pd.NA
     if "STATE" not in df.columns:
         df["STATE"] = pd.NA
@@ -1008,7 +1008,7 @@ def process_file_for_unsorted(path):
 
     # Calculate overall average for Score/100.00
     avg_score = cleaned["Score/100.00"].mean()
-    avg_score = round(avg_score, 2) if pd.notna(avg_score) else None
+    avg_score = round(float(avg_score), 2) if pd.notna(avg_score) else None
 
     return cleaned, batch_id, avg_score
 
@@ -1044,7 +1044,7 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
             if "STATE_SN" in unsorted_cleaned.columns:
                 unsorted_cleaned = unsorted_cleaned.drop(columns=["STATE_SN"])
             # Calculate overall average for combined unsorted data
-            combined_avg = round(unsorted_cleaned["Score/100.00"].mean(), 2) if pd.notna(unsorted_cleaned["Score/100.00"].mean()) else None
+            combined_avg = round(float(unsorted_cleaned["Score/100.00"].mean()), 2) if pd.notna(unsorted_cleaned["Score/100.00"].mean()) else None
             out_unsorted_xlsx = os.path.join(output_dir, f"PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx")
             try:
                 with pd.ExcelWriter(out_unsorted_xlsx, engine="openpyxl") as writer:
@@ -1106,16 +1106,19 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
         except Exception as e:
             print(f"Invalid conversion value; skipped converted column: {e}")
     elif not non_interactive:
-        add_conv = input("Add converted score column for combined result (e.g., convert Score/100 to Score/60)? (y/n): ").strip().lower()
-        if add_conv in ("y", "yes"):
-            tgt_raw = input("Enter target maximum (integer), e.g., 60: ").strip()
-            try:
-                tgt = float(tgt_raw)
-                new_col = f"Score/{int(tgt)}%"
-                combined_cleaned[new_col] = ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt).round(0).astype("Int64")
-                print(f"Added converted column '{new_col}' to combined result.")
-            except Exception as e:
-                print(f"Invalid conversion value; skipped converted column: {e}")
+        if sys.stdin.isatty():
+            add_conv = input("Add converted score column for combined result (e.g., convert Score/100 to Score/60)? (y/n): ").strip().lower()
+            if add_conv in ("y", "yes"):
+                tgt_raw = input("Enter target maximum (integer), e.g., 60: ").strip()
+                try:
+                    tgt = float(tgt_raw)
+                    new_col = f"Score/{int(tgt)}%"
+                    combined_cleaned[new_col] = ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt).round(0).astype("Int64")
+                    print(f"Added converted column '{new_col}' to combined result.")
+                except Exception as e:
+                    print(f"Invalid conversion value; skipped converted column: {e}")
+        else:
+            print("Non-interactive mode detected; skipping converted score column.")
 
     combined_df = pd.concat(dfs, ignore_index=True)
     combined_df = combined_df.drop_duplicates(subset=["APPLICATION ID"], keep="first")
@@ -1173,7 +1176,7 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
             if tok:
                 present_ids.add(tok)
             else:
-                invalid_ids.append((v, combined_cleaned.at[index, "FULL NAME"))
+                invalid_ids.append((v, combined_cleaned.at[index, "FULL NAME"]))
         if invalid_ids:
             print(f"Found {len(invalid_ids)} invalid APPLICATION ID entries in combined results (non-numeric):")
             for invalid_id, full_name in invalid_ids[:5]:

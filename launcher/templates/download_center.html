@@ -516,6 +516,15 @@
             cursor: not-allowed;
         }
 
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning) 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        }
+
         .btn-delete {
             background: linear-gradient(135deg, var(--danger) 0%, #c0392b 100%);
             color: white;
@@ -528,6 +537,15 @@
 
         .semester-badge {
             background: linear-gradient(135deg, var(--secondary) 0%, #2980b9 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+
+        .zip-badge {
+            background: linear-gradient(135deg, var(--success) 0%, #219653 100%);
             color: white;
             padding: 4px 10px;
             border-radius: 12px;
@@ -751,9 +769,12 @@
         <div class="header-bar">
             <div class="header-left">
                 <h1>{{ college }}</h1>
-                <h2>Download Center - Processed Results</h2>
+                <h2>Download Center - Processed Results (ZIP Files Only)</h2>
             </div>
             <div class="header-right">
+                <a href="{{ url_for('fix_scattered_files') }}" class="btn btn-warning" style="background: var(--warning); color: white;">
+                    <i class="fas fa-file-archive"></i> Enforce ZIP Policy
+                </a>
                 <div class="user-info">
                     <div class="user-avatar">A</div>
                     <div>
@@ -771,9 +792,9 @@
         <div class="download-container">
             <!-- Search Box -->
             <div class="search-box">
-                <input type="text" id="fileSearch" placeholder="Search files by name..." aria-label="Search files">
+                <input type="text" id="fileSearch" placeholder="Search ZIP files by name..." aria-label="Search ZIP files">
                 <button class="clear-btn" id="clearBtn" aria-label="Clear search"><i class="fas fa-times"></i></button>
-                <button class="search-btn" id="searchBtn" aria-label="Search"><i class="fas fa-search"></i> Search</button>
+                <button class="search-btn" id="searchBtn" aria-label="Search"><i class="fas fa-search"></i> Search ZIPs</button>
             </div>
 
             <!-- ND Results -->
@@ -819,8 +840,9 @@
                                     {% for file in files %}
                                     <div class="file-item" data-filename="{{ file.name.lower() }}">
                                         <div class="file-name">
-                                            <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                            <i class="file-icon fas fa-file-archive"></i>
                                             {{ file.name }}
+                                            <span class="zip-badge">ZIP</span>
                                             {% if file.subfolder and file.subfolder != file.folder %}
                                             <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                             {% endif %}
@@ -838,7 +860,7 @@
                                         </div>
                                         <div class="file-actions">
                                             <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                                <i class="fas fa-download"></i> Download
+                                                <i class="fas fa-download"></i> Download ZIP
                                             </a>
                                             <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                                 <input type="hidden" name="confirm" value="true">
@@ -906,8 +928,9 @@
                                     {% for file in files %}
                                     <div class="file-item" data-filename="{{ file.name.lower() }}">
                                         <div class="file-name">
-                                            <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                            <i class="file-icon fas fa-file-archive"></i>
                                             {{ file.name }}
+                                            <span class="zip-badge">ZIP</span>
                                             {% if file.subfolder and file.subfolder != file.folder %}
                                             <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                             {% endif %}
@@ -925,7 +948,7 @@
                                         </div>
                                         <div class="file-actions">
                                             <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                                <i class="fas fa-download"></i> Download
+                                                <i class="fas fa-download"></i> Download ZIP
                                             </a>
                                             <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                                 <input type="hidden" name="confirm" value="true">
@@ -993,8 +1016,9 @@
                                     {% for file in files %}
                                     <div class="file-item" data-filename="{{ file.name.lower() }}">
                                         <div class="file-name">
-                                            <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                            <i class="file-icon fas fa-file-archive"></i>
                                             {{ file.name }}
+                                            <span class="zip-badge">ZIP</span>
                                             {% if file.subfolder and file.subfolder != file.folder %}
                                             <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                             {% endif %}
@@ -1012,7 +1036,7 @@
                                         </div>
                                         <div class="file-actions">
                                             <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                                <i class="fas fa-download"></i> Download
+                                                <i class="fas fa-download"></i> Download ZIP
                                             </a>
                                             <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                                 <input type="hidden" name="confirm" value="true">
@@ -1055,8 +1079,9 @@
                             {% for file in files_by_category.putme_results %}
                             <div class="file-item" data-filename="{{ file.name.lower() }}">
                                 <div class="file-name">
-                                    <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                    <i class="file-icon fas fa-file-archive"></i>
                                     {{ file.name }}
+                                    <span class="zip-badge">ZIP</span>
                                     {% if file.subfolder and file.subfolder != file.folder %}
                                     <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                     {% endif %}
@@ -1071,7 +1096,7 @@
                                 </div>
                                 <div class="file-actions">
                                     <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                        <i class="fas fa-download"></i> Download
+                                        <i class="fas fa-download"></i> Download ZIP
                                     </a>
                                     <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                         <input type="hidden" name="confirm" value="true">
@@ -1111,8 +1136,9 @@
                             {% for file in files_by_category.caosce_results %}
                             <div class="file-item" data-filename="{{ file.name.lower() }}">
                                 <div class="file-name">
-                                    <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                    <i class="file-icon fas fa-file-archive"></i>
                                     {{ file.name }}
+                                    <span class="zip-badge">ZIP</span>
                                     {% if file.subfolder and file.subfolder != file.folder %}
                                     <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                     {% endif %}
@@ -1127,7 +1153,7 @@
                                 </div>
                                 <div class="file-actions">
                                     <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                        <i class="fas fa-download"></i> Download
+                                        <i class="fas fa-download"></i> Download ZIP
                                     </a>
                                     <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                         <input type="hidden" name="confirm" value="true">
@@ -1167,8 +1193,9 @@
                             {% for file in files_by_category.internal_results %}
                             <div class="file-item" data-filename="{{ file.name.lower() }}">
                                 <div class="file-name">
-                                    <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                    <i class="file-icon fas fa-file-archive"></i>
                                     {{ file.name }}
+                                    <span class="zip-badge">ZIP</span>
                                     {% if file.subfolder and file.subfolder != file.folder %}
                                     <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                     {% endif %}
@@ -1183,7 +1210,7 @@
                                 </div>
                                 <div class="file-actions">
                                     <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                        <i class="fas fa-download"></i> Download
+                                        <i class="fas fa-download"></i> Download ZIP
                                     </a>
                                     <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                         <input type="hidden" name="confirm" value="true">
@@ -1223,8 +1250,9 @@
                             {% for file in files_by_category.jamb_results %}
                             <div class="file-item" data-filename="{{ file.name.lower() }}">
                                 <div class="file-name">
-                                    <i class="file-icon fas {% if file.name.endswith('.pdf') %}fa-file-pdf{% elif file.name.endswith('.xlsx') or file.name.endswith('.xls') %}fa-file-excel{% else %}fa-file{% endif %}"></i>
+                                    <i class="file-icon fas fa-file-archive"></i>
                                     {{ file.name }}
+                                    <span class="zip-badge">ZIP</span>
                                     {% if file.subfolder and file.subfolder != file.folder %}
                                     <span class="subfolder-indicator" title="Located in: {{ file.subfolder }}">subfolder</span>
                                     {% endif %}
@@ -1239,7 +1267,7 @@
                                 </div>
                                 <div class="file-actions">
                                     <a href="{{ url_for('download', filename=file.relative_path) }}" class="btn btn-primary">
-                                        <i class="fas fa-download"></i> Download
+                                        <i class="fas fa-download"></i> Download ZIP
                                     </a>
                                     <form action="{{ url_for('delete_file', filename=file.relative_path) }}" method="POST" onsubmit="return confirmDelete('{{ file.relative_path }}');" class="delete-form">
                                         <input type="hidden" name="confirm" value="true">
@@ -1377,7 +1405,7 @@
                 if (!noResultsMsg) {
                     const msg = document.createElement('div');
                     msg.className = 'no-results';
-                    msg.innerHTML = '<i class="fas fa-search"></i><p>No files match your search.</p>';
+                    msg.innerHTML = '<i class="fas fa-search"></i><p>No ZIP files match your search.</p>';
                     document.querySelector('.download-container').appendChild(msg);
                 }
             } else if (noResultsMsg) {
@@ -1426,7 +1454,7 @@
                             this.classList.remove('disabled');
                             this.innerHTML = this.classList.contains('btn-delete') ? '<i class="fas fa-trash"></i> Delete' : 
                                            this.classList.contains('download-all-btn') ? '<i class="fas fa-file-archive"></i> Download All as ZIP' : 
-                                           '<i class="fas fa-download"></i> Download';
+                                           '<i class="fas fa-download"></i> Download ZIP';
                         }, 2000);
                     }
                 });
