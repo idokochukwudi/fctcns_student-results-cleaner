@@ -732,8 +732,9 @@
                     <i class="fas fa-info-circle"></i> Process carryover and resit examination results for National Diploma students. This tool integrates resit results with existing student records and recalculates academic status.
                 </div>
 
-                <form method="POST" enctype="multipart/form-data" action="{{ url_for('process_resit') }}" id="nd_carryover_form">
-                    <input type="hidden" name="processing_type" value="carryover">
+                <!-- UPDATED FORM ACTION -->
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('process_nd_carryover') }}" id="nd_carryover_form">
+                    <!-- REMOVED: <input type="hidden" name="processing_type" value="carryover"> -->
                     
                     <div class="carryover-section">
                         <div class="carryover-header">
@@ -742,9 +743,10 @@
                             <span class="carryover-badge">ND SPECIAL PROCESSING</span>
                         </div>
 
+                        <!-- UPDATED FIELD NAMES -->
                         <div class="form-group">
-                            <label for="nd_resit_set" class="required"><i class="fas fa-folder"></i> Academic Set</label>
-                            <select id="nd_resit_set" name="resit_set" required>
+                            <label for="selected_set" class="required"><i class="fas fa-folder"></i> Academic Set</label>
+                            <select id="selected_set" name="selected_set" required>
                                 <option value="">-- Select ND Set --</option>
                                 {% for set in nd_sets %}
                                 <option value="{{ set }}">{{ set }}</option>
@@ -753,9 +755,10 @@
                             <div class="info-text"><i class="fas fa-info-circle"></i> Select the National Diploma academic set for carryover processing</div>
                         </div>
 
+                        <!-- UPDATED FIELD NAMES -->
                         <div class="form-group">
-                            <label for="nd_resit_semester" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
-                            <select id="nd_resit_semester" name="resit_semester" required>
+                            <label for="selected_semester" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
+                            <select id="selected_semester" name="selected_semester" required>
                                 <option value="">-- Select Semester --</option>
                                 <option value="ND-FIRST-YEAR-FIRST-SEMESTER">First Year - First Semester</option>
                                 <option value="ND-FIRST-YEAR-SECOND-SEMESTER">First Year - Second Semester</option>
@@ -765,15 +768,22 @@
                             <div class="info-text"><i class="fas fa-info-circle"></i> Select the semester for carryover processing</div>
                         </div>
 
+                        <!-- UPDATED FIELD NAMES -->
                         <div class="form-group">
-                            <label for="nd_resit_file" class="required"><i class="fas fa-file-upload"></i> ND Resit Results File (Excel)</label>
-                            <input type="file" id="nd_resit_file" name="resit_file" accept=".xlsx,.xls" required>
+                            <label for="resit_file" class="required"><i class="fas fa-file-upload"></i> ND Resit Results File (Excel)</label>
+                            <input type="file" id="resit_file" name="resit_file" accept=".xlsx,.xls" required>
                             <div class="info-text"><i class="fas fa-info-circle"></i> Upload the National Diploma resit results Excel file</div>
                         </div>
 
                         <div class="carryover-note">
                             <i class="fas fa-info-circle"></i> 
                             <strong>File Format:</strong> Upload an Excel file with columns: Student ID, Course Code, Score for National Diploma students.
+                        </div>
+
+                        <!-- ADDED: NEW FEATURES INFORMATION -->
+                        <div class="carryover-note" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-color: var(--success); color: #155724;">
+                            <i class="fas fa-robot"></i> 
+                            <strong>NEW AUTO-UPDATE FEATURE:</strong> This process now automatically updates the original mastersheet with passed resit scores (≥50) and recalculates GPA, TCPE, and CGPA metrics.
                         </div>
                     </div>
 
@@ -843,16 +853,16 @@
         }
 
         function validateNDCarryoverForm() {
-            const resitSet = document.getElementById('nd_resit_set').value;
-            const resitSemester = document.getElementById('nd_resit_semester').value;
-            const resitFile = document.getElementById('nd_resit_file').value;
+            const selectedSet = document.getElementById('selected_set').value;
+            const selectedSemester = document.getElementById('selected_semester').value;
+            const resitFile = document.getElementById('resit_file').value;
             
-            if (!resitSet) {
+            if (!selectedSet) {
                 alert('Please select a National Diploma academic set for carryover processing.');
                 return false;
             }
             
-            if (!resitSemester) {
+            if (!selectedSemester) {
                 alert('Please select a target semester for carryover processing.');
                 return false;
             }

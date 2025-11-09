@@ -141,7 +141,72 @@ def create_zip_from_directory(source_dir, zip_filename, remove_original=True):
         logger.error(f"❌ Failed to create ZIP: {e}")
         return False
 
-def enforce_zip_only_policy(clean_dir, zip_base_name):
+def enforce_zip_only_policy(directory):
+    """Enforce ZIP-only policy but PROTECT CARRYOVER_RECORDS and recent CARRYOVER_* directories"""
+    print(f"🔒 Enforcing ZIP-only policy in: {directory}")
+    
+    if not os.path.exists(directory):
+        return
+    
+    items = os.listdir(directory)
+    zip_files = [f for f in items if f.endswith('.zip')]
+    directories = [d for d in items if os.path.isdir(os.path.join(directory, d))]
+    other_files = [f for f in items if not f.endswith('.zip') and not os.path.isdir(os.path.join(directory, f))]
+    
+    print(f"📊 ZIP enforcement - ZIPs: {len(zip_files)}, Dirs: {len(directories)}, Files: {len(other_files)}")
+    
+    removed_dirs = 0
+    removed_files = 0
+    
+    # PROTECTED: Skip CARRYOVER_RECORDS and recent CARRYOVER_* directories
+    protected_dirs = []
+    removable_dirs = []
+    
+    for d in directories:
+        if d == "CARRYOVER_RECORDS":
+            protected_dirs.append(d)
+        elif d.startswith("CARRYOVER_"):
+            # Check age - protect if less than 7 days old
+            dir_path = os.path.join(directory, d)
+            try:
+                age_days = (datetime.now().timestamp() - os.path.getmtime(dir_path)) / 86400
+                if age_days < 7:
+                    protected_dirs.append(f"{d} (age: {age_days:.1f}d)")
+                else:
+                    removable_dirs.append(d)
+            except:
+                removable_dirs.append(d)
+        else:
+            removable_dirs.append(d)
+    
+    if protected_dirs:
+        print(f"🛡️  PROTECTED directories (skipped): {protected_dirs}")
+    
+    # Remove non-protected directories
+    for dir_name in removable_dirs:
+        dir_path = os.path.join(directory, dir_name)
+        try:
+            shutil.rmtree(dir_path)
+            print(f"🗑️ Removed directory: {dir_name}")
+            removed_dirs += 1
+        except Exception as e:
+            print(f"⚠️ Error removing directory {dir_name}: {e}")
+    
+    # Remove non-ZIP files
+    for file_name in other_files:
+        file_path = os.path.join(directory, file_name)
+        try:
+            os.remove(file_path)
+            print(f"🗑️ Removed file: {file_name}")
+            removed_files += 1
+        except Exception as e:
+            print(f"⚠️ Error removing file {file_name}: {e}")
+    
+    print(f"🧹 CLEANUP completed: {removed_dirs} folders, {removed_files} files removed. CARRYOVER_RECORDS and recent CARRYOVER_* directories protected.")
+    
+    return len(zip_files), removed_dirs, removed_files
+
+def enforce_zip_only_policy_legacy(clean_dir, zip_base_name):
     """ENFORCE ZIP-ONLY POLICY: Remove all non-ZIP files and create ZIP if needed"""
     try:
         if not os.path.exists(clean_dir):
@@ -1196,7 +1261,7 @@ def check_exam_processor_files(input_dir, program, selected_set=None):
             "*credit*.xlsx"
         ]
        
-        for pattern in course_patterns:
+        for pattern in patterns:
             for file in os.listdir(course_dir):
                 if file.lower().endswith('.xlsx') and any(keyword in file.lower() for keyword in ['course', 'credit']):
                     course_file = os.path.join(course_dir, file)
@@ -1587,8 +1652,7 @@ def get_files_by_category():
         for set_name in sets:
             clean_dir = os.path.join(program_dir, set_name, "CLEAN_RESULTS")
             if os.path.exists(clean_dir):
-                zip_base_name = f"{set_name}_RESULTS"
-                enforce_zip_only_policy(clean_dir, zip_base_name)
+                enforce_zip_only_policy(clean_dir)
     # Enforce for other result directories
     other_dirs = {
         "putme_results": os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT"),
@@ -1599,8 +1663,7 @@ def get_files_by_category():
    
     for category, dir_path in other_dirs.items():
         if os.path.exists(dir_path):
-            zip_base_name = f"{category.upper().replace('_', ' ')}"
-            enforce_zip_only_policy(dir_path, zip_base_name)
+            enforce_zip_only_policy(dir_path)
     # Process program results - ONLY ZIP FILES
     for program in ["ND", "BN", "BM"]:
         program_dir = os.path.join(BASE_DIR, program)
@@ -1743,7 +1806,6 @@ def create_zip_manually(category, set_name):
         if category in ["nd_results", "bn_results", "bm_results"]:
             program = category.split('_')[0].upper()
             clean_dir = os.path.join(BASE_DIR, program, set_name, "CLEAN_RESULTS")
-            zip_base_name = f"{set_name}_RESULTS"
         else:
             dir_map = {
                 "putme_results": os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT"),
@@ -1752,10 +1814,9 @@ def create_zip_manually(category, set_name):
                 "jamb_results": os.path.join(BASE_DIR, "JAMB_DB", "CLEAN_JAMB_DB"),
             }
             clean_dir = dir_map.get(category)
-            zip_base_name = f"{category.upper().replace('_', ' ')}"
        
         if clean_dir and os.path.exists(clean_dir):
-            if enforce_zip_only_policy(clean_dir, zip_base_name):
+            if enforce_zip_only_policy(clean_dir):
                 flash(f"✅ Successfully created ZIP file for {set_name or category}", "success")
             else:
                 flash(f"❌ Failed to create ZIP file for {set_name or category}", "error")
@@ -2623,26 +2684,10 @@ def process_script_with_strict_zip_enforcement(script_name, program, selected_se
         # 🔒 STRICT ZIP ENFORCEMENT for ALL scripts
         clean_dir = get_clean_directory(script_name, program, selected_set)
        
-        # Determine zip base name based on script type
-        if script_name in ["exam_processor_nd", "exam_processor_bn", "exam_processor_bm"]:
-            zip_base_name = f"{selected_set}_RESULTS"
-        elif script_name == "nd_carryover_processor":
-            zip_base_name = f"{selected_set}_CARRYOVER_RESULTS"
-        elif script_name == "utme":
-            zip_base_name = "PUTME_RESULTS"
-        elif script_name == "caosce":
-            zip_base_name = "CAOSCE_RESULTS"
-        elif script_name == "clean":
-            zip_base_name = "INTERNAL_EXAM_RESULTS"
-        elif script_name == "split":
-            zip_base_name = "JAMB_DB_RESULTS"
-        else:
-            zip_base_name = f"{script_name.upper()}_RESULTS"
-       
         # Enforce ZIP-only policy
         if os.path.exists(clean_dir):
             logger.info(f"🔒 Enforcing STRICT ZIP-only policy for {script_name}")
-            enforce_zip_only_policy(clean_dir, zip_base_name)
+            enforce_zip_only_policy(clean_dir)
        
         return {"success": True, "output": output_lines}
        
@@ -3130,7 +3175,7 @@ def download_center():
         files_by_category = get_files_by_category()
         for category, files in files_by_category.items():
             if isinstance(files, dict):
-                total_files = sum(len(files_in_set) for files_in_set in files.values())
+                total_files = sum(len(f) for f in files.values())
                 app.logger.info(f"Download center - {category}: {total_files} ZIP files across {len(files)} sets")
             else:
                 app.logger.info(f"Download center - {category}: {len(files)} ZIP files")
@@ -3578,6 +3623,122 @@ def process_resit():
         flash(f"Resit processing failed: {str(e)}", "error")
         return redirect(url_for("nd_carryover"))
 
+# ============================================================================
+# UPDATED: Process ND Carryover Route with Enhanced Logging
+# ============================================================================
+@app.route('/process_nd_carryover', methods=['POST'])
+@login_required
+def process_nd_carryover():
+    """Process ND carryover resit results with automatic mastersheet update"""
+    try:
+        logger.info("ND CARRYOVER: Route called")
+        
+        # Get form data
+        selected_set = request.form.get('selected_set')
+        selected_semester = request.form.get('selected_semester')
+        resit_file = request.files.get('resit_file')
+        
+        logger.info(f"ND CARRYOVER: Set={selected_set}, Semester={selected_semester}")
+        
+        # Validation
+        if not all([selected_set, selected_semester, resit_file]):
+            flash('All fields are required', 'error')
+            return redirect(url_for('nd_carryover'))
+        
+        # Save uploaded file
+        upload_dir = os.path.join(BASE_DIR, "ND", selected_set, "RAW_RESULTS", "CARRYOVER")
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        filename = f"nd_resit_{selected_semester}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        file_path = os.path.join(upload_dir, filename)
+        resit_file.save(file_path)
+        
+        logger.info(f"✅ Resit file saved: {file_path}")
+        
+        # ============================================================================
+        # STEP 1: Find latest regular ZIP for BASE_RESULT_PATH
+        # ============================================================================
+        clean_dir = os.path.join(BASE_DIR, "ND", selected_set, "CLEAN_RESULTS")
+        regular_zips = [f for f in os.listdir(clean_dir) 
+                       if f.startswith(f"{selected_set}_RESULT-") 
+                       and f.endswith('.zip') 
+                       and 'CARRYOVER' not in f.upper() 
+                       and 'UPDATED' not in f.upper()]
+
+        if regular_zips:
+            latest_zip = sorted(regular_zips)[-1]
+            base_result_path = os.path.join(clean_dir, latest_zip)
+            os.environ['BASE_RESULT_PATH'] = base_result_path
+            logger.info(f"Set BASE_RESULT_PATH: {base_result_path}")
+        else:
+            flash("No regular result ZIP found for update. Please process regular results first.", "error")
+            return redirect(url_for("nd_carryover"))
+
+        # ============================================================================
+        # STEP 2: Set OUTPUT_DIR
+        # ============================================================================
+        os.environ['OUTPUT_DIR'] = clean_dir
+        logger.info(f"Set OUTPUT_DIR: {clean_dir}")
+
+        # Set other environment variables
+        os.environ['SELECTED_SET'] = selected_set
+        os.environ['SELECTED_SEMESTERS'] = selected_semester
+        os.environ['RESIT_FILE_PATH'] = file_path
+        os.environ['WEB_MODE'] = 'true'
+        
+        # Run processor
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(script_dir)
+        processor_path = os.path.join(SCRIPT_DIR, 'nd_carryover_processor.py')
+        
+        if not os.path.exists(processor_path):
+            flash(f'Processor not found: {processor_path}', 'error')
+            return redirect(url_for('nd_carryover'))
+        
+        result = subprocess.run(
+            [sys.executable, processor_path],
+            capture_output=True,
+            text=True,
+            timeout=600
+        )
+        
+        # Clean up uploaded file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        
+        # ENHANCED: Log subprocess output
+        logger.info("=== ND CARRYOVER PROCESSOR OUTPUT ===")
+        for line in result.stdout.splitlines():
+            logger.info(line)
+        logger.info("=== ND CARRYOVER PROCESSOR ERRORS ===")
+        for line in result.stderr.splitlines():
+            logger.error(line)
+        
+        if result.returncode == 0:
+            # Check if UPDATED_ ZIP was actually created
+            updated_zips = [f for f in os.listdir(clean_dir) 
+                          if f.startswith("UPDATED_") and f.endswith('.zip')]
+            
+            if updated_zips:
+                flash('✅ Carryover processing completed! UPDATED ZIP was created.', 'success')
+                logger.info(f"✅ UPDATED ZIP created: {updated_zips[0]}")
+            else:
+                flash('⚠️ Carryover processing completed but UPDATED ZIP was not created. Check logs.', 'warning')
+                logger.warning("UPDATED ZIP was not created despite successful processing")
+        else:
+            error_msg = result.stderr.splitlines()[-1] if result.stderr else "Unknown error"
+            flash(f'❌ Carryover processing failed: {error_msg}', 'error')
+            logger.error(f"Subprocess failed with code {result.returncode}")
+        
+        return redirect(url_for('nd_carryover'))
+        
+    except Exception as e:
+        logger.error(f"ND carryover error: {e}")
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('nd_carryover'))
+
 @app.route("/debug_resit_files/<program>/<set_name>")
 @login_required
 def debug_resit_files(program, set_name):
@@ -3846,6 +4007,12 @@ def run_script(script_name):
                 processed_files = count_processed_files(output_lines, script_name)
                 success_msg = get_success_message(script_name, processed_files, output_lines)
                 flash(success_msg or "Processing completed successfully!", "success")
+                
+                # 🔒 ENFORCE ZIP-ONLY POLICY for all scripts
+                clean_dir = get_clean_directory(script_name)
+                if os.path.exists(clean_dir):
+                    enforce_zip_only_policy(clean_dir)
+                    logger.info(f"🔒 Enforced ZIP-only policy for {script_name} in {clean_dir}")
             else:
                 error_msg = result.stderr.splitlines()[-1] if result.stderr else "Unknown error"
                 flash(f"Processing failed: {error_msg}", "error")
@@ -4002,7 +4169,7 @@ def putme_processor():
             # Enforce ZIP-only policy
             clean_dir = os.path.join(BASE_DIR, "PUTME_RESULT", "CLEAN_PUTME_RESULT")
             if os.path.exists(clean_dir):
-                enforce_zip_only_policy(clean_dir, "PUTME_RESULTS")
+                enforce_zip_only_policy(clean_dir)
            
             flash(success_msg or "PUTME processing completed successfully!", "success")
         else:
@@ -4039,6 +4206,240 @@ def debug_putme_files():
         'candidate_exists': os.path.exists(candidate_dir),
         'candidate_files': os.listdir(candidate_dir) if os.path.exists(candidate_dir) else []
     })
+
+# ============================================================================
+# NEW: Routes for other script processors (CAOSCE, Internal, JAMB)
+# ============================================================================
+@app.route("/caosce_processor", methods=["GET", "POST"])
+@login_required
+def caosce_processor():
+    """CAOSCE Results processor form and handler"""
+    try:
+        if request.method == "GET":
+            return render_template(
+                "caosce_processor.html",
+                college=COLLEGE,
+                department=DEPARTMENT,
+                environment="Railway Production" if not is_local_environment() else "Local Development"
+            )
+       
+        # POST - Handle form submission
+        # Validate input directory
+        input_dir = os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
+       
+        if not check_caosce_files(input_dir):
+            flash("No CAOSCE files found in RAW_CAOSCE_RESULT directory", "error")
+            return redirect(url_for("caosce_processor"))
+       
+        # Setup environment
+        env = os.environ.copy()
+        env["BASE_DIR"] = BASE_DIR
+       
+        # Get script path
+        script_path = os.path.join(SCRIPT_DIR, "caosce_result.py")
+       
+        # Run script
+        result = subprocess.run(
+            [sys.executable, script_path],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=600,
+        )
+       
+        output_lines = result.stdout.splitlines()
+        error_lines = result.stderr.splitlines()
+       
+        # Log output
+        logger.info("=== CAOSCE PROCESSING OUTPUT ===")
+        for line in output_lines:
+            logger.info(line)
+       
+        if error_lines:
+            logger.error("=== CAOSCE PROCESSING ERRORS ===")
+            for line in error_lines:
+                logger.error(line)
+       
+        # Check success
+        if result.returncode == 0:
+            processed_files = count_processed_files(output_lines, "caosce")
+            success_msg = get_success_message("caosce", processed_files, output_lines)
+           
+            # Enforce ZIP-only policy
+            clean_dir = os.path.join(BASE_DIR, "CAOSCE_RESULT", "CLEAN_CAOSCE_RESULT")
+            if os.path.exists(clean_dir):
+                enforce_zip_only_policy(clean_dir)
+           
+            flash(success_msg or "CAOSCE processing completed successfully!", "success")
+        else:
+            error_msg = error_lines[-1] if error_lines else "Unknown error"
+            flash(f"CAOSCE processing failed: {error_msg}", "error")
+       
+        return redirect(url_for("caosce_processor"))
+       
+    except subprocess.TimeoutExpired:
+        flash("CAOSCE processing timed out after 10 minutes", "error")
+        return redirect(url_for("caosce_processor"))
+    except Exception as e:
+        logger.error(f"CAOSCE processing error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("caosce_processor"))
+
+@app.route("/internal_processor", methods=["GET", "POST"])
+@login_required
+def internal_processor():
+    """Internal Results processor form and handler"""
+    try:
+        if request.method == "GET":
+            return render_template(
+                "internal_processor.html",
+                college=COLLEGE,
+                department=DEPARTMENT,
+                environment="Railway Production" if not is_local_environment() else "Local Development"
+            )
+       
+        # POST - Handle form submission
+        # Validate input directory
+        input_dir = os.path.join(BASE_DIR, "OBJ_RESULT", "RAW_OBJ")
+       
+        if not check_internal_exam_files(input_dir):
+            flash("No internal exam files found in RAW_OBJ directory", "error")
+            return redirect(url_for("internal_processor"))
+       
+        # Setup environment
+        env = os.environ.copy()
+        env["BASE_DIR"] = BASE_DIR
+       
+        # Get script path
+        script_path = os.path.join(SCRIPT_DIR, "obj_results.py")
+       
+        # Run script
+        result = subprocess.run(
+            [sys.executable, script_path],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=600,
+        )
+       
+        output_lines = result.stdout.splitlines()
+        error_lines = result.stderr.splitlines()
+       
+        # Log output
+        logger.info("=== INTERNAL EXAM PROCESSING OUTPUT ===")
+        for line in output_lines:
+            logger.info(line)
+       
+        if error_lines:
+            logger.error("=== INTERNAL EXAM PROCESSING ERRORS ===")
+            for line in error_lines:
+                logger.error(line)
+       
+        # Check success
+        if result.returncode == 0:
+            processed_files = count_processed_files(output_lines, "clean")
+            success_msg = get_success_message("clean", processed_files, output_lines)
+           
+            # Enforce ZIP-only policy
+            clean_dir = os.path.join(BASE_DIR, "OBJ_RESULT", "CLEAN_OBJ")
+            if os.path.exists(clean_dir):
+                enforce_zip_only_policy(clean_dir)
+           
+            flash(success_msg or "Internal exam processing completed successfully!", "success")
+        else:
+            error_msg = error_lines[-1] if error_lines else "Unknown error"
+            flash(f"Internal exam processing failed: {error_msg}", "error")
+       
+        return redirect(url_for("internal_processor"))
+       
+    except subprocess.TimeoutExpired:
+        flash("Internal exam processing timed out after 10 minutes", "error")
+        return redirect(url_for("internal_processor"))
+    except Exception as e:
+        logger.error(f"Internal exam processing error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("internal_processor"))
+
+@app.route("/jamb_processor", methods=["GET", "POST"])
+@login_required
+def jamb_processor():
+    """JAMB Results processor form and handler"""
+    try:
+        if request.method == "GET":
+            return render_template(
+                "jamb_processor.html",
+                college=COLLEGE,
+                department=DEPARTMENT,
+                environment="Railway Production" if not is_local_environment() else "Local Development"
+            )
+       
+        # POST - Handle form submission
+        # Validate input directory
+        input_dir = os.path.join(BASE_DIR, "JAMB_DB", "RAW_JAMB_DB")
+       
+        if not check_split_files(input_dir):
+            flash("No JAMB files found in RAW_JAMB_DB directory", "error")
+            return redirect(url_for("jamb_processor"))
+       
+        # Setup environment
+        env = os.environ.copy()
+        env["BASE_DIR"] = BASE_DIR
+       
+        # Get script path
+        script_path = os.path.join(SCRIPT_DIR, "split_names.py")
+       
+        # Run script
+        result = subprocess.run(
+            [sys.executable, script_path],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=600,
+        )
+       
+        output_lines = result.stdout.splitlines()
+        error_lines = result.stderr.splitlines()
+       
+        # Log output
+        logger.info("=== JAMB PROCESSING OUTPUT ===")
+        for line in output_lines:
+            logger.info(line)
+       
+        if error_lines:
+            logger.error("=== JAMB PROCESSING ERRORS ===")
+            for line in error_lines:
+                logger.error(line)
+       
+        # Check success
+        if result.returncode == 0:
+            processed_files = count_processed_files(output_lines, "split")
+            success_msg = get_success_message("split", processed_files, output_lines)
+           
+            # Enforce ZIP-only policy
+            clean_dir = os.path.join(BASE_DIR, "JAMB_DB", "CLEAN_JAMB_DB")
+            if os.path.exists(clean_dir):
+                enforce_zip_only_policy(clean_dir)
+           
+            flash(success_msg or "JAMB processing completed successfully!", "success")
+        else:
+            error_msg = error_lines[-1] if error_lines else "Unknown error"
+            flash(f"JAMB processing failed: {error_msg}", "error")
+       
+        return redirect(url_for("jamb_processor"))
+       
+    except subprocess.TimeoutExpired:
+        flash("JAMB processing timed out after 10 minutes", "error")
+        return redirect(url_for("jamb_processor"))
+    except Exception as e:
+        logger.error(f"JAMB processing error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("jamb_processor"))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
