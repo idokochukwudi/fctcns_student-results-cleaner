@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 exam_result_processor.py
-Complete script with integrated carryover student management.
-UPDATED VERSION - Fixed carryover students count in ANALYSIS sheet and added professional formatting
+Complete script with ENFORCED probation/withdrawal rule and integrated carryover student management.
+UPDATED VERSION - Enforced probation/withdrawal rule and added professional formatting
 """
 from openpyxl.cell import MergedCell
 from openpyxl.drawing.image import Image as XLImage
@@ -413,7 +413,7 @@ def initialize_carryover_tracker():
 def identify_carryover_students(mastersheet_df, semester_key, set_name, pass_threshold=50.0):
     """
     Identify students with carryover courses from current semester processing.
-    Returns list of carryover students with their failed courses.
+    UPDATED: Includes both Resit and Probation students as carryover students
     """
     carryover_students = []
    
@@ -428,40 +428,44 @@ def identify_carryover_students(mastersheet_df, semester_key, set_name, pass_thr
         student_name = student['NAME']
         remarks = str(student['REMARKS'])
        
-        for course in course_columns:
-            score = student.get(course, 0)
-            try:
-                score_val = float(score) if pd.notna(score) else 0
-                if score_val < pass_threshold:
-                    failed_courses.append({
-                        'course_code': course,
-                        'original_score': score_val,
-                        'semester': semester_key,
-                        'set': set_name,
-                        'resit_attempts': 0,
-                        'best_score': score_val,
-                        'status': 'Failed' # Failed, Passed_Resit, Carryover
-                    })
-            except (ValueError, TypeError):
-                continue
-       
-        if failed_courses and "Withdrawn" not in remarks:
-            carryover_data = {
-                'exam_number': exam_no,
-                'name': student_name,
-                'failed_courses': failed_courses,
-                'semester': semester_key,
-                'set': set_name,
-                'identified_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'total_resit_attempts': 0,
-                'status': 'Active' # Active, Cleared, Withdrawn
-            }
-            carryover_students.append(carryover_data)
+        # Include both Resit and Probation students in carryover
+        if remarks in ["Resit", "Probation"]:
+            for course in course_columns:
+                score = student.get(course, 0)
+                try:
+                    score_val = float(score) if pd.notna(score) else 0
+                    if score_val < pass_threshold:
+                        failed_courses.append({
+                            'course_code': course,
+                            'original_score': score_val,
+                            'semester': semester_key,
+                            'set': set_name,
+                            'resit_attempts': 0,
+                            'best_score': score_val,
+                            'status': 'Failed'
+                        })
+                except (ValueError, TypeError):
+                    continue
            
-            # Update global tracker
-            student_key = f"{exam_no}_{semester_key}"
-            CARRYOVER_STUDENTS[student_key] = carryover_data
+            if failed_courses:
+                carryover_data = {
+                    'exam_number': exam_no,
+                    'name': student_name,
+                    'failed_courses': failed_courses,
+                    'semester': semester_key,
+                    'set': set_name,
+                    'identified_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'total_resit_attempts': 0,
+                    'status': 'Active',
+                    'probation_status': remarks == "Probation"  # Track if on probation
+                }
+                carryover_students.append(carryover_data)
+               
+                # Update global tracker
+                student_key = f"{exam_no}_{semester_key}"
+                CARRYOVER_STUDENTS[student_key] = carryover_data
    
+    print(f"📊 Identified {len(carryover_students)} carryover students ({len([s for s in carryover_students if s['probation_status']])} on probation)")
     return carryover_students
 
 def save_carryover_records(carryover_students, output_dir, set_name, semester_key):
@@ -573,6 +577,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     Create a CGPA summary sheet that aggregates GPA across all semesters.
     FIXED: Added withdrawn status column and sorting by Cumulative CGPA
     UPDATED: Added professional formatting with school name and title
+    UPDATED: Added probation status tracking
     """
     try:
         print("📊 Creating CGPA Summary Sheet...")
@@ -587,10 +592,11 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             if sheet_name in SEMESTER_ORDER:
                 df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
                
-                # Find exam number and GPA columns
+                # Find exam number, GPA, and REMARKS columns
                 exam_col = find_exam_number_column(df)
                 gpa_col = None
                 name_col = None
+                remarks_col = None
                
                 for col in df.columns:
                     col_str = str(col).upper()
@@ -598,6 +604,8 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                         gpa_col = col
                     elif 'NAME' in col_str:
                         name_col = col
+                    elif 'REMARKS' in col_str:
+                        remarks_col = col
                
                 if exam_col and gpa_col:
                     for idx, row in df.iterrows():
@@ -606,20 +614,28 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                             if exam_no not in cgpa_data:
                                 cgpa_data[exam_no] = {
                                     'name': row[name_col] if name_col and pd.notna(row.get(name_col)) else '',
-                                    'gpas': {}, # Semester GPAs
-                                    'status': 'Active' # Default status
+                                    'gpas': {},
+                                    'status': 'Active',
+                                    'probation_semesters': []
                                 }
                             cgpa_data[exam_no]['gpas'][sheet_name] = row[gpa_col]
+                            
+                            # Track probation status
+                            if remarks_col and pd.notna(row.get(remarks_col)):
+                                remarks = str(row[remarks_col])
+                                if remarks == "Probation" and sheet_name not in cgpa_data[exam_no]['probation_semesters']:
+                                    cgpa_data[exam_no]['probation_semesters'].append(sheet_name)
        
-        # Create CGPA summary dataframe
+        # Create CGPA summary dataframe with probation tracking
         summary_data = []
         for exam_no, data in cgpa_data.items():
             row = {
                 'EXAM NUMBER': exam_no,
-                'NAME': data['name']
+                'NAME': data['name'],
+                'PROBATION HISTORY': ', '.join(data['probation_semesters']) if data['probation_semesters'] else 'None'
             }
            
-            # Add GPA for each semester
+            # Add GPA for each semester and calculate cumulative
             total_gpa = 0
             semester_count = 0
            
@@ -632,7 +648,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 else:
                     row[semester] = None
            
-            # Calculate Cumulative CGPA (average of all semester GPAs)
+            # Calculate Cumulative CGPA
             row['CUMULATIVE CGPA'] = round(total_gpa / semester_count, 2) if semester_count > 0 else 0.0
            
             # Check if student is withdrawn
@@ -671,8 +687,8 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         date_cell.font = Font(italic=True, size=10)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
        
-        # Write header with correct terminology
-        headers = ['EXAM NUMBER', 'NAME'] + SEMESTER_ORDER + ['CUMULATIVE CGPA', 'WITHDRAWN']
+        # Write header with correct terminology and probation history
+        headers = ['EXAM NUMBER', 'NAME', 'PROBATION HISTORY'] + SEMESTER_ORDER + ['CUMULATIVE CGPA', 'WITHDRAWN']
         for col_idx, header in enumerate(headers, 1):
             ws.cell(row=5, column=col_idx, value=header)
        
@@ -705,7 +721,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                                    top=Side(style="thin"), bottom=Side(style="thin"))
                
                 # Center align numeric and code columns
-                if col <= 2 or col > len(headers) - 2:  # Exam Number, Name, Cumulative CGPA, Withdrawn
+                if col <= 3 or col > len(headers) - 2:  # Exam Number, Name, Probation History, Cumulative CGPA, Withdrawn
                     cell.alignment = Alignment(horizontal="left", vertical="center")
                 else:
                     cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -734,6 +750,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             max_cgpa = summary_df['CUMULATIVE CGPA'].max()
             min_cgpa = summary_df['CUMULATIVE CGPA'].min()
             withdrawn_count = (summary_df['WITHDRAWN'] == 'Yes').sum()
+            probation_count = (summary_df['PROBATION HISTORY'] != 'None').sum()
            
             ws.cell(row=stats_row, column=1, value=f"Average Cumulative CGPA: {avg_cgpa:.2f}")
             stats_row += 1
@@ -742,9 +759,11 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             ws.cell(row=stats_row, column=1, value=f"Lowest Cumulative CGPA: {min_cgpa:.2f}")
             stats_row += 1
             ws.cell(row=stats_row, column=1, value=f"Withdrawn Students: {withdrawn_count}")
+            stats_row += 1
+            ws.cell(row=stats_row, column=1, value=f"Students with Probation History: {probation_count}")
        
         wb.save(mastersheet_path)
-        print("✅ CGPA Summary sheet created successfully with professional formatting")
+        print("✅ CGPA Summary sheet created successfully with professional formatting and probation tracking")
        
         return summary_df
        
@@ -758,6 +777,7 @@ def create_analysis_sheet(mastersheet_path, timestamp):
     FIXED: Correct student counts using EXAM NUMBER pattern detection
     FIXED: CARRYOVER STUDENTS column now correctly counts students with Resit/Probation status
     UPDATED: Added professional formatting with school name and title
+    UPDATED: Correctly counts probation students in carryover statistics
     """
     try:
         print("📈 Creating Analysis Sheet...")
@@ -769,7 +789,8 @@ def create_analysis_sheet(mastersheet_path, timestamp):
             'semester': [],
             'total_students': [],
             'passed_all': [],
-            'carryover_students': [],
+            'resit_students': [],
+            'probation_students': [],
             'withdrawn_students': [],
             'average_gpa': [],
             'pass_rate': []
@@ -829,27 +850,44 @@ def create_analysis_sheet(mastersheet_path, timestamp):
                    
                     passed_all = len(passed_students)
                
-                # FIXED: Calculate carryover students (students with Resit or Probation status)
-                carryover_count = 0
+                # FIXED: Count resit students (students with Resit status)
+                resit_count = 0
                 if exam_col and 'REMARKS' in df.columns:
-                    carryover_students = set()
+                    resit_students = set()
                     for idx, row in df.iterrows():
                         exam_no = str(row[exam_col]).strip()
                         remarks = str(row['REMARKS']).strip() if pd.notna(row.get('REMARKS')) else ""
                        
-                        # Count students with "Resit" or "Probation" in remarks (but not withdrawn)
                         if (exam_no and
                             exam_no != 'nan' and
                             exam_no != '' and
                             not exam_no.lower().startswith('exam') and
                             not exam_no.lower().startswith('reg') and
                             len(exam_no) >= 3 and
-                            (remarks == "Resit" or remarks == "Probation") and
-                            "Withdraw" not in remarks): # Exclude withdrawn students from carryover count
-                            carryover_students.add(exam_no)
+                            remarks == "Resit"):
+                            resit_students.add(exam_no)
                    
-                    carryover_count = len(carryover_students)
-                    print(f"📊 {sheet_name}: Found {carryover_count} carryover students (Resit/Probation)")
+                    resit_count = len(resit_students)
+               
+                # FIXED: Count probation students (students with Probation status)
+                probation_count = 0
+                if exam_col and 'REMARKS' in df.columns:
+                    probation_students = set()
+                    for idx, row in df.iterrows():
+                        exam_no = str(row[exam_col]).strip()
+                        remarks = str(row['REMARKS']).strip() if pd.notna(row.get('REMARKS')) else ""
+                       
+                        if (exam_no and
+                            exam_no != 'nan' and
+                            exam_no != '' and
+                            not exam_no.lower().startswith('exam') and
+                            not exam_no.lower().startswith('reg') and
+                            len(exam_no) >= 3 and
+                            remarks == "Probation"):
+                            probation_students.add(exam_no)
+                   
+                    probation_count = len(probation_students)
+                    print(f"📊 {sheet_name}: Found {probation_count} probation students")
                
                 # FIXED: Calculate withdrawn students for this semester using global tracker
                 withdrawn_count = 0
@@ -894,7 +932,8 @@ def create_analysis_sheet(mastersheet_path, timestamp):
                 analysis_data['semester'].append(sheet_name)
                 analysis_data['total_students'].append(total_students)
                 analysis_data['passed_all'].append(passed_all)
-                analysis_data['carryover_students'].append(carryover_count)
+                analysis_data['resit_students'].append(resit_count)
+                analysis_data['probation_students'].append(probation_count)
                 analysis_data['withdrawn_students'].append(withdrawn_count)
                 analysis_data['average_gpa'].append(avg_gpa)
                 analysis_data['pass_rate'].append(round(pass_rate, 2))
@@ -902,7 +941,8 @@ def create_analysis_sheet(mastersheet_path, timestamp):
                 print(f"📊 {sheet_name} Analysis:")
                 print(f" Total Students (Exam Number count): {total_students}")
                 print(f" Passed All: {passed_all}")
-                print(f" Carryover Students: {carryover_count}")
+                print(f" Resit Students: {resit_count}")
+                print(f" Probation Students: {probation_count}")
                 print(f" Withdrawn Students: {withdrawn_count}")
                 print(f" Average GPA: {avg_gpa}")
                 print(f" Pass Rate: {round(pass_rate, 2)}%")
@@ -915,7 +955,8 @@ def create_analysis_sheet(mastersheet_path, timestamp):
             'semester': 'OVERALL',
             'total_students': analysis_df['total_students'].sum(),
             'passed_all': analysis_df['passed_all'].sum(),
-            'carryover_students': analysis_df['carryover_students'].sum(),
+            'resit_students': analysis_df['resit_students'].sum(),
+            'probation_students': analysis_df['probation_students'].sum(),
             'withdrawn_students': analysis_df['withdrawn_students'].sum(),
             'average_gpa': round(analysis_df['average_gpa'].mean(), 2),
             'pass_rate': round(analysis_df['pass_rate'].mean(), 2)
@@ -929,29 +970,29 @@ def create_analysis_sheet(mastersheet_path, timestamp):
         ws = wb.create_sheet('ANALYSIS')
        
         # ADD PROFESSIONAL HEADER WITH SCHOOL NAME
-        ws.merge_cells('A1:G1')
+        ws.merge_cells('A1:H1')
         title_cell = ws['A1']
         title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
         title_cell.font = Font(bold=True, size=16, color="FFFFFF")
         title_cell.alignment = Alignment(horizontal="center", vertical="center")
         title_cell.fill = PatternFill(start_color="1E90FF", end_color="1E90FF", fill_type="solid")
        
-        ws.merge_cells('A2:G2')
+        ws.merge_cells('A2:H2')
         subtitle_cell = ws['A2']
         subtitle_cell.value = "ACADEMIC PERFORMANCE ANALYSIS REPORT"
         subtitle_cell.font = Font(bold=True, size=14, color="000000")
         subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
         subtitle_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
        
-        ws.merge_cells('A3:G3')
+        ws.merge_cells('A3:H3')
         date_cell = ws['A3']
         date_cell.value = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         date_cell.font = Font(italic=True, size=10)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
        
         # Write header starting from row 5
-        headers = ['SEMESTER', 'TOTAL STUDENTS', 'PASSED ALL', 'CARRYOVER STUDENTS',
-                  'WITHDRAWN STUDENTS', 'AVERAGE GPA', 'PASS RATE (%)']
+        headers = ['SEMESTER', 'TOTAL STUDENTS', 'PASSED ALL', 'RESIT STUDENTS',
+                  'PROBATION STUDENTS', 'WITHDRAWN STUDENTS', 'AVERAGE GPA', 'PASS RATE (%)']
         for col_idx, header in enumerate(headers, 1):
             ws.cell(row=5, column=col_idx, value=header)
        
@@ -960,10 +1001,11 @@ def create_analysis_sheet(mastersheet_path, timestamp):
             ws.cell(row=row_idx+6, column=1, value=row_data['semester'])
             ws.cell(row=row_idx+6, column=2, value=row_data['total_students'])
             ws.cell(row=row_idx+6, column=3, value=row_data['passed_all'])
-            ws.cell(row=row_idx+6, column=4, value=row_data['carryover_students'])
-            ws.cell(row=row_idx+6, column=5, value=row_data['withdrawn_students'])
-            ws.cell(row=row_idx+6, column=6, value=row_data['average_gpa'])
-            ws.cell(row=row_idx+6, column=7, value=row_data['pass_rate'])
+            ws.cell(row=row_idx+6, column=4, value=row_data['resit_students'])
+            ws.cell(row=row_idx+6, column=5, value=row_data['probation_students'])
+            ws.cell(row=row_idx+6, column=6, value=row_data['withdrawn_students'])
+            ws.cell(row=row_idx+6, column=7, value=row_data['average_gpa'])
+            ws.cell(row=row_idx+6, column=8, value=row_data['pass_rate'])
        
         # Style the header row (row 5)
         for col in range(1, len(headers) + 1):
@@ -1016,15 +1058,17 @@ def create_analysis_sheet(mastersheet_path, timestamp):
         notes_row = len(analysis_df) + 7
         ws.cell(row=notes_row, column=1, value="ANALYSIS NOTES:").font = Font(bold=True, size=12)
         notes_row += 1
-        ws.cell(row=notes_row, column=1, value="• Carryover Students: Students with Resit or Probation status who need to retake failed courses")
+        ws.cell(row=notes_row, column=1, value="• Resit Students: Students with GPA ≥ 2.0 who failed ≤45% of credits")
+        notes_row += 1
+        ws.cell(row=notes_row, column=1, value="• Probation Students: Students with GPA < 2.0 OR failed >45% with GPA ≥ 2.0")
+        notes_row += 1
+        ws.cell(row=notes_row, column=1, value="• Withdrawn Students: Students who failed >45% of credits with GPA < 2.0")
         notes_row += 1
         ws.cell(row=notes_row, column=1, value="• Pass Rate: Percentage of students who passed all courses in the semester")
-        notes_row += 1
-        ws.cell(row=notes_row, column=1, value="• Withdrawn Students: Students advised to withdraw due to poor academic performance")
        
         wb.save(mastersheet_path)
         print("✅ Analysis sheet created successfully with accurate student counts using EXAM NUMBER")
-        print("✅ FIXED: Carryover students now correctly counted from Resit/Probation remarks")
+        print("✅ FIXED: Probation students now correctly counted and separated from resit students")
        
         return analysis_df
        
@@ -1033,6 +1077,153 @@ def create_analysis_sheet(mastersheet_path, timestamp):
         import traceback
         traceback.print_exc()
         return None
+
+# ----------------------------
+# ENFORCED STUDENT STATUS DETERMINATION - ENFORCED PROBATION/WITHDRAWAL RULE
+# ----------------------------
+def determine_student_status(row, total_cu, pass_threshold):
+    """
+    ENFORCE the rule based on:
+    | Category | GPA Condition | Credit Units Passed | Status                                                 |
+    | -------- | ------------- | ------------------- | ------------------------------------------------------ |
+    | 1        | GPA ≥ 2.00    | ≥ 45%               | To **resit** failed courses next session               |
+    | 2        | GPA < 2.00    | ≥ 45%               | **Placed on Probation**, to resit courses next session |
+    | 3        | Any GPA       | < 45%               | **Advised to withdraw**                                |
+    
+    Note: "Credit Units Passed" refers to the percentage of total credit units passed.
+    """
+    exam_no = row.get("EXAM NUMBER", "Unknown")
+    gpa = float(row.get("GPA", 0))
+    cu_passed = int(row.get("CU Passed", 0))
+    cu_failed = int(row.get("CU Failed", 0))
+    
+    # Calculate percentage of credit units passed
+    passed_percentage = (cu_passed / total_cu * 100) if total_cu > 0 else 0
+    
+    # ENFORCED DECISION LOGIC BASED ON THE RULE
+    # Rule 1: No failures → PASSED
+    if cu_failed == 0:
+        status = "Passed"
+        reason = "No failed courses"
+    
+    # Rule 3: Passed < 45% of credits → WITHDRAWN (regardless of GPA)
+    elif passed_percentage < 45:
+        status = "Withdrawn"
+        reason = f"Passed only {passed_percentage:.1f}% of credits (<45%) - Advised to withdraw"
+    
+    # Rule 1 & 2: Passed ≥ 45% of credits
+    else:
+        if gpa >= 2.00:
+            status = "Resit"
+            reason = f"GPA {gpa:.2f} ≥ 2.00, passed {passed_percentage:.1f}% of credits (≥45%) - To resit failed courses"
+        else:
+            status = "Probation"
+            reason = f"GPA {gpa:.2f} < 2.00, passed {passed_percentage:.1f}% of credits (≥45%) - Placed on probation, to resit courses"
+    
+    # Debug output for specific students
+    if hasattr(determine_student_status, 'debug_students'):
+        if exam_no in determine_student_status.debug_students or not hasattr(determine_student_status, 'count'):
+            if not hasattr(determine_student_status, 'count'):
+                determine_student_status.count = 0
+            determine_student_status.count += 1
+            
+            if determine_student_status.count <= 10:
+                print(f"\n   Student {exam_no}:")
+                print(f"      CU Passed: {cu_passed} ({passed_percentage:.1f}%), CU Failed: {cu_failed}")
+                print(f"      GPA: {gpa:.2f}")
+                print(f"      → Status: {status}")
+                print(f"      → Reason: {reason}")
+    
+    return status
+
+# Initialize debug list for specific students
+determine_student_status.debug_students = ['FCTCONS/ND24/109']
+determine_student_status.count = 0
+
+def validate_probation_withdrawal_logic(mastersheet, total_cu):
+    """
+    Validate that probation and withdrawal statuses are correctly assigned.
+    Specifically check edge cases around the 45% threshold.
+    """
+    print("\n" + "="*70)
+    print("🔍 VALIDATING PROBATION/WITHDRAWAL LOGIC - ENFORCED RULE")
+    print("="*70)
+    
+    # Check students who passed < 45% (should be Withdrawn regardless of GPA)
+    low_pass_students = mastersheet[
+        (mastersheet["CU Passed"] / total_cu < 0.45) & 
+        (mastersheet["CU Failed"] > 0)  # Exclude students with no failures
+    ]
+    
+    print(f"\n📊 Students with <45% credits passed:")
+    print(f"   Total: {len(low_pass_students)}")
+    
+    if len(low_pass_students) > 0:
+        print(f"\n   Should ALL be 'Withdrawn' (regardless of GPA):")
+        for idx, row in low_pass_students.head(10).iterrows():
+            exam_no = row["EXAM NUMBER"]
+            gpa = row["GPA"]
+            cu_passed = row["CU Passed"]
+            cu_failed = row["CU Failed"]
+            passed_pct = (cu_passed / total_cu * 100)
+            status = row["REMARKS"]
+            
+            correct = "✅" if status == "Withdrawn" else f"❌ (got {status})"
+            print(f"      {exam_no}: GPA={gpa:.2f}, Passed={passed_pct:.1f}%, Failed={cu_failed}, Status={status} {correct}")
+    
+    # Check students who passed ≥ 45% with GPA >= 2.00 (should be Resit)
+    high_gpa_adequate_pass = mastersheet[
+        (mastersheet["CU Passed"] / total_cu >= 0.45) & 
+        (mastersheet["GPA"] >= 2.00) &
+        (mastersheet["CU Failed"] > 0)  # Must have some failures
+    ]
+    
+    print(f"\n📊 Students with ≥45% credits passed AND GPA ≥ 2.00:")
+    print(f"   Total: {len(high_gpa_adequate_pass)}")
+    
+    if len(high_gpa_adequate_pass) > 0:
+        print(f"\n   Should ALL be 'Resit':")
+        for idx, row in high_gpa_adequate_pass.head(10).iterrows():
+            exam_no = row["EXAM NUMBER"]
+            gpa = row["GPA"]
+            cu_passed = row["CU Passed"]
+            passed_pct = (cu_passed / total_cu * 100)
+            status = row["REMARKS"]
+            
+            correct = "✅" if status == "Resit" else f"❌ (got {status})"
+            print(f"      {exam_no}: GPA={gpa:.2f}, Passed={passed_pct:.1f}%, Status={status} {correct}")
+    
+    # Check students who passed ≥ 45% with GPA < 2.00 (should be Probation)
+    low_gpa_adequate_pass = mastersheet[
+        (mastersheet["CU Passed"] / total_cu >= 0.45) & 
+        (mastersheet["GPA"] < 2.00) &
+        (mastersheet["CU Failed"] > 0)  # Must have some failures
+    ]
+    
+    print(f"\n📊 Students with ≥45% credits passed AND GPA < 2.00:")
+    print(f"   Total: {len(low_gpa_adequate_pass)}")
+    
+    if len(low_gpa_adequate_pass) > 0:
+        print(f"\n   Should ALL be 'Probation':")
+        for idx, row in low_gpa_adequate_pass.head(10).iterrows():
+            exam_no = row["EXAM NUMBER"]
+            gpa = row["GPA"]
+            cu_passed = row["CU Passed"]
+            passed_pct = (cu_passed / total_cu * 100)
+            status = row["REMARKS"]
+            
+            correct = "✅" if status == "Probation" else f"❌ (got {status})"
+            print(f"      {exam_no}: GPA={gpa:.2f}, Passed={passed_pct:.1f}%, Status={status} {correct}")
+    
+    # Status distribution
+    print(f"\n📊 Overall Status Distribution:")
+    status_counts = mastersheet["REMARKS"].value_counts()
+    for status in ["Passed", "Resit", "Probation", "Withdrawn"]:
+        count = status_counts.get(status, 0)
+        pct = (count / len(mastersheet) * 100) if len(mastersheet) > 0 else 0
+        print(f"   {status:12s}: {count:3d} ({pct:5.1f}%)")
+    
+    print("="*70)
 
 # ----------------------------
 # Upgrade Rule Functions
@@ -1166,10 +1357,11 @@ def initialize_student_tracker():
 def update_student_tracker(
         semester_key,
         exam_numbers,
-        withdrawn_students=None):
+        withdrawn_students=None,
+        probation_students=None):
     """
     Update the student tracker with current semester's students.
-    This helps track which students are present in each semester.
+    UPDATED: Tracks probation status separately
     """
     global STUDENT_TRACKER, WITHDRAWN_STUDENTS
     print(f"📊 Updating student tracker for {semester_key}")
@@ -1186,6 +1378,8 @@ def update_student_tracker(
                 }
                 print(f"🚫 Marked as withdrawn: {exam_no} in {semester_key}")
    
+    # Track probation students
+    probation_count = 0
     for exam_no in exam_numbers:
         if exam_no not in STUDENT_TRACKER:
             STUDENT_TRACKER[exam_no] = {
@@ -1194,7 +1388,9 @@ def update_student_tracker(
                 'semesters_present': [semester_key],
                 'status': 'Active',
                 'withdrawn': False,
-                'withdrawn_semester': None
+                'withdrawn_semester': None,
+                'probation_history': [],
+                'current_probation': False
             }
         else:
             STUDENT_TRACKER[exam_no]['last_seen'] = semester_key
@@ -1208,9 +1404,17 @@ def update_student_tracker(
                     if semester_key not in WITHDRAWN_STUDENTS[exam_no]['reappeared_semesters']:
                         WITHDRAWN_STUDENTS[exam_no]['reappeared_semesters'].append(
                             semester_key)
+       
+        # Update probation status if this student is on probation
+        if probation_students and exam_no in probation_students:
+            if semester_key not in STUDENT_TRACKER[exam_no]['probation_history']:
+                STUDENT_TRACKER[exam_no]['probation_history'].append(semester_key)
+            STUDENT_TRACKER[exam_no]['current_probation'] = True
+            probation_count += 1
    
     print(f"📈 Total unique students tracked: {len(STUDENT_TRACKER)}")
     print(f"🚫 Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+    print(f"⚠️  Total probation students: {probation_count}")
 
 def mark_student_withdrawn(exam_no, semester_key):
     """Mark a student as withdrawn in a specific semester."""
@@ -1828,30 +2032,6 @@ def get_cumulative_cgpa(
     total_credits = current_credits + previous_credits
     return round(total_points / total_credits, 2) if total_credits > 0 else 0.0
 
-def determine_student_status(row, total_cu, pass_threshold):
-    """
-    Determine student status based on performance metrics.
-    Returns: 'Pass', 'Carry Over', 'Probation', or 'Withdrawn'
-    """
-    gpa = row.get("GPA", 0)
-    cu_passed = row.get("CU Passed", 0)
-    cu_failed = row.get("CU Failed", 0)
-   
-    # Calculate percentage of failed credit units
-    failed_percentage = (cu_failed / total_cu) * 100 if total_cu > 0 else 0
-   
-    # Decision matrix based on the summary criteria
-    if cu_failed == 0:
-        return "Pass"
-    elif gpa >= 2.0 and failed_percentage <= 45:
-        return "Carry Over"
-    elif gpa < 2.0 and failed_percentage <= 45:
-        return "Probation"
-    elif failed_percentage > 45:
-        return "Withdrawn"
-    else:
-        return "Carry Over"
-
 def format_failed_courses_remark(failed_courses, max_line_length=60):
     """
     Format failed courses remark with line breaks for long lists.
@@ -1983,6 +2163,7 @@ def generate_individual_student_pdf(
     """
     Create a PDF with one page per student matching the sample format exactly.
     FIXED: Proper GPA vs CGPA terminology
+    UPDATED: Added specific probation reason based on ENFORCED rule
     """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -2351,8 +2532,6 @@ def generate_individual_student_pdf(
                         f"Failed: {failed_courses_formatted[0]}")
                     if len(failed_courses_formatted) > 1:
                         final_remarks_lines.extend(failed_courses_formatted[1:])
-                if current_gpa < 2.0:
-                    final_remarks_lines.append("Placed on Probation")
                 final_remarks_lines.append("To Resit Courses")
             elif student_status == "Probation":
                 if failed_courses_formatted:
@@ -2360,8 +2539,12 @@ def generate_individual_student_pdf(
                         f"Failed: {failed_courses_formatted[0]}")
                     if len(failed_courses_formatted) > 1:
                         final_remarks_lines.extend(failed_courses_formatted[1:])
-                final_remarks_lines.append("Placed on Probation")
-                final_remarks_lines.append("To Resit Courses")
+                
+                # UPDATED: Add specific probation reason based on ENFORCED rule
+                passed_percentage = (tcup / total_cu * 100) if total_cu > 0 else 0
+                if passed_percentage >= 45 and current_gpa < 2.00:
+                    final_remarks_lines.append("Placed on Probation (Passed ≥45% but GPA < 2.00)")
+                final_remarks_lines.append("To Resit Failed Courses")
        
         final_remarks = "<br/>".join(final_remarks_lines)
        
@@ -2783,15 +2966,14 @@ def process_single_file(
         if c not in mastersheet.columns:
             mastersheet[c] = 0
    
-    # NEW: Compute FAILED COURSES
+    # UPDATED: Compute FAILED COURSES with corrected logic
     def compute_failed_courses(row):
         """Compute list of failed courses."""
-        fails = [c for c in ordered_codes if float(
-            row.get(c, 0) or 0) < pass_threshold]
+        fails = [c for c in ordered_codes if float(row.get(c, 0) or 0) < pass_threshold]
         return ", ".join(sorted(fails)) if fails else ""
-   
+
     mastersheet["FAILED COURSES"] = mastersheet.apply(compute_failed_courses, axis=1)
-   
+
     # Calculate TCPE, TCUP, TCUF correctly
     def calc_tcpe_tcup_tcuf(row):
         tcpe = 0.0
@@ -2801,57 +2983,40 @@ def process_single_file(
             score = float(row.get(code, 0) or 0)
             cu = filtered_credit_units.get(code, 0)
             gp = get_grade_point(score)
-            # TCPE: Grade Point × Credit Units
             tcpe += gp * cu
-            # TCUP/TCUF: Count credit units based on pass/fail
             if score >= pass_threshold:
                 tcup += cu
             else:
                 tcuf += cu
         return tcpe, tcup, tcuf
-   
-    # Apply calculations to each row
-    results = mastersheet.apply(
-        calc_tcpe_tcup_tcuf,
-        axis=1,
-        result_type='expand')
+
+    results = mastersheet.apply(calc_tcpe_tcup_tcuf, axis=1, result_type='expand')
     mastersheet["TCPE"] = results[0].round(1)
     mastersheet["CU Passed"] = results[1]
     mastersheet["CU Failed"] = results[2]
-   
-    total_cu = sum(filtered_credit_units.values()
-                   ) if filtered_credit_units else 0
-   
-    # Calculate GPA - ALWAYS calculate the actual GPA (semester GPA)
+
+    total_cu = sum(filtered_credit_units.values()) if filtered_credit_units else 0
+
+    # Calculate GPA
     def calculate_gpa(row):
         tcpe = row["TCPE"]
         return round((tcpe / total_cu), 2) if total_cu > 0 else 0.0
-   
+
     mastersheet["GPA"] = mastersheet.apply(calculate_gpa, axis=1)
-    mastersheet["AVERAGE"] = mastersheet[[
-        c for c in ordered_codes]].mean(axis=1).round(0)
-   
-    # NEW: Compute REMARKS based on status after all calculations
-    def compute_status(row):
-        """Compute student status."""
-        return determine_student_status(row, total_cu, pass_threshold)
-    
-    status = mastersheet.apply(compute_status, axis=1)
-    
-    # UPDATED: Map status to remarks with PROBATION status
-    def map_status(s):
-        if s == "Pass":
-            return "Passed"
-        elif s == "Carry Over":
-            return "Resit"
-        elif s == "Probation":
-            return "Probation"  # NEW: Keep Probation status
-        elif s == "Withdrawn":
-            return "Withdrawn"
-        else:
-            return s
-    
-    mastersheet["REMARKS"] = status.apply(map_status)
+    mastersheet["AVERAGE"] = mastersheet[[c for c in ordered_codes]].mean(axis=1).round(0)
+
+    # ENFORCED: Compute REMARKS with ENFORCED rule logic
+    print("\n🎯 Determining student statuses with ENFORCED probation/withdrawal rule...")
+    determine_student_status.debug_students = ['FCTCONS/ND24/109']  # Add specific students to debug
+    determine_student_status.count = 0
+
+    mastersheet["REMARKS"] = mastersheet.apply(
+        lambda row: determine_student_status(row, total_cu, pass_threshold),
+        axis=1
+    )
+
+    # Validate the probation/withdrawal logic
+    validate_probation_withdrawal_logic(mastersheet, total_cu)
    
     # FILTER OUT PREVIOUSLY WITHDRAWN STUDENTS
     mastersheet, removed_students = filter_out_withdrawn_students(
@@ -2865,10 +3030,17 @@ def process_single_file(
             withdrawn_students.append(exam_no)
             mark_student_withdrawn(exam_no, semester_key)
             print(f"🚫 Student {exam_no} marked as withdrawn in {semester_key}")
+
+    # UPDATED: Identify probation students for tracking
+    probation_students = []
+    for idx, row in mastersheet.iterrows():
+        if row["REMARKS"] == "Probation":
+            exam_no = str(row["EXAM NUMBER"]).strip()
+            probation_students.append(exam_no)
    
     # Update student tracker with current semester's students (after filtering)
     exam_numbers = mastersheet["EXAM NUMBER"].astype(str).str.strip().tolist()
-    update_student_tracker(semester_key, exam_numbers, withdrawn_students)
+    update_student_tracker(semester_key, exam_numbers, withdrawn_students, probation_students)
    
     # Identify and save carryover students after processing
     carryover_students = identify_carryover_students(mastersheet, semester_key, set_name, pass_threshold)
@@ -3183,51 +3355,48 @@ def process_single_file(
             cell.font = Font(bold=True)
             cell.alignment = Alignment(horizontal="center")
    
-    # COMPREHENSIVE SUMMARY BLOCK - UPDATED TEXTS
+    # UPDATED: COMPREHENSIVE SUMMARY BLOCK - ENFORCED RULE
     total_students = len(mastersheet)
     passed_all = len(mastersheet[mastersheet["REMARKS"] == "Passed"])
-   
-    # Calculate students with GPA >= 2.0 but failed some courses
-    gpa_above_2_failed = len(mastersheet[
-        (mastersheet["GPA"] >= 2.0) &
-        (mastersheet["REMARKS"] == "Resit") &
-        (mastersheet["CU Passed"] >= 0.45 * total_cu)
+
+    # Count students by status with ENFORCED rule
+    resit_students = len(mastersheet[mastersheet["REMARKS"] == "Resit"])
+    probation_students = len(mastersheet[mastersheet["REMARKS"] == "Probation"])
+    withdrawn_students = len(mastersheet[mastersheet["REMARKS"] == "Withdrawn"])
+
+    # ENFORCED RULE: Break down students by the new criteria
+    resit_rule_students = len(mastersheet[
+        (mastersheet["REMARKS"] == "Resit") & 
+        (mastersheet["CU Passed"] / total_cu >= 0.45) &
+        (mastersheet["GPA"] >= 2.00)
     ])
-   
-    # Calculate students with GPA < 2.0 but passed at least 45% of credits
-    gpa_below_2_failed = len(mastersheet[
-        (mastersheet["GPA"] < 2.0) &
-        (mastersheet["REMARKS"] == "Probation") &  # UPDATED: Changed from "Resit" to "Probation"
-        (mastersheet["CU Passed"] >= 0.45 * total_cu)
+
+    probation_rule_students = len(mastersheet[
+        (mastersheet["REMARKS"] == "Probation") & 
+        (mastersheet["CU Passed"] / total_cu >= 0.45) &
+        (mastersheet["GPA"] < 2.00)
     ])
-   
-    # Calculate students who failed more than 45% of credit units
-    failed_over_45_percent = len(mastersheet[
-        (mastersheet["CU Failed"] > 0.45 * total_cu)
+
+    withdrawn_rule_students = len(mastersheet[
+        (mastersheet["REMARKS"] == "Withdrawn") & 
+        (mastersheet["CU Passed"] / total_cu < 0.45)
     ])
-   
-    # Add withdrawn student tracking to summary
+
+    # Add summary rows
     ws.append([])
     ws.append(["SUMMARY"])
-    ws.append(
-        [f"A total of {total_students} students registered and sat for the Examination"])
-    ws.append(
-        [f"A total of {passed_all} students passed in all courses registered and are to proceed to Second Semester, ND I"])
-    ws.append([f"A total of {gpa_above_2_failed} students with Grade Point Average (GPA) of 2.00 and above failed various courses, but passed at least 45% of the total registered credit units, and are to resit these courses in the next session."])
-    ws.append([f"A total of {gpa_below_2_failed} students with Grade Point Average (GPA) below 2.00 failed various courses, but passed at least 45% of the total registered credit units, and are placed on Probation, to resit these courses in the next session."])  # UPDATED: Added probation text
-    ws.append(
-        [f"A total of {failed_over_45_percent} students failed in more than 45% of their registered credit units in various courses and have been advised to withdraw"])
-   
-    # FIXED: Keep the upgrade notice only in the summary section, not in the header
+    ws.append([f"A total of {total_students} students registered and sat for the Examination"])
+    ws.append([f"A total of {passed_all} students passed in all courses registered and are to proceed to the next semester"])
+    ws.append([f"A total of {resit_rule_students} students with Grade Point Average (GPA) of 2.00 and above who passed ≥45% of credit units failed various courses, and are to resit these courses in the next session."])
+    ws.append([f"A total of {probation_rule_students} students with Grade Point Average (GPA) below 2.00 who passed ≥45% of credit units failed various courses, and are placed on Probation, to resit these courses in the next session."])
+    ws.append([f"A total of {withdrawn_rule_students} students who passed less than 45% of their registered credit units have been advised to withdraw"])
+
     if upgrade_min_threshold is not None:
-        ws.append(
-            [f"✅ Upgraded all scores between {upgrade_min_threshold}–49 to 50 as per management decision ({upgraded_scores_count} scores upgraded)"])
-   
-    # Add removed withdrawn students info
+        ws.append([f"✅ Upgraded all scores between {upgrade_min_threshold}–49 to 50 as per management decision ({upgraded_scores_count} scores upgraded)"])
+
     if removed_students:
-        ws.append(
-            [f"NOTE: {len(removed_students)} previously withdrawn students were removed from this semester's results as they should not be processed."])
-   
+        ws.append([f"NOTE: {len(removed_students)} previously withdrawn students were removed from this semester's results as they should not be processed."])
+
     ws.append(["The above decisions are in line with the provisions of the General Information Section of the NMCN/NBTE Examinations Regulations (Pg 4) adopted by the College."])
     ws.append([])
     ws.append(["________________________", "", "",

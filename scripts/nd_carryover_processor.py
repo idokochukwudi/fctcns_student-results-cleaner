@@ -29,6 +29,20 @@ EXCEL FILE CORRUPTION CRITICAL FIXES:
 3. ✅ Backup creation before any modifications
 4. ✅ Final verification of file integrity
 5. ✅ Complete save pattern with exception handling
+
+ENHANCED FORMATTING:
+1. ✅ CGPA_SUMMARY sheet with professional headers and centralized formatting
+2. ✅ ANALYSIS sheet with professional headers and centralized formatting
+3. ✅ Department name and institution headers properly centered
+4. ✅ Class information extracted from set_name
+
+FINAL FIX FOR CARRYOVER ENHANCEMENTS:
+✅ Added ensure_required_sheets_exist function to check and create sheets if needed
+✅ Modified update_mastersheet_with_recalculation_FINAL to include sheet verification
+✅ FIXED: Withdrawn students remain withdrawn even after passing resit courses
+✅ FIXED: Serial numbers are properly sorted from 1 to n
+✅ FIXED: CGPA_SUMMARY properly tracks and displays withdrawn status
+✅ FIXED: Student sorting maintains proper order (Passed -> Carryover -> Withdrawn)
 """
 
 import os
@@ -250,6 +264,11 @@ def generate_remarks(resit_courses):
         return f"{passed_count}/{total_count} courses passed in resit"
     else:
         return "No improvement in resit"
+
+def extract_class_from_set_name(set_name):
+    """Extract class name from set_name (e.g., 'ND-2024' from 'ND-2024')"""
+    # set_name is already in format like "ND-2024"
+    return set_name
 
 # ----------------------------
 # Course Data Management
@@ -546,7 +565,7 @@ def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_
                 print(f" 💡 Similar keys found: {similar_keys[:5]}")
             else:
                 print(f" 💡 Sample available keys: {list(course_code_to_title.keys())[:10]}")
-                
+
 def find_course_title(course_code, course_titles_dict, course_code_to_title):
     """Robust function to find course title with comprehensive matching strategies - ENHANCED."""
     if not course_code or str(course_code).upper() in ['NAN', 'NONE', '']:
@@ -1040,6 +1059,101 @@ def find_sheet_structure(ws):
     print(f"❌ Could not find header row")
     return None, {}
 
+def apply_student_sorting(ws, header_row, headers_dict):
+    """Apply sorting to students - compatibility function for ANALYSIS sheet"""
+    # This is just an alias for the main sorting function
+    apply_student_sorting_with_serial_numbers(ws, header_row, headers_dict)
+
+def apply_student_sorting_with_serial_numbers(ws, header_row, headers_dict):
+    """Apply sorting to students with PROPER serial numbers - FIXED VERSION"""
+    from openpyxl.styles import Font, PatternFill
+    
+    exam_col = headers_dict.get('EXAM NUMBER')
+    remarks_col = headers_dict.get('REMARKS')
+    gpa_col = headers_dict.get('GPA')
+    serial_col = 1  # Serial number is always column 1
+    
+    if not all([exam_col, remarks_col, gpa_col]):
+        return
+    
+    # Collect all student rows
+    student_rows = []
+    for row in range(header_row + 1, ws.max_row + 1):
+        exam_no = ws.cell(row, exam_col).value
+        if not exam_no or "SUMMARY" in str(exam_no).upper():
+            break
+            
+        # Get basic row data (values only, not styles)
+        row_data = []
+        for col in range(1, ws.max_column + 1):
+            cell = ws.cell(row, col)
+            row_data.append({
+                'value': cell.value,
+                'number_format': cell.number_format
+            })
+        
+        remarks = ws.cell(row, remarks_col).value or ''
+        remarks_upper = str(remarks).upper()
+        
+        # Assign priority for sorting
+        if "WITHDRAW" in remarks_upper:
+            priority = 3  # Withdrawn - last
+        elif "RESIT" in remarks_upper or "CARRYOVER" in remarks_upper or "PROBATION" in remarks_upper:
+            priority = 2  # Carryover - middle
+        else:
+            priority = 1  # Passed - first
+            
+        student_rows.append({
+            'row_num': row,
+            'priority': priority,
+            'gpa': ws.cell(row, gpa_col).value or 0,
+            'row_data': row_data,
+            'remarks': remarks_upper,
+            'exam_no': exam_no  # Store exam number for secondary sorting
+        })
+    
+    # Sort by priority (Passed first, then Carryover, then Withdrawn)
+    # Within each group, sort by GPA (descending), then by exam number
+    student_rows.sort(key=lambda x: (x['priority'], -float(x['gpa'] if x['gpa'] else 0), x['exam_no']))
+    
+    # Write sorted data back to worksheet
+    for idx, student in enumerate(student_rows):
+        target_row = header_row + 1 + idx
+        row_data = student['row_data']
+        
+        for col_idx, cell_data in enumerate(row_data, 1):
+            cell = ws.cell(target_row, col_idx)
+            cell.value = cell_data['value']
+            
+            # Apply number format if present
+            if cell_data.get('number_format'):
+                cell.number_format = cell_data['number_format']
+            
+            # CRITICAL FIX: Update serial numbers to be consecutive
+            if col_idx == serial_col:  # Serial number column
+                cell.value = idx + 1
+            
+            # Re-apply styling based on content and student status
+            if student['priority'] == 3:  # Withdrawn
+                cell.fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
+                if "WITHDRAW" in student['remarks']:
+                    cell.font = Font(bold=True, color="FF0000")
+            elif idx % 2 == 0:  # Alternate row coloring
+                cell.fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
+            
+            # Apply GPA styling for GPA column
+            if col_idx == headers_dict.get('GPA'):
+                try:
+                    gpa_val = float(cell.value) if cell.value else 0
+                    if gpa_val >= 3.5:
+                        cell.font = Font(bold=True, color="006400")  # Dark green for high GPA
+                    elif gpa_val < 2.0:
+                        cell.font = Font(bold=True, color="FF0000")  # Red for low GPA
+                except (ValueError, TypeError):
+                    pass
+
+    print(f" ✅ Applied student sorting with proper serial numbers (1 to {len(student_rows)})")
+
 # CRITICAL FIX #1: Proper course column identification
 def identify_course_columns_properly(headers):
     """Identify course columns using PROPER pattern matching"""
@@ -1211,10 +1325,49 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
         print(f" ❌ Error updating summary: {e}")
         traceback.print_exc()
 
-def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
-    """Update CGPA_SUMMARY sheet - FIXED VERSION with SINGLE workbook session"""
+def ensure_required_sheets_exist(wb):
+    """Ensure CGPA_SUMMARY and ANALYSIS sheets exist in workbook"""
+    from openpyxl.styles import Font, Alignment, PatternFill
+    
+    print(f"\n🔍 CHECKING FOR REQUIRED SHEETS...")
+    print(f"   Current sheets: {wb.sheetnames}")
+    
+    # Create CGPA_SUMMARY if it doesn't exist
+    if 'CGPA_SUMMARY' not in wb.sheetnames:
+        print(f"⚠️ CGPA_SUMMARY sheet not found - creating it...")
+        cgpa_ws = wb.create_sheet('CGPA_SUMMARY')
+        
+        # Add basic structure
+        cgpa_ws['A1'] = "CGPA SUMMARY"
+        cgpa_ws['A1'].font = Font(bold=True, size=14)
+        cgpa_ws['A1'].alignment = Alignment(horizontal='center')
+        
+        print(f"✅ Created CGPA_SUMMARY sheet")
+    else:
+        print(f"✅ CGPA_SUMMARY sheet exists")
+    
+    # Create ANALYSIS if it doesn't exist
+    if 'ANALYSIS' not in wb.sheetnames:
+        print(f"⚠️ ANALYSIS sheet not found - creating it...")
+        analysis_ws = wb.create_sheet('ANALYSIS')
+        
+        # Add basic structure
+        analysis_ws['A1'] = "PERFORMANCE ANALYSIS"
+        analysis_ws['A1'].font = Font(bold=True, size=14)
+        analysis_ws['A1'].alignment = Alignment(horizontal='center')
+        
+        print(f"✅ Created ANALYSIS sheet")
+    else:
+        print(f"✅ ANALYSIS sheet exists")
+    
+    print(f"✅ All required sheets verified")
+    return True
+
+def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
+    """Update CGPA_SUMMARY sheet - COMPLETELY FIXED VERSION"""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
+    from datetime import datetime
   
     print(f" 📈 Updating CGPA_SUMMARY...")
   
@@ -1233,11 +1386,92 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
     except Exception as e:
         print(f" ⚠️ Could not unmerge cells: {e}")
   
-    # Clear old data from row6 down
-    for row in range(6, cgpa_ws.max_row + 1):
+    # Clear ALL old data (including headers)
+    for row in range(1, cgpa_ws.max_row + 1):
         for col in range(1, cgpa_ws.max_column + 1):
             cgpa_ws.cell(row, col).value = None
+            cgpa_ws.cell(row, col).fill = PatternFill()  # Clear formatting
+            cgpa_ws.cell(row, col).font = Font()
+            cgpa_ws.cell(row, col).border = Border()
   
+    # ===================================================================
+    # STEP 1: CREATE PROFESSIONAL HEADER SECTION
+    # ===================================================================
+    
+    class_name = set_name
+    
+    # Get semester info
+    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
+    
+    # Calculate total columns needed (9 columns for our data)
+    total_columns = 9
+    last_column = get_column_letter(total_columns)
+    
+    # Row 1: Institution Name (Merged and Centered)
+    cgpa_ws.merge_cells(f'A1:{last_column}1')
+    title_cell = cgpa_ws['A1']
+    title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
+    title_cell.font = Font(bold=True, size=14, name='Calibri')
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 2: Department (Merged and Centered)
+    cgpa_ws.merge_cells(f'A2:{last_column}2')
+    dept_cell = cgpa_ws['A2']
+    dept_cell.value = "DEPARTMENT OF NURSING"
+    dept_cell.font = Font(bold=True, size=12, name='Calibri')
+    dept_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 3: Class and Sheet Title (Merged and Centered)
+    cgpa_ws.merge_cells(f'A3:{last_column}3')
+    class_cell = cgpa_ws['A3']
+    class_cell.value = f"{class_name} CLASS - CUMULATIVE GPA SUMMARY"
+    class_cell.font = Font(bold=True, size=13, name='Calibri', color="FFFFFF")
+    class_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    class_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 4: Date and Academic Session (Merged and Centered)
+    cgpa_ws.merge_cells(f'A4:{last_column}4')
+    date_cell = cgpa_ws['A4']
+    current_year = datetime.now().year
+    date_cell.value = f"{current_year}/{current_year + 1} Academic Session - Generated on {datetime.now().strftime('%B %d, %Y')}"
+    date_cell.font = Font(size=11, name='Calibri', italic=True)
+    date_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 5: Empty spacer
+    cgpa_ws.row_dimensions[5].height = 5
+    
+    # ===================================================================
+    # STEP 2: CREATE COLUMN HEADERS
+    # ===================================================================
+    
+    # Row 6: Column Headers
+    headers = ['S/N', 'EXAM NUMBER', 'NAME', 'Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'CGPA', 'WITHDRAWN']
+    
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11, name='Calibri')
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    
+    for col_idx, header in enumerate(headers, 1):
+        cell = cgpa_ws.cell(row=6, column=col_idx)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+        cell.border = border
+    
+    # Set row height for header
+    cgpa_ws.row_dimensions[6].height = 25
+  
+    # ===================================================================
+    # STEP 3: COLLECT AND POPULATE DATA WITH PROPER WITHDRAWN TRACKING
+    # ===================================================================
+    
     # Collect data from all semesters using SINGLE workbook session
     semester_keys = [
         "ND-FIRST-YEAR-FIRST-SEMESTER",
@@ -1247,6 +1481,11 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
     ]
     semester_data = {}
     
+    # Track ALL historically withdrawn students across ALL semesters - CRITICAL FIX
+    all_withdrawn_students = set()
+    
+    # FIRST PASS: Identify ALL historically withdrawn students from ALL semesters
+    print(f" 🔍 FIRST PASS: Identifying ALL historically withdrawn students...")
     for key in semester_keys:
         sheet_name = None
         for sheet in wb.sheetnames:
@@ -1256,15 +1495,52 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
                 
         if sheet_name and sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
-            header_row_found, headers = find_sheet_structure(ws)
+            header_row_found, headers_dict = find_sheet_structure(ws)
             if not header_row_found:
                 continue
                 
-            exam_col = headers.get('EXAM NUMBER')
-            name_col = headers.get('NAME')
-            gpa_col = headers.get('GPA')
-            credits_col = headers.get('TCPE')
-            remarks_col = headers.get('REMARKS')
+            exam_col = headers_dict.get('EXAM NUMBER')
+            remarks_col = headers_dict.get('REMARKS')
+            
+            if not all([exam_col, remarks_col]):
+                continue
+            
+            # Collect withdrawn students from this semester
+            for row in range(header_row_found + 1, ws.max_row + 1):
+                exam_no = ws.cell(row, exam_col).value
+                if not exam_no or "SUMMARY" in str(exam_no).upper():
+                    break
+                    
+                exam_no_clean = str(exam_no).strip().upper()
+                remarks = ws.cell(row, remarks_col).value or ''
+                remarks_upper = str(remarks).upper()
+                
+                # CRITICAL FIX: Track ALL students who were EVER withdrawn
+                if "WITHDRAW" in remarks_upper:
+                    all_withdrawn_students.add(exam_no_clean)
+                    print(f"   📝 Found historically withdrawn: {exam_no_clean} in {sheet_name}")
+    
+    print(f" ✅ Identified {len(all_withdrawn_students)} historically withdrawn students")
+    
+    # SECOND PASS: Collect semester data with PERSISTENT withdrawn status
+    for key in semester_keys:
+        sheet_name = None
+        for sheet in wb.sheetnames:
+            if key.upper() in sheet.upper():
+                sheet_name = sheet
+                break
+                
+        if sheet_name and sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            header_row_found, headers_dict = find_sheet_structure(ws)
+            if not header_row_found:
+                continue
+                
+            exam_col = headers_dict.get('EXAM NUMBER')
+            name_col = headers_dict.get('NAME')
+            gpa_col = headers_dict.get('GPA')
+            credits_col = headers_dict.get('TCPE')
+            remarks_col = headers_dict.get('REMARKS')
             
             if not all([exam_col, name_col, gpa_col]):
                 continue
@@ -1281,6 +1557,9 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
                 credits_val = ws.cell(row, credits_col).value if credits_col else 0
                 remarks = ws.cell(row, remarks_col).value if remarks_col else ''
                 
+                # CRITICAL FIX: Check if student is historically withdrawn (PERSISTENT STATUS)
+                is_withdrawn = (exam_no in all_withdrawn_students)
+                
                 try:
                     gpa = float(gpa_val) if gpa_val else 0
                     credits = float(credits_val) if credits_val else 0
@@ -1288,7 +1567,8 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
                         'name': name, 
                         'gpa': gpa, 
                         'credits': credits, 
-                        'remarks': remarks
+                        'remarks': remarks,
+                        'withdrawn': is_withdrawn  # Store withdrawn status
                     }
                 except (ValueError, TypeError):
                     continue
@@ -1305,17 +1585,20 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
         total_gp = 0.0
         total_cr = 0.0
         gpas = {}
-        withdrawn = False
         name = None
         
+        # CRITICAL FIX: Check if student is withdrawn in ANY semester
+        withdrawn = False
         for key, d in semester_data.items():
             if exam_no in d:
                 data = d[exam_no]
                 gpas[key] = data['gpa']
                 total_gp += data['gpa'] * data['credits']
                 total_cr += data['credits']
-                if 'WITHDRAW' in str(data['remarks']).upper():
+                # If student is withdrawn in ANY semester, mark as withdrawn
+                if data['withdrawn']:
                     withdrawn = True
+                    print(f"   🔒 Student {exam_no} marked as withdrawn (found in {key})")
                 if not name:
                     name = data['name']
                     
@@ -1325,60 +1608,257 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row):
             'name': name, 
             'gpas': gpas, 
             'cgpa': cgpa, 
-            'withdrawn': withdrawn
+            'withdrawn': withdrawn  # PERSISTENT withdrawn status
         })
   
-    # Sort
+    # Sort: non-withdrawn by CGPA (descending), then withdrawn by CGPA (descending)
     non_withdrawn = [s for s in students if not s['withdrawn']]
     withdrawn_list = [s for s in students if s['withdrawn']]
-    non_withdrawn.sort(key=lambda s: s['cgpa'], reverse=True)
-    withdrawn_list.sort(key=lambda s: s['cgpa'], reverse=True)
+    
+    # CRITICAL FIX: Sort by CGPA descending, then by exam number for consistency
+    non_withdrawn.sort(key=lambda s: (-s['cgpa'], s['exam_no']))
+    withdrawn_list.sort(key=lambda s: (-s['cgpa'], s['exam_no']))
+    
     sorted_students = non_withdrawn + withdrawn_list
   
-    # Write data
-    row = 6
-    for s in sorted_students:
-        cgpa_ws.cell(row, 1).value = s['exam_no']
-        cgpa_ws.cell(row, 2).value = s['name']
-        cgpa_ws.cell(row, 3).value = s['gpas'].get('ND-FIRST-YEAR-FIRST-SEMESTER', '')
-        cgpa_ws.cell(row, 4).value = s['gpas'].get('ND-FIRST-YEAR-SECOND-SEMESTER', '')
-        cgpa_ws.cell(row, 5).value = s['gpas'].get('ND-SECOND-YEAR-FIRST-SEMESTER', '')
-        cgpa_ws.cell(row, 6).value = s['gpas'].get('ND-SECOND-YEAR-SECOND-SEMESTER', '')
-        cgpa_ws.cell(row, 7).value = s['cgpa']
-        cgpa_ws.cell(row, 8).value = 'Yes' if s['withdrawn'] else 'No'
+    # ===================================================================
+    # STEP 4: WRITE STUDENT DATA WITH FORMATTING AND PROPER SERIAL NUMBERS
+    # ===================================================================
+    
+    row = 7  # Start from row 7 (after header)
+    data_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Alternate row colors
+    even_row_fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
+    withdrawn_fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
+    
+    # CRITICAL FIX: Proper serial numbers from 1 to n
+    serial_number = 1
+    
+    for idx, s in enumerate(sorted_students):
+        # Determine row fill
+        if s['withdrawn']:
+            row_fill = withdrawn_fill
+        elif idx % 2 == 0:
+            row_fill = even_row_fill
+        else:
+            row_fill = PatternFill()  # White
+        
+        # Serial Number (PROPERLY SORTED from 1 to n)
+        cell = cgpa_ws.cell(row, 1, value=serial_number)
+        cell.border = data_border
+        cell.fill = row_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        serial_number += 1
+        
+        # Exam Number
+        cell = cgpa_ws.cell(row, 2, value=s['exam_no'])
+        cell.border = data_border
+        cell.fill = row_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Name
+        cell = cgpa_ws.cell(row, 3, value=s['name'])
+        cell.border = data_border
+        cell.fill = row_fill
+        cell.alignment = Alignment(horizontal='left', vertical='center')
+        
+        # Semester GPAs
+        for col_idx, sem_key in enumerate(['ND-FIRST-YEAR-FIRST-SEMESTER', 
+                                            'ND-FIRST-YEAR-SECOND-SEMESTER',
+                                            'ND-SECOND-YEAR-FIRST-SEMESTER',
+                                            'ND-SECOND-YEAR-SECOND-SEMESTER'], 4):
+            gpa_value = s['gpas'].get(sem_key, '')
+            cell = cgpa_ws.cell(row, col_idx, value=gpa_value)
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            if gpa_value:
+                cell.number_format = '0.00'
+        
+        # CGPA
+        cell = cgpa_ws.cell(row, 8, value=s['cgpa'])
+        cell.border = data_border
+        cell.fill = row_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.number_format = '0.00'
+        cell.font = Font(bold=True)
+        
+        # Withdrawn status - CRITICAL FIX: Show "Yes" for withdrawn students
+        withdrawn_status = 'Yes' if s['withdrawn'] else 'No'
+        cell = cgpa_ws.cell(row, 9, value=withdrawn_status)
+        cell.border = data_border
+        cell.fill = row_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        if s['withdrawn']:
+            cell.font = Font(bold=True, color="FF0000")
+            print(f"   ✅ Marked {s['exam_no']} as WITHDRAWN in CGPA_SUMMARY")
+        
         row += 1
   
-    # Update summary stats
+    # ===================================================================
+    # STEP 5: ADD SUMMARY STATISTICS
+    # ===================================================================
+    
+    summary_start_row = row + 2
+    
     total_students = len(students)
     avg_cgpa = round(sum(s['cgpa'] for s in students) / total_students, 2) if total_students > 0 else 0
     highest_cgpa = max(s['cgpa'] for s in students) if students else 0
     lowest_cgpa = min(s['cgpa'] for s in students if s['cgpa'] > 0) if students else 0
     withdrawn_count = len(withdrawn_list)
   
-    # Find and update summary rows
-    for row in range(1, cgpa_ws.max_row + 1):
-        cell_value = cgpa_ws.cell(row, 1).value
-        if cell_value:
-            cell_str = str(cell_value).upper()
-            if "TOTAL STUDENTS:" in cell_str:
-                cgpa_ws.cell(row, 1).value = f"Total Students: {total_students}"
-            elif "AVERAGE CUMULATIVE CGPA:" in cell_str:
-                cgpa_ws.cell(row, 1).value = f"Average Cumulative CGPA: {avg_cgpa}"
-            elif "HIGHEST CUMULATIVE CGPA:" in cell_str:
-                cgpa_ws.cell(row, 1).value = f"Highest Cumulative CGPA: {highest_cgpa}"
-            elif "LOWEST CUMULATIVE CGPA:" in cell_str:
-                cgpa_ws.cell(row, 1).value = f"Lowest Cumulative CGPA: {lowest_cgpa}"
-            elif "WITHDRAWN STUDENTS:" in cell_str:
-                cgpa_ws.cell(row, 1).value = f"Withdrawn Students: {withdrawn_count}"
+    # Summary header
+    cgpa_ws.merge_cells(f'A{summary_start_row}:{last_column}{summary_start_row}')
+    summary_header = cgpa_ws.cell(summary_start_row, 1)
+    summary_header.value = "SUMMARY STATISTICS"
+    summary_header.font = Font(bold=True, size=12, name='Calibri')
+    summary_header.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+    summary_header.alignment = Alignment(horizontal='center', vertical='center')
+    summary_header.border = Border(
+        left=Side(style='medium'),
+        right=Side(style='medium'),
+        top=Side(style='medium'),
+        bottom=Side(style='thin')
+    )
+    
+    # Summary data
+    summary_data = [
+        ("Total Students:", total_students),
+        ("Average Cumulative CGPA:", avg_cgpa),
+        ("Highest Cumulative CGPA:", highest_cgpa),
+        ("Lowest Cumulative CGPA:", lowest_cgpa),
+        ("Withdrawn Students:", withdrawn_count)
+    ]
+    
+    summary_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+    
+    for i, (label, value) in enumerate(summary_data):
+        current_row = summary_start_row + 1 + i
+        
+        # Label (columns A-D merged)
+        cgpa_ws.merge_cells(f'A{current_row}:D{current_row}')
+        label_cell = cgpa_ws.cell(current_row, 1)
+        label_cell.value = label
+        label_cell.font = Font(bold=True, size=11, name='Calibri')
+        label_cell.fill = summary_fill
+        label_cell.alignment = Alignment(horizontal='right', vertical='center')
+        label_cell.border = Border(
+            left=Side(style='medium'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Value (columns E-I merged)
+        cgpa_ws.merge_cells(f'E{current_row}:{last_column}{current_row}')
+        value_cell = cgpa_ws.cell(current_row, 5)
+        value_cell.value = value
+        value_cell.font = Font(bold=True, size=11, name='Calibri')
+        value_cell.alignment = Alignment(horizontal='center', vertical='center')
+        value_cell.border = Border(
+            left=Side(style='thin'),
+            right=Side(style='medium'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        if isinstance(value, float):
+            value_cell.number_format = '0.00'
+    
+    # Bottom border for summary section
+    last_summary_row = summary_start_row + len(summary_data)
+    for col in range(1, total_columns + 1):
+        cell = cgpa_ws.cell(last_summary_row, col)
+        cell.border = Border(
+            left=cell.border.left,
+            right=cell.border.right,
+            top=cell.border.top,
+            bottom=Side(style='medium')
+        )
   
-    print(f" ✅ CGPA_SUMMARY updated with {len(students)} students")
+    # ===================================================================
+    # STEP 6: ADJUST COLUMN WIDTHS
+    # ===================================================================
+    
+    cgpa_ws.column_dimensions['A'].width = 8   # S/N
+    cgpa_ws.column_dimensions['B'].width = 18  # EXAM NUMBER
+    cgpa_ws.column_dimensions['C'].width = 35  # NAME
+    cgpa_ws.column_dimensions['D'].width = 12  # Semester 1
+    cgpa_ws.column_dimensions['E'].width = 12  # Semester 2
+    cgpa_ws.column_dimensions['F'].width = 12  # Semester 3
+    cgpa_ws.column_dimensions['G'].width = 12  # Semester 4
+    cgpa_ws.column_dimensions['H'].width = 12  # CGPA
+    cgpa_ws.column_dimensions['I'].width = 12  # WITHDRAWN
+    
+    # Set specific row heights
+    cgpa_ws.row_dimensions[1].height = 20  # Title
+    cgpa_ws.row_dimensions[2].height = 18  # Department
+    cgpa_ws.row_dimensions[3].height = 20  # Class/Title
+    cgpa_ws.row_dimensions[4].height = 16  # Date
+  
+    print(f" ✅ CGPA_SUMMARY updated with {len(students)} students, {withdrawn_count} withdrawn, and proper serial numbers")
+    print(f" ✅ Withdrawn students properly marked: {[s['exam_no'] for s in withdrawn_list]}")
 
-def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, header_row):
-    """Update ANALYSIS sheet - FIXED VERSION with SINGLE workbook session"""
+def update_cgpa_summary_with_withdrawn(wb, withdrawn_students):
+    """Update CGPA SUMMARY sheet with PERSISTENT withdrawn status and apply sorting"""
+    if 'CGPA SUMMARY' not in wb.sheetnames:
+        return
+        
+    cgpa_ws = wb['CGPA SUMMARY']
+    header_row_found, headers_dict = find_sheet_structure(cgpa_ws)
+    
+    if not header_row_found:
+        return
+        
+    exam_col = headers_dict.get('EXAM NUMBER')
+    remarks_col = headers_dict.get('REMARKS')
+    cgpa_col = headers_dict.get('CGPA')
+    withdrawn_col = None
+    
+    # Find withdrawn column if it exists
+    for header, col in headers_dict.items():
+        if 'WITHDRAWN' in header.upper():
+            withdrawn_col = col
+            break
+    
+    if not all([exam_col, remarks_col, cgpa_col]):
+        return
+    
+    # Update remarks AND withdrawn column for withdrawn students
+    for row in range(header_row_found + 1, cgpa_ws.max_row + 1):
+        exam_no = cgpa_ws.cell(row, exam_col).value
+        if not exam_no or "SUMMARY" in str(exam_no).upper():
+            break
+            
+        exam_no_clean = str(exam_no).strip()
+        if exam_no_clean in withdrawn_students:
+            # Update remarks to ensure withdrawn status
+            cgpa_ws.cell(row, remarks_col).value = "WITHDRAWN"
+            
+            # Update withdrawn column if it exists
+            if withdrawn_col:
+                cgpa_ws.cell(row, withdrawn_col).value = "Yes"
+            
+            print(f"   🔒 Maintaining withdrawn status in CGPA: {exam_no_clean}")
+    
+    # Apply sorting to CGPA SUMMARY
+    apply_student_sorting(cgpa_ws, header_row_found, headers_dict)
+    
+    print(f" ✅ CGPA SUMMARY updated with PERSISTENT withdrawn status")
+
+def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, header_row, set_name):
+    """Update ANALYSIS sheet - ENHANCED VERSION with PERSISTENT withdrawn tracking and sorting"""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
+    from datetime import datetime
   
-    print(f" 📊 Updating ANALYSIS...")
+    print(f" 📊 Updating ANALYSIS with PERSISTENT withdrawn tracking...")
   
     if 'ANALYSIS' not in wb.sheetnames:
         print(" ℹ️ No ANALYSIS sheet")
@@ -1386,18 +1866,119 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
   
     analysis_ws = wb['ANALYSIS']
   
-    # Clear old data from row6 to 10
-    for row in range(6, 11):
-        for col in range(1, 8):
-            analysis_ws.cell(row, col).value = None
+    # FIXED: Properly handle merged cells by unmerging first
+    try:
+        merged_ranges = list(analysis_ws.merged_cells.ranges)
+        for merged_range in merged_ranges:
+            analysis_ws.unmerge_cells(str(merged_range))
+        print(f" ✅ Unmerged {len(merged_ranges)} cell ranges in ANALYSIS sheet")
+    except Exception as e:
+        print(f" ⚠️ Could not unmerge cells in ANALYSIS sheet: {e}")
   
-    # Collect data from all semesters using SINGLE workbook session
+    # Clear ALL old data (including headers)
+    for row in range(1, analysis_ws.max_row + 1):
+        for col in range(1, analysis_ws.max_column + 1):
+            try:
+                cell = analysis_ws.cell(row, col)
+                if cell.value is not None:
+                    cell.value = None
+                cell.fill = PatternFill()
+                cell.font = Font()
+                cell.border = Border()
+            except AttributeError:
+                continue
+
+    # ===================================================================
+    # STEP 1: CREATE PROFESSIONAL HEADER SECTION
+    # ===================================================================
+    
+    class_name = set_name
+    
+    # Get semester info
+    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
+    
+    # Calculate total columns needed (7 columns for our data)
+    total_columns = 7
+    last_column = get_column_letter(total_columns)
+    
+    # Row 1: Institution Name
+    analysis_ws.merge_cells(f'A1:{last_column}1')
+    title_cell = analysis_ws['A1']
+    title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
+    title_cell.font = Font(bold=True, size=14, name='Calibri')
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 2: Department
+    analysis_ws.merge_cells(f'A2:{last_column}2')
+    dept_cell = analysis_ws['A2']
+    dept_cell.value = "DEPARTMENT OF NURSING"
+    dept_cell.font = Font(bold=True, size=12, name='Calibri')
+    dept_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 3: Class and Sheet Title
+    analysis_ws.merge_cells(f'A3:{last_column}3')
+    class_cell = analysis_ws['A3']
+    class_cell.value = f"{class_name} CLASS - PERFORMANCE ANALYSIS"
+    class_cell.font = Font(bold=True, size=13, name='Calibri', color="FFFFFF")
+    class_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    class_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 4: Date and Academic Session
+    analysis_ws.merge_cells(f'A4:{last_column}4')
+    date_cell = analysis_ws['A4']
+    current_year = datetime.now().year
+    date_cell.value = f"{current_year}/{current_year + 1} Academic Session - Generated on {datetime.now().strftime('%B %d, %Y')}"
+    date_cell.font = Font(size=11, name='Calibri', italic=True)
+    date_cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Row 5: Empty spacer
+    analysis_ws.row_dimensions[5].height = 5
+    
+    # ===================================================================
+    # STEP 2: CREATE COLUMN HEADERS
+    # ===================================================================
+    
+    # Row 6: Column Headers
+    headers_list = ['SEMESTER', 'TOTAL', 'PASSED', 'CARRYOVER', 'WITHDRAWN', 'AVG GPA', 'PASS RATE (%)']
+    
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11, name='Calibri')
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    
+    for col_idx, header in enumerate(headers_list, 1):
+        cell = analysis_ws.cell(row=6, column=col_idx)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+        cell.border = border
+    
+    analysis_ws.row_dimensions[6].height = 25
+
+    # ===================================================================
+    # STEP 3: ENHANCED DATA COLLECTION WITH PERSISTENT WITHDRAWN TRACKING
+    # ===================================================================
+    
     semester_keys = [
         "ND-FIRST-YEAR-FIRST-SEMESTER",
-        "ND-FIRST-YEAR-SECOND-SEMESTER",
+        "ND-FIRST-YEAR-SECOND-SEMESTER", 
         "ND-SECOND-YEAR-FIRST-SEMESTER",
         "ND-SECOND-YEAR-SECOND-SEMESTER"
     ]
+    
+    semester_display_names = {
+        "ND-FIRST-YEAR-FIRST-SEMESTER": "Year 1 - Semester 1",
+        "ND-FIRST-YEAR-SECOND-SEMESTER": "Year 1 - Semester 2",
+        "ND-SECOND-YEAR-FIRST-SEMESTER": "Year 2 - Semester 1", 
+        "ND-SECOND-YEAR-SECOND-SEMESTER": "Year 2 - Semester 2"
+    }
+    
     semester_stats = {}
     overall_total = 0
     overall_passed = 0
@@ -1405,6 +1986,12 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
     overall_withdrawn = 0
     overall_gpa_sum = 0
     overall_students_for_gpa = 0
+    
+    # Track withdrawn students across ALL semesters - CRITICAL FIX
+    all_withdrawn_students = set()
+    
+    # FIRST PASS: Identify ALL historically withdrawn students from ALL semesters
+    print(f" 🔍 FIRST PASS: Identifying ALL historically withdrawn students...")
     
     for key in semester_keys:
         sheet_name = None
@@ -1415,13 +2002,52 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
                 
         if sheet_name and sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
-            header_row_found, headers = find_sheet_structure(ws)
+            header_row_found, headers_dict = find_sheet_structure(ws)
             if not header_row_found:
                 continue
                 
-            exam_col = headers.get('EXAM NUMBER')
-            gpa_col = headers.get('GPA')
-            remarks_col = headers.get('REMARKS')
+            exam_col = headers_dict.get('EXAM NUMBER')
+            remarks_col = headers_dict.get('REMARKS')
+            
+            if not all([exam_col, remarks_col]):
+                continue
+            
+            # Collect withdrawn students from this semester
+            for row in range(header_row_found + 1, ws.max_row + 1):
+                exam_no = ws.cell(row, exam_col).value
+                if not exam_no or "SUMMARY" in str(exam_no).upper():
+                    break
+                    
+                exam_no_clean = str(exam_no).strip()
+                remarks = ws.cell(row, remarks_col).value or ''
+                remarks_upper = str(remarks).upper()
+                
+                # CRITICAL FIX: Track ALL students who were EVER withdrawn
+                if "WITHDRAW" in remarks_upper:
+                    all_withdrawn_students.add(exam_no_clean)
+                    print(f"   📝 Found historically withdrawn: {exam_no_clean} in {sheet_name}")
+    
+    print(f" ✅ Identified {len(all_withdrawn_students)} historically withdrawn students")
+    
+    # SECOND PASS: Process each semester with PERSISTENT withdrawn status
+    print(f" 🔍 SECOND PASS: Processing semesters with persistent withdrawn status...")
+    
+    for key in semester_keys:
+        sheet_name = None
+        for sheet in wb.sheetnames:
+            if key.upper() in sheet.upper():
+                sheet_name = sheet
+                break
+                
+        if sheet_name and sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            header_row_found, headers_dict = find_sheet_structure(ws)
+            if not header_row_found:
+                continue
+                
+            exam_col = headers_dict.get('EXAM NUMBER')
+            gpa_col = headers_dict.get('GPA')
+            remarks_col = headers_dict.get('REMARKS')
             
             if not all([exam_col, gpa_col, remarks_col]):
                 continue
@@ -1433,30 +2059,46 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
             withdrawn = 0
             gpa_sum = 0
             
+            # Track students for this semester
+            semester_students = set()
+            
             for row in range(header_row_found + 1, ws.max_row + 1):
                 exam_no = ws.cell(row, exam_col).value
                 if not exam_no or "SUMMARY" in str(exam_no).upper():
                     break
                     
+                exam_no_clean = str(exam_no).strip()
+                semester_students.add(exam_no_clean)
                 total += 1
+                
                 remarks = ws.cell(row, remarks_col).value or ''
                 remarks_upper = str(remarks).upper()
                 gpa_val = ws.cell(row, gpa_col).value
                 
-                if "PASSED" in remarks_upper:
+                # CRITICAL FIX: Check if student is historically withdrawn (PERSISTENT STATUS)
+                is_withdrawn = (exam_no_clean in all_withdrawn_students)
+                
+                if is_withdrawn:
+                    withdrawn += 1
+                    # ENSURE withdrawn status is maintained in remarks
+                    if "WITHDRAW" not in remarks_upper:
+                        ws.cell(row, remarks_col).value = "WITHDRAWN"
+                        print(f"   🔒 Maintaining withdrawn status for: {exam_no_clean} in {sheet_name}")
+                elif "PASSED" in remarks_upper:
                     passed += 1
                 elif "RESIT" in remarks_upper or "CARRYOVER" in remarks_upper:
                     resit += 1
                 elif "PROBATION" in remarks_upper:
                     probation += 1
-                elif "WITHDRAW" in remarks_upper:
-                    withdrawn += 1
                     
                 try:
                     gpa_sum += float(gpa_val) if gpa_val else 0
                 except (ValueError, TypeError):
                     pass
-                    
+            
+            # Apply sorting to semester sheet (Passed -> Carryover -> Withdrawn)
+            apply_student_sorting_with_serial_numbers(ws, header_row_found, headers_dict)
+            
             avg_gpa = round(gpa_sum / total, 2) if total > 0 else 0
             pass_rate = round(passed / total * 100, 2) if total > 0 else 0
             carryover = resit + probation
@@ -1477,33 +2119,135 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
             overall_gpa_sum += gpa_sum
             overall_students_for_gpa += total
 
-    # Write data
-    row = 6
-    for key in semester_keys:
+    # Update CGPA SUMMARY with PERSISTENT withdrawn status
+    update_cgpa_summary_with_withdrawn(wb, all_withdrawn_students)
+
+    # ===================================================================
+    # STEP 4: WRITE SEMESTER DATA WITH FORMATTING
+    # ===================================================================
+    
+    row = 7  # Start from row 7 (after header)
+    data_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Alternate row colors
+    even_row_fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
+    
+    for idx, key in enumerate(semester_keys):
         if key in semester_stats:
             stats = semester_stats[key]
-            analysis_ws.cell(row, 1).value = key.replace('-', ' ').title()
-            analysis_ws.cell(row, 2).value = stats['total']
-            analysis_ws.cell(row, 3).value = stats['passed']
-            analysis_ws.cell(row, 4).value = stats['carryover']
-            analysis_ws.cell(row, 5).value = stats['withdrawn']
-            analysis_ws.cell(row, 6).value = stats['avg_gpa']
-            analysis_ws.cell(row, 7).value = stats['pass_rate']
+            
+            # Determine row fill
+            row_fill = even_row_fill if idx % 2 == 0 else PatternFill()
+            
+            # Semester name
+            cell = analysis_ws.cell(row, 1, value=semester_display_names[key])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='left', vertical='center')
+            cell.font = Font(bold=True)
+            
+            # Total students
+            cell = analysis_ws.cell(row, 2, value=stats['total'])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Passed
+            cell = analysis_ws.cell(row, 3, value=stats['passed'])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Carryover
+            cell = analysis_ws.cell(row, 4, value=stats['carryover'])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Withdrawn
+            cell = analysis_ws.cell(row, 5, value=stats['withdrawn'])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+            # Average GPA
+            cell = analysis_ws.cell(row, 6, value=stats['avg_gpa'])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.number_format = '0.00'
+            
+            # Pass Rate
+            cell = analysis_ws.cell(row, 7, value=stats['pass_rate'])
+            cell.border = data_border
+            cell.fill = row_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.number_format = '0.00'
+            
             row += 1
-  
-    # Overall
+
+    # ===================================================================
+    # STEP 5: ADD OVERALL SUMMARY ROW
+    # ===================================================================
+    
+    row += 1  # Skip a row
+    
     overall_avg_gpa = round(overall_gpa_sum / overall_students_for_gpa, 2) if overall_students_for_gpa > 0 else 0
     overall_pass_rate = round(overall_passed / overall_total * 100, 2) if overall_total > 0 else 0
     
-    analysis_ws.cell(10, 1).value = "OVERALL"
-    analysis_ws.cell(10, 2).value = overall_total
-    analysis_ws.cell(10, 3).value = overall_passed
-    analysis_ws.cell(10, 4).value = overall_carryover
-    analysis_ws.cell(10, 5).value = overall_withdrawn
-    analysis_ws.cell(10, 6).value = overall_avg_gpa
-    analysis_ws.cell(10, 7).value = overall_pass_rate
-  
-    print(f" ✅ ANALYSIS updated")
+    overall_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+    overall_border = Border(
+        left=Side(style='medium'),
+        right=Side(style='medium'),
+        top=Side(style='medium'),
+        bottom=Side(style='medium')
+    )
+    
+    # OVERALL label
+    cell = analysis_ws.cell(row, 1, value="OVERALL")
+    cell.border = overall_border
+    cell.fill = overall_fill
+    cell.alignment = Alignment(horizontal='left', vertical='center')
+    cell.font = Font(bold=True, size=12)
+    
+    # Overall stats
+    overall_data = [overall_total, overall_passed, overall_carryover, overall_withdrawn, overall_avg_gpa, overall_pass_rate]
+    
+    for col_idx, value in enumerate(overall_data, 2):
+        cell = analysis_ws.cell(row, col_idx, value=value)
+        cell.border = overall_border
+        cell.fill = overall_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.font = Font(bold=True, size=11)
+        
+        if col_idx >= 6:  # GPA and Pass Rate
+            cell.number_format = '0.00'
+
+    # ===================================================================
+    # STEP 6: ADJUST COLUMN WIDTHS
+    # ===================================================================
+    
+    analysis_ws.column_dimensions['A'].width = 25  # SEMESTER
+    analysis_ws.column_dimensions['B'].width = 12  # TOTAL
+    analysis_ws.column_dimensions['C'].width = 12  # PASSED
+    analysis_ws.column_dimensions['D'].width = 14  # CARRYOVER
+    analysis_ws.column_dimensions['E'].width = 14  # WITHDRAWN
+    analysis_ws.column_dimensions['F'].width = 12  # AVG GPA
+    analysis_ws.column_dimensions['G'].width = 15  # PASS RATE (%)
+    
+    # Set specific row heights
+    analysis_ws.row_dimensions[1].height = 20  # Title
+    analysis_ws.row_dimensions[2].height = 18  # Department
+    analysis_ws.row_dimensions[3].height = 20  # Class/Title
+    analysis_ws.row_dimensions[4].height = 16  # Date
+    
+    print(f" ✅ ANALYSIS updated with PERSISTENT withdrawn tracking: {overall_withdrawn} withdrawn students")
+    print(f" ✅ Student sorting applied across all sheets")
 
 def apply_complete_professional_formatting(wb, semester_key, header_row, set_name):
     """Apply complete professional formatting"""
@@ -1565,6 +2309,7 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
     """FINAL FIXED VERSION - SINGLE workbook session to prevent Excel corruption"""
     print(f"\n{'='*80}")
     print(f"🔄 FINAL FIX: UPDATING MASTERSHEET WITH SINGLE SESSION")
+    print(f"   SET NAME: '{set_name}'")
     print(f"{'='*80}")
    
     # Create backup first
@@ -1580,6 +2325,9 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         # SINGLE WORKBOOK LOAD - No repeated loading/closing
         print(f"📖 Loading workbook ONCE...")
         wb = load_workbook(mastersheet_path)
+        
+        # ⭐ ADD THIS CRITICAL LINE ⭐
+        ensure_required_sheets_exist(wb)
        
         # Find semester sheet
         sheet_name = None
@@ -1605,10 +2353,7 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         print(f"✅ Found header row at: {header_row}")
        
         # Identify course columns properly
-        course_columns = {}
-        for header, col in headers.items():
-            if re.match(r'^[A-Z]{3}\d{3}$', str(header).strip()):
-                course_columns[header] = col
+        course_columns = identify_course_columns_properly(headers)
        
         if not course_columns:
             print(f"❌ No course columns found!")
@@ -1654,7 +2399,14 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         students_updated = 0
         courses_updated = 0
         
-        # Find exam column
+        # DEBUG: Verify updates are being applied
+        print(f"🔍 DEBUG: Checking if updates are being applied...")
+        for exam_no, course_updates in updates.items():
+            print(f"📝 Updates for {exam_no}: {len(course_updates)} courses")
+            for course_code, new_score in course_updates.items():
+                print(f"   - {course_code}: {new_score}")
+
+        # Also add debug to verify we're finding the right students
         exam_col = None
         for header, col_idx in headers.items():
             if 'EXAM NUMBER' in header.upper():
@@ -1664,6 +2416,19 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         if not exam_col:
             print("❌ No exam column found")
             return False
+
+        for row_idx in range(header_row + 1, ws.max_row + 1):
+            exam_no_cell = ws.cell(row_idx, column=exam_col)
+            exam_no = str(exam_no_cell.value).strip().upper() if exam_no_cell.value else None
+            
+            if not exam_no or exam_no in ['', 'NAN', 'NONE']:
+                continue
+            
+            if "SUMMARY" in str(exam_no).upper():
+                break
+            
+            if exam_no in updates:
+                print(f"🎯 FOUND student {exam_no} at row {row_idx} - will update {len(updates[exam_no])} courses")
        
         for row_idx in range(header_row + 1, ws.max_row + 1):
             exam_no_cell = ws.cell(row=row_idx, column=exam_col)
@@ -1707,6 +2472,21 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
                         courses_updated += 1
                
                 students_updated += 1
+
+        # VERIFICATION: Check if scores were actually updated
+        print(f"🔍 VERIFICATION: Checking if scores were updated...")
+        for exam_no in updates:
+            for row_idx in range(header_row + 1, ws.max_row + 1):
+                exam_no_cell = ws.cell(row_idx, column=exam_col)
+                current_exam_no = str(exam_no_cell.value).strip().upper() if exam_no_cell.value else None
+                
+                if current_exam_no == exam_no:
+                    for course_code, expected_score in updates[exam_no].items():
+                        if course_code in course_columns:
+                            course_col = course_columns[course_code]
+                            actual_score = ws.cell(row_idx, column=course_col).value
+                            print(f"   {exam_no} - {course_code}: Expected {expected_score}, Got {actual_score}")
+                    break
        
         print(f"✅ Step 1 Complete: Updated {courses_updated} scores ({students_updated} students)")
        
@@ -1829,27 +2609,41 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         # STEP 4: Update CGPA_SUMMARY - FIXED VERSION with SINGLE session
         # =============================================================
         print(f"\n📈 STEP 4: UPDATING CGPA_SUMMARY...")
+        print(f"   Available sheets: {wb.sheetnames}")
+        print(f"   set_name parameter: '{set_name}'")
        
         if 'CGPA_SUMMARY' in wb.sheetnames:
-            update_cgpa_summary_sheet_fixed(wb, semester_key, header_row)
+            print(f"✅ Calling update_cgpa_summary_sheet_fixed...")
+            update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name)
             print(f"✅ Step 4 Complete: CGPA_SUMMARY updated")
+        else:
+            print(f"❌ CGPA_SUMMARY sheet still not found!")
        
         # =============================================================
         # STEP 5: Update ANALYSIS
         # =============================================================
         print(f"\n📊 STEP 5: UPDATING ANALYSIS...")
+        print(f"   Available sheets: {wb.sheetnames}")
+        print(f"   set_name parameter: '{set_name}'")
        
         if 'ANALYSIS' in wb.sheetnames:
-            update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, header_row)
+            print(f"✅ Calling update_analysis_sheet_fixed...")
+            update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, header_row, set_name)
             print(f"✅ Step 5 Complete: ANALYSIS updated")
+        else:
+            print(f"❌ ANALYSIS sheet still not found!")
        
         # =============================================================
-        # STEP 6: Apply formatting
+        # STEP 6: Apply formatting and PROPER sorting
         # =============================================================
-        print(f"\n🎨 STEP 6: APPLYING FORMATTING...")
+        print(f"\n🎨 STEP 6: APPLYING FORMATTING AND PROPER SORTING...")
        
         apply_complete_professional_formatting(wb, semester_key, header_row, set_name)
-        print(f"✅ Step 6 Complete: Formatting applied")
+        
+        # Apply student sorting to maintain proper order with CORRECT serial numbers
+        apply_student_sorting_with_serial_numbers(ws, header_row, headers)
+        
+        print(f"✅ Step 6 Complete: Formatting and proper sorting applied")
        
         # =============================================================
         # FINAL SINGLE SAVE - CRITICAL FIX: Only save once at the end
@@ -2253,10 +3047,16 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     if previous_semesters:
         start_col += len(previous_semesters)
  
+    # CRITICAL FIX: Proper serial numbers from 1 to n
+    serial_number = 1
+    
     for student in carryover_data:
         exam_no = student['EXAM NUMBER']
      
-        ws.cell(row=row_idx, column=1, value=row_idx-7)
+        # Serial Number (PROPERLY SORTED from 1 to n)
+        ws.cell(row=row_idx, column=1, value=serial_number)
+        serial_number += 1
+        
         ws.cell(row=row_idx, column=2, value=student['EXAM NUMBER'])
         ws.cell(row=row_idx, column=3, value=student['NAME'])
      
