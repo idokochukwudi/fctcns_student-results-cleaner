@@ -1,0 +1,4175 @@
+{
+  "7434": {
+    "exam_number": "7434",
+    "name": "ABDULKADIR MARYAM IKPEMOSIME",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 32.0,
+        "resit_score": 54.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 68.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 18.0,
+        "resit_score": 53.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 32.0,
+        "resit_score": 54.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 68.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 18.0,
+        "resit_score": 53.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7439": {
+    "exam_number": "7439",
+    "name": "ABDULSALAM  HAUWA UMMI",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 55.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 26.0,
+        "resit_score": 53.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 72.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 67.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 55.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 26.0,
+        "resit_score": 53.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 72.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 67.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7440": {
+    "exam_number": "7440",
+    "name": "ABDULSALAM  ZULIEHAT",
+    "carryover_courses": {
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 59.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 59.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7443": {
+    "exam_number": "7443",
+    "name": "ABUBAKAR  NABILA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 19.0,
+        "resit_score": 64.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 77.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 33.0,
+        "resit_score": 57.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 64.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 19.0,
+        "resit_score": 64.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 77.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 33.0,
+        "resit_score": 57.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 64.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7448": {
+    "exam_number": "7448",
+    "name": "ADEGBEMILE OLUWANIFEMI O.",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 70.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 74.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 58.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 70.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 74.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 58.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7451": {
+    "exam_number": "7451",
+    "name": "ADO AMATULLAH",
+    "carryover_courses": {
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 76.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 76.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7456": {
+    "exam_number": "7456",
+    "name": "AHMED-RUFAI ASMAU",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 30.0,
+        "resit_score": 50.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 62.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 30.0,
+        "resit_score": 50.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 62.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7457": {
+    "exam_number": "7457",
+    "name": "AJEH MARTHA SYLVERA",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 63.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 77.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 63.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 77.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7460": {
+    "exam_number": "7460",
+    "name": "ALHAMDU ISAAC",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 63.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 78.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 75.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 65.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 80.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 63.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 78.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 75.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 65.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 80.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7461": {
+    "exam_number": "7461",
+    "name": "ALHASSAN  FATIMA",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 66.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 71.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 71.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 60.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 16.0,
+        "resit_score": 51.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 66.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 71.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 71.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 60.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 16.0,
+        "resit_score": 51.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7462": {
+    "exam_number": "7462",
+    "name": "ALIU MARTHA ODUFA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 31.0,
+        "resit_score": 71.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 15.0,
+        "resit_score": 78.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 65.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 64.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 52.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 31.0,
+        "resit_score": 71.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 15.0,
+        "resit_score": 78.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 65.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 64.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 52.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7463": {
+    "exam_number": "7463",
+    "name": "ALIU MARIA OCHUWA",
+    "carryover_courses": {
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 50.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 69.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 77.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 52.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 50.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 69.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 77.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 52.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7467": {
+    "exam_number": "7467",
+    "name": "AMADI JULIET OBIANUJUNWA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 71.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 43.0,
+        "resit_score": 59.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 71.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 43.0,
+        "resit_score": 59.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7472": {
+    "exam_number": "7472",
+    "name": "ANTHONY OBADIAH",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 51.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 19.0,
+        "resit_score": 72.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 53.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 77.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 51.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 19.0,
+        "resit_score": 72.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 53.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 77.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7478": {
+    "exam_number": "7478",
+    "name": "AUGUSTINE  MONICA ENOSI",
+    "carryover_courses": {
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 57.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 39.0,
+        "resit_score": 55.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 57.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 39.0,
+        "resit_score": 55.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7480": {
+    "exam_number": "7480",
+    "name": "AYIKOYE FLOURISH ULIEJU",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 32.0,
+        "resit_score": 65.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 53.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 77.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 32.0,
+        "resit_score": 65.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 53.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 77.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7482": {
+    "exam_number": "7482",
+    "name": "BABAJIDE DEBORAH GBEMISOLA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 55.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 69.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 61.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 55.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 69.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 61.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7483": {
+    "exam_number": "7483",
+    "name": "BALA CHRISTOPHER BLAYA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 39.0,
+        "resit_score": 75.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 38.0,
+        "resit_score": 62.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 79.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 80.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 39.0,
+        "resit_score": 75.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 38.0,
+        "resit_score": 62.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 79.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 80.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7491": {
+    "exam_number": "7491",
+    "name": "DAUDA  CYNTIKI KUYET",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 62.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 23.0,
+        "resit_score": 67.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 55.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 62.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 23.0,
+        "resit_score": 67.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 55.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7492": {
+    "exam_number": "7492",
+    "name": "DAVID JIKHIRIT FAITH",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 28.0,
+        "resit_score": 76.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 75.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 6.0,
+        "resit_score": 65.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 25.0,
+        "resit_score": 79.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 28.0,
+        "resit_score": 76.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 75.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 6.0,
+        "resit_score": 65.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 25.0,
+        "resit_score": 79.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7493": {
+    "exam_number": "7493",
+    "name": "DAVID JAMES",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 77.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 76.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 26.0,
+        "resit_score": 77.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 62.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 67.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 77.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 76.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 26.0,
+        "resit_score": 77.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 62.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 67.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7495": {
+    "exam_number": "7495",
+    "name": "DOKIH BLESSING IVREN",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 69.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 53.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 26.0,
+        "resit_score": 62.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 75.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 69.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 53.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 26.0,
+        "resit_score": 62.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 75.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7497": {
+    "exam_number": "7497",
+    "name": "EBERECHUKWU DIVINE STEPHEN",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 18.0,
+        "resit_score": 70.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 16.0,
+        "resit_score": 53.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 72.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 18.0,
+        "resit_score": 70.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 16.0,
+        "resit_score": 53.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 72.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7498": {
+    "exam_number": "7498",
+    "name": "EDWARD ISAAC DANJUMA",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 73.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 73.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7499": {
+    "exam_number": "7499",
+    "name": "EHIABHI QUEEN",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 37.0,
+        "resit_score": 60.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 26.0,
+        "resit_score": 74.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 80.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 37.0,
+        "resit_score": 60.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 26.0,
+        "resit_score": 74.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 80.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7500": {
+    "exam_number": "7500",
+    "name": "ELOCHUKWU PROMISE ONYINYECHI",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 76.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 60.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 76.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 60.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7502": {
+    "exam_number": "7502",
+    "name": "EMMANUEL MARY CORNELIUS",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 37.0,
+        "resit_score": 59.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 69.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 71.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 70.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 37.0,
+        "resit_score": 59.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 69.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 71.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 70.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7507": {
+    "exam_number": "7507",
+    "name": "ESIKE  CHINENYE STEPHANIE",
+    "carryover_courses": {
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 58.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 66.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 58.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 66.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7514": {
+    "exam_number": "7514",
+    "name": "HARUNA  PRINCESS ALHERI",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 65.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 67.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 51.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 52.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 24.0,
+        "resit_score": 80.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 65.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 67.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 51.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 52.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 24.0,
+        "resit_score": 80.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7515": {
+    "exam_number": "7515",
+    "name": "HARUNA  HAFSAT UMAR",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 34.0,
+        "resit_score": 79.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 67.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 59.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 34.0,
+        "resit_score": 79.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 27.0,
+        "resit_score": 67.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 59.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7516": {
+    "exam_number": "7516",
+    "name": "HASSAN ABUBAKAR",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 38.0,
+        "resit_score": 62.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 65.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 13.0,
+        "resit_score": 69.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 67.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 51.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 38.0,
+        "resit_score": 62.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 65.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 13.0,
+        "resit_score": 69.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 67.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 51.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7523": {
+    "exam_number": "7523",
+    "name": "IKWUEZE SANDRA CHINAZA",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 41.0,
+        "resit_score": 77.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 73.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 63.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 77.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 41.0,
+        "resit_score": 77.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 73.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 63.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 77.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7530": {
+    "exam_number": "7530",
+    "name": "ISMAIL RUKAYAT",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 59.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 70.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 64.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 24.0,
+        "resit_score": 73.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 76.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 59.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 70.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 64.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 24.0,
+        "resit_score": 73.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 76.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7533": {
+    "exam_number": "7533",
+    "name": "JAMES  ELIJAH",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 42.0,
+        "resit_score": 80.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 62.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 67.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 50.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 42.0,
+        "resit_score": 80.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 62.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 67.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 50.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7535": {
+    "exam_number": "7535",
+    "name": "JAMES  MERCY NDOUK",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 78.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 25.0,
+        "resit_score": 68.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 59.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 61.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 78.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 25.0,
+        "resit_score": 68.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 59.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 61.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7538": {
+    "exam_number": "7538",
+    "name": "JOSEPHAT RUTH CHIDERA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 80.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 57.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 80.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 57.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7542": {
+    "exam_number": "7542",
+    "name": "LAWAL ANAS",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 62.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 60.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 79.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 65.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 79.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 59.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 62.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 60.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 79.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 65.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 79.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 59.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7543": {
+    "exam_number": "7543",
+    "name": "LAWAL GLORY IFEOLUWA",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 27.0,
+        "resit_score": 61.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 64.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 80.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 27.0,
+        "resit_score": 61.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 64.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 80.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7544": {
+    "exam_number": "7544",
+    "name": "LAWRENCE  ESTHER AMARACHI",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 57.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 80.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 66.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 57.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 80.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 66.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7545": {
+    "exam_number": "7545",
+    "name": "LUKA JENNIFER",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 22.0,
+        "resit_score": 65.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 67.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 22.0,
+        "resit_score": 65.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 67.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7550": {
+    "exam_number": "7550",
+    "name": "MBUI GIFT  ODUM",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 28.0,
+        "resit_score": 79.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 79.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 79.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 28.0,
+        "resit_score": 79.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 79.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 79.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7551": {
+    "exam_number": "7551",
+    "name": "MENSAH PRAISE CHIOMA",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 8.0,
+        "resit_score": 73.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 67.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 67.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 67.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 79.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 8.0,
+        "resit_score": 73.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 67.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 67.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 67.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 79.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7553": {
+    "exam_number": "7553",
+    "name": "MICHAEL  OGHENEKOME FAVOUR",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 58.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 52.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 80.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 50.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 59.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 58.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 52.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 80.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 50.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 59.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7555": {
+    "exam_number": "7555",
+    "name": "MOHAMMED  SULEIMAN",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 51.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 72.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 53.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 60.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 51.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 72.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 53.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 60.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7557": {
+    "exam_number": "7557",
+    "name": "MOLOKWU ONYINYECHUKWU OLIVIA",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 54.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 57.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 69.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 13.0,
+        "resit_score": 55.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 54.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 57.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 69.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 13.0,
+        "resit_score": 55.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7558": {
+    "exam_number": "7558",
+    "name": "MORGAN MARY SOKOGA",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 42.0,
+        "resit_score": 64.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 54.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 72.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 61.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 60.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 42.0,
+        "resit_score": 64.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 54.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 72.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 61.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 60.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7559": {
+    "exam_number": "7559",
+    "name": "MOSES VICTORY ESHIOFUNE",
+    "carryover_courses": {
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 59.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 80.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 59.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 80.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7560": {
+    "exam_number": "7560",
+    "name": "MOSES ESTHER SATI",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 22.0,
+        "resit_score": 74.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 33.0,
+        "resit_score": 57.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 71.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 63.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 22.0,
+        "resit_score": 74.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 33.0,
+        "resit_score": 57.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 71.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 63.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7562": {
+    "exam_number": "7562",
+    "name": "MOYOSORE JUMOKE DOLAPO-GRACE",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7570": {
+    "exam_number": "7570",
+    "name": "MUSA  GIDEON HAI",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 68.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 80.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 57.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 76.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 78.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 68.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 80.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 57.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 76.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 78.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7579": {
+    "exam_number": "7579",
+    "name": "ODEAHAN ITOHAN ABIGAIL",
+    "carryover_courses": {
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 58.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 54.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 58.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7580": {
+    "exam_number": "7580",
+    "name": "OGBE  INNOCENT OCHE",
+    "carryover_courses": {
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 59.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 60.0
+      }
+    },
+    "passed_resit_courses": {
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 59.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 60.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7581": {
+    "exam_number": "7581",
+    "name": "OKAM BELIEVE  ONENO",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 79.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 75.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 77.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 68.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 79.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 75.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 77.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 68.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7585": {
+    "exam_number": "7585",
+    "name": "OLUWADAMILARE BLESSING RUTH",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 32.0,
+        "resit_score": 77.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 62.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 73.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 16.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 32.0,
+        "resit_score": 77.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 32.0,
+        "resit_score": 62.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 41.0,
+        "resit_score": 73.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 16.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7590": {
+    "exam_number": "7590",
+    "name": "ONAKOYA TAIWO FOLAKEMI",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 37.0,
+        "resit_score": 57.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 66.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 60.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 69.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 67.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 37.0,
+        "resit_score": 57.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 66.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 60.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 69.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 67.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7593": {
+    "exam_number": "7593",
+    "name": "OSIPITAN ESTHER ARIBIYO",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 35.0,
+        "resit_score": 59.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 18.0,
+        "resit_score": 69.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 51.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 15.0,
+        "resit_score": 53.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 35.0,
+        "resit_score": 59.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 18.0,
+        "resit_score": 69.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 51.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 15.0,
+        "resit_score": 53.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7599": {
+    "exam_number": "7599",
+    "name": "PETER ISHAKU",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 78.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 59.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 78.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 59.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7605": {
+    "exam_number": "7605",
+    "name": "SAMSON ERNEST ALLU",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 73.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 73.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 50.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 63.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 73.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 73.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 50.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 63.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7607": {
+    "exam_number": "7607",
+    "name": "SANUSI MABEL",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 54.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 51.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 62.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 54.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 51.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 62.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7612": {
+    "exam_number": "7612",
+    "name": "SHUAIBU MUSTAPHA IBRAHIM",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 59.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 33.0,
+        "resit_score": 58.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 25.0,
+        "resit_score": 64.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 67.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 54.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 57.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 28.0,
+        "resit_score": 59.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 33.0,
+        "resit_score": 58.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 25.0,
+        "resit_score": 64.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 67.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 54.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 57.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7613": {
+    "exam_number": "7613",
+    "name": "SOLOMON  SHEDRACH ANYUDO",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 72.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 55.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 56.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 78.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 70.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 70.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 72.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 55.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 56.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 35.0,
+        "resit_score": 78.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 70.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 70.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7617": {
+    "exam_number": "7617",
+    "name": "TAIWO HOPE",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 28.0,
+        "resit_score": 50.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 58.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 71.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 68.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 28.0,
+        "resit_score": 50.0
+      },
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 58.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 71.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 68.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 31.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7618": {
+    "exam_number": "7618",
+    "name": "THEOPHILUS BUKOLA CHRYSOPRASE",
+    "carryover_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 71.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 70.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS114": {
+        "course_code": "GNS114",
+        "course_title": "Nutrition",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 71.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 70.0
+      },
+      "GST114": {
+        "course_code": "GST114",
+        "course_title": "Microbiology",
+        "credit_unit": 2.0,
+        "original_score": 20.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7619": {
+    "exam_number": "7619",
+    "name": "TUKUR COMFORT",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 52.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 80.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 24.0,
+        "resit_score": 51.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 52.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 80.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 24.0,
+        "resit_score": 51.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7626": {
+    "exam_number": "7626",
+    "name": "UNUABOR PHILIP OSEIWE",
+    "carryover_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 59.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 56.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 66.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 61.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 14.0,
+        "resit_score": 59.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 56.0
+      },
+      "GST112": {
+        "course_code": "GST112",
+        "course_title": "Applied Physics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 66.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 22.0,
+        "resit_score": 61.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7634": {
+    "exam_number": "7634",
+    "name": "YAKUBU AKUMISHI PATIENCE",
+    "carryover_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 35.0,
+        "resit_score": 80.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 30.0,
+        "resit_score": 50.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 72.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS111": {
+        "course_code": "GNS111",
+        "course_title": "Anatomy & Physiology I",
+        "credit_unit": 4.0,
+        "original_score": 35.0,
+        "resit_score": 80.0
+      },
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 30.0,
+        "resit_score": 50.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 72.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7635": {
+    "exam_number": "7635",
+    "name": "YAKUBU HALIMA SADIYA",
+    "carryover_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 24.0,
+        "resit_score": 58.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 78.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 50.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 39.0,
+        "resit_score": 52.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS112": {
+        "course_code": "GNS112",
+        "course_title": "Foundation of Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 24.0,
+        "resit_score": 58.0
+      },
+      "GNS113": {
+        "course_code": "GNS113",
+        "course_title": "Introduction to Nursing Informatics",
+        "credit_unit": 2.0,
+        "original_score": 34.0,
+        "resit_score": 78.0
+      },
+      "GST111": {
+        "course_code": "GST111",
+        "course_title": "Use of English",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 50.0
+      },
+      "GST113": {
+        "course_code": "GST113",
+        "course_title": "Applied Chemistry",
+        "credit_unit": 2.0,
+        "original_score": 39.0,
+        "resit_score": 52.0
+      },
+      "GST115": {
+        "course_code": "GST115",
+        "course_title": "Social and Behavioral Science",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  }
+}

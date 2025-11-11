@@ -332,7 +332,8 @@
 
         .form-group select,
         .form-group input[type="text"],
-        .form-group input[type="file"] {
+        .form-group input[type="file"],
+        .form-group input[type="number"] {
             width: 100%;
             padding: 10px 15px;
             border: 2px solid var(--border-color);
@@ -344,14 +345,16 @@
 
         .form-group select:focus,
         .form-group input[type="text"]:focus,
-        .form-group input[type="file"]:focus {
+        .form-group input[type="file"]:focus,
+        .form-group input[type="number"]:focus {
             border-color: var(--bn-color);
             background: white;
             outline: none;
         }
 
         .form-group select:valid,
-        .form-group input[type="text"]:valid {
+        .form-group input[type="text"]:valid,
+        .form-group input[type="number"]:valid {
             border-color: var(--success);
         }
 
@@ -532,7 +535,6 @@
             color: #ccc;
         }
 
-        /* Carryover Configuration Styles */
         .checkbox-group {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             padding: 15px;
@@ -780,9 +782,7 @@
                     <i class="fas fa-info-circle"></i> Process carryover and resit examination results for Basic Nursing students. This tool integrates resit results with existing student records and recalculates academic status.
                 </div>
 
-                <form method="POST" enctype="multipart/form-data" action="{{ url_for('process_bn_resit') }}" id="bn_carryover_form">
-                    <input type="hidden" name="processing_type" value="carryover">
-                    
+                <form action="{{ url_for('bn_carryover') }}" method="post" enctype="multipart/form-data" id="bn_carryover_form">
                     <div class="carryover-section">
                         <div class="carryover-header">
                             <i class="fas fa-sync-alt carryover-icon"></i>
@@ -791,8 +791,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="resit_set" class="required"><i class="fas fa-folder"></i> Academic Set</label>
-                            <select id="resit_set" name="resit_set" required>
+                            <label for="set_name" class="required"><i class="fas fa-folder"></i> Academic Set</label>
+                            <select id="set_name" name="set_name" required>
                                 <option value="">-- Select BN Set --</option>
                                 {% for set in bn_sets %}
                                 <option value="{{ set }}">{{ set }}</option>
@@ -802,8 +802,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="resit_semester" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
-                            <select id="resit_semester" name="resit_semester" required>
+                            <label for="semester_key" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
+                            <select id="semester_key" name="semester_key" required>
                                 <option value="">-- Select Semester --</option>
                                 <option value="N-FIRST-YEAR-FIRST-SEMESTER">First Year - First Semester</option>
                                 <option value="N-FIRST-YEAR-SECOND-SEMESTER">First Year - Second Semester</option>
@@ -819,6 +819,12 @@
                             <label for="resit_file" class="required"><i class="fas fa-file-upload"></i> BN Resit Results File (Excel)</label>
                             <input type="file" id="resit_file" name="resit_file" accept=".xlsx,.xls" required>
                             <div class="info-text"><i class="fas fa-info-circle"></i> Upload the Basic Nursing resit results Excel file</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="pass_threshold"><i class="fas fa-percentage"></i> Pass Threshold</label>
+                            <input type="number" id="pass_threshold" name="pass_threshold" value="50.0" step="0.1" min="0" max="100">
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Minimum passing score (default: 50.0)</div>
                         </div>
 
                         <!-- Carryover Processing Configuration -->
@@ -940,27 +946,27 @@
         }
 
         function validateBNCarryoverForm() {
-            const resitSet = document.getElementById('resit_set').value;
-            const resitSemester = document.getElementById('resit_semester').value;
-            const resitFile = document.getElementById('resit_file').value;
+            const bnSet = document.getElementById('set_name').value;
+            const bnSemester = document.getElementById('semester_key').value;
+            const bnResitFile = document.getElementById('resit_file').value;
             
-            if (!resitSet) {
+            if (!bnSet) {
                 alert('Please select a Basic Nursing academic set for carryover processing.');
                 return false;
             }
             
-            if (!resitSemester) {
+            if (!bnSemester) {
                 alert('Please select a target semester for carryover processing.');
                 return false;
             }
             
-            if (!resitFile) {
+            if (!bnResitFile) {
                 alert('Please upload a Basic Nursing carryover Excel file.');
                 return false;
             }
             
             const allowedExtensions = /(\.xlsx|\.xls)$/i;
-            if (!allowedExtensions.exec(resitFile)) {
+            if (!allowedExtensions.exec(bnResitFile)) {
                 alert('Please upload a valid Excel file (.xlsx or .xls).');
                 return false;
             }
@@ -969,6 +975,32 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            const semesterSelect = document.getElementById('semester_key');
+            
+            // Ensure BN semester options are present
+            if (semesterSelect && semesterSelect.options.length <= 1) {
+                console.log('BN Semester dropdown is empty, repopulating...');
+                
+                // Add BN semester options with N- prefix (Basic Nursing standard)
+                const semesters = [
+                    {value: 'N-FIRST-YEAR-FIRST-SEMESTER', text: 'First Year - First Semester'},
+                    {value: 'N-FIRST-YEAR-SECOND-SEMESTER', text: 'First Year - Second Semester'},
+                    {value: 'N-SECOND-YEAR-FIRST-SEMESTER', text: 'Second Year - First Semester'},
+                    {value: 'N-SECOND-YEAR-SECOND-SEMESTER', text: 'Second Year - Second Semester'},
+                    {value: 'N-THIRD-YEAR-FIRST-SEMESTER', text: 'Third Year - First Semester'},
+                    {value: 'N-THIRD-YEAR-SECOND-SEMESTER', text: 'Third Year - Second Semester'}
+                ];
+                
+                semesters.forEach(semester => {
+                    const option = document.createElement('option');
+                    option.value = semester.value;
+                    option.textContent = semester.text;
+                    semesterSelect.appendChild(option);
+                });
+                
+                console.log('BN Semester dropdown repopulated with', semesters.length, 'options');
+            }
+
             const carryoverForm = document.getElementById('bn_carryover_form');
             carryoverForm.onsubmit = function(e) {
                 if (!validateBNCarryoverForm()) {

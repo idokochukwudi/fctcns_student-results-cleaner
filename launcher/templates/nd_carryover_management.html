@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ND Carryover & Resit Processing - {{ college | default('FCT College of Nursing Sciences') }}</title>
+    <title>Basic Nursing Carryover Management - {{ college | default('FCT College of Nursing Sciences') }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -19,8 +19,7 @@
             --gradient-end: #764ba2;
             --shadow: 0 6px 20px rgba(0,0,0,0.08);
             --border-color: #e9ecef;
-            --nd-color: #e74c3c;
-            --carryover-color: #8e44ad;
+            --bn-color: #3498db;
         }
 
         * {
@@ -277,7 +276,7 @@
             border-radius: 12px;
             box-shadow: var(--shadow);
             margin-bottom: 15px;
-            border-left: 4px solid var(--nd-color);
+            border-left: 4px solid var(--bn-color);
         }
 
         .form-header {
@@ -289,7 +288,7 @@
 
         .form-header-icon {
             font-size: 2em;
-            color: var(--nd-color);
+            color: var(--bn-color);
         }
 
         .form-section h3 {
@@ -299,7 +298,7 @@
         }
 
         .program-badge {
-            background: linear-gradient(135deg, var(--nd-color) 0%, #c0392b 100%);
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
             color: white;
             padding: 6px 12px;
             border-radius: 18px;
@@ -333,7 +332,8 @@
 
         .form-group select,
         .form-group input[type="text"],
-        .form-group input[type="file"] {
+        .form-group input[type="file"],
+        .form-group input[type="number"] {
             width: 100%;
             padding: 10px 15px;
             border: 2px solid var(--border-color);
@@ -345,20 +345,22 @@
 
         .form-group select:focus,
         .form-group input[type="text"]:focus,
-        .form-group input[type="file"]:focus {
-            border-color: var(--nd-color);
+        .form-group input[type="file"]:focus,
+        .form-group input[type="number"]:focus {
+            border-color: var(--bn-color);
             background: white;
             outline: none;
         }
 
         .form-group select:valid,
-        .form-group input[type="text"]:valid {
+        .form-group input[type="text"]:valid,
+        .form-group input[type="number"]:valid {
             border-color: var(--success);
         }
 
         .carryover-section {
-            background: linear-gradient(135deg, #fdedec 0%, #fadbd8 100%);
-            border: 2px solid var(--nd-color);
+            background: linear-gradient(135deg, #e8f4fd 0%, #d6eaff 100%);
+            border: 2px solid var(--bn-color);
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
@@ -373,17 +375,17 @@
 
         .carryover-icon {
             font-size: 1.5em;
-            color: var(--nd-color);
+            color: var(--bn-color);
         }
 
         .carryover-header h4 {
             font-size: 1.2em;
-            color: var(--nd-color);
+            color: var(--bn-color);
             font-weight: 600;
         }
 
         .carryover-badge {
-            background: linear-gradient(135deg, var(--nd-color) 0%, #c0392b 100%);
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
             color: white;
             padding: 4px 8px;
             border-radius: 12px;
@@ -392,20 +394,20 @@
         }
 
         .carryover-note {
-            background: linear-gradient(135deg, #fadbd8 0%, #f5b7b1 100%);
-            border: 2px solid #e74c3c;
+            background: linear-gradient(135deg, #d6eaff 0%, #b3d9ff 100%);
+            border: 2px solid #99ccff;
             border-radius: 6px;
             padding: 10px 15px;
             margin-top: 10px;
             font-size: 0.85em;
-            color: #78281f;
+            color: #004085;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .btn {
-            background: linear-gradient(135deg, var(--nd-color) 0%, #c0392b 100%);
+            background: linear-gradient(135deg, var(--bn-color) 0%, #2980b9 100%);
             color: white;
             padding: 14px 28px;
             border-radius: 8px;
@@ -444,13 +446,13 @@
         }
 
         .form-note {
-            background: linear-gradient(135deg, #fdedec 0%, #fadbd8 100%);
-            border: 2px solid #f5b7b1;
+            background: linear-gradient(135deg, #e8f4fd 0%, #d6eaff 100%);
+            border: 2px solid #b8daff;
             border-radius: 6px;
             padding: 12px 15px;
             margin: 15px 0;
             font-size: 0.9em;
-            color: #78281f;
+            color: #004085;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -505,13 +507,13 @@
             border-radius: 8px;
             box-shadow: var(--shadow);
             text-align: center;
-            border-top: 4px solid var(--nd-color);
+            border-top: 4px solid var(--bn-color);
         }
 
         .stat-number {
             font-size: 2.5em;
             font-weight: 700;
-            color: var(--nd-color);
+            color: var(--bn-color);
             margin-bottom: 8px;
         }
 
@@ -531,6 +533,55 @@
             font-size: 3em;
             margin-bottom: 15px;
             color: #ccc;
+        }
+
+        /* Carryover Configuration Styles */
+        .checkbox-group {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 15px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+        }
+
+        .checkbox-group h4 {
+            font-size: 1.1em;
+            color: var(--dark);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .form-check input {
+            margin-right: 10px;
+            transform: scale(1.1);
+        }
+
+        .form-check label {
+            font-size: 0.95em;
+            color: var(--dark);
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .form-check label strong {
+            font-weight: 600;
+        }
+
+        .form-check label span {
+            font-size: 0.85em;
+            color: #666;
+            display: block;
         }
 
         @keyframes slideIn {
@@ -650,11 +701,11 @@
             </div>
             <div class="nav-section">
                 <div class="nav-section-title">Carryover Management</div>
-                <a href="{{ url_for('nd_carryover') }}" class="active">
+                <a href="{{ url_for('carryover') }}">
                     <span class="nav-icon">🔄</span>
                     <span>ND Carryover</span>
                 </a>
-                <a href="{{ url_for('bn_carryover') }}">
+                <a href="{{ url_for('bn_carryover_management') }}" class="active">
                     <span class="nav-icon">🔄</span>
                     <span>BN Carryover</span>
                 </a>
@@ -718,106 +769,154 @@
         </div>
 
         <div class="form-container">
-            <!-- ND Carryover Processing Form -->
+            <!-- BN Carryover Processing Form -->
             <div class="form-section">
                 <div class="form-header">
-                    <i class="fas fa-graduation-cap form-header-icon"></i>
+                    <i class="fas fa-user-nurse form-header-icon"></i>
                     <div>
-                        <h3>National Diploma Carryover & Resit Processing</h3>
-                        <span class="program-badge">ND</span>
+                        <h3>Basic Nursing Carryover & Resit Processing</h3>
+                        <span class="program-badge">BN</span>
                     </div>
                 </div>
 
                 <div class="section-description">
-                    <i class="fas fa-info-circle"></i> Process carryover and resit examination results for National Diploma students. This tool integrates resit results with existing student records and recalculates academic status.
+                    <i class="fas fa-info-circle"></i> Process carryover and resit examination results for Basic Nursing students. This tool integrates resit results with existing student records and recalculates academic status.
                 </div>
 
-                <!-- UPDATED FORM ACTION -->
-                <form method="POST" enctype="multipart/form-data" action="{{ url_for('process_nd_carryover') }}" id="nd_carryover_form">
-                    <!-- REMOVED: <input type="hidden" name="processing_type" value="carryover"> -->
-                    
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('bn_carryover_processor') }}" id="bn_carryover_form">
                     <div class="carryover-section">
                         <div class="carryover-header">
                             <i class="fas fa-sync-alt carryover-icon"></i>
-                            <h4>National Diploma Carryover/Resit Processing</h4>
-                            <span class="carryover-badge">ND SPECIAL PROCESSING</span>
+                            <h4>Basic Nursing Carryover/Resit Processing</h4>
+                            <span class="carryover-badge">BN SPECIAL PROCESSING</span>
                         </div>
 
-                        <!-- UPDATED FIELD NAMES -->
                         <div class="form-group">
-                            <label for="selected_set" class="required"><i class="fas fa-folder"></i> Academic Set</label>
-                            <select id="selected_set" name="selected_set" required>
-                                <option value="">-- Select ND Set --</option>
-                                {% for set in nd_sets %}
-                                <option value="{{ set }}">{{ set }}</option>
-                                {% endfor %}
+                            <label for="bn_set" class="required"><i class="fas fa-folder"></i> Academic Set</label>
+                            <select id="bn_set" name="bn_set" required>
+                                <option value="">-- Select BN Set --</option>
+                                {% if bn_sets %}
+                                    {% for set in bn_sets %}
+                                    <option value="{{ set }}">{{ set }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="SET47">SET47</option>
+                                    <option value="SET48">SET48</option>
+                                {% endif %}
                             </select>
-                            <div class="info-text"><i class="fas fa-info-circle"></i> Select the National Diploma academic set for carryover processing</div>
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Select the Basic Nursing academic set for carryover processing</div>
                         </div>
 
-                        <!-- UPDATED FIELD NAMES -->
                         <div class="form-group">
-                            <label for="selected_semester" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
-                            <select id="selected_semester" name="selected_semester" required>
+                            <label for="bn_semester" class="required"><i class="fas fa-calendar"></i> Target Semester</label>
+                            <select id="bn_semester" name="bn_semester" required>
                                 <option value="">-- Select Semester --</option>
-                                <option value="ND-FIRST-YEAR-FIRST-SEMESTER">First Year - First Semester</option>
-                                <option value="ND-FIRST-YEAR-SECOND-SEMESTER">First Year - Second Semester</option>
-                                <option value="ND-SECOND-YEAR-FIRST-SEMESTER">Second Year - First Semester</option>
-                                <option value="ND-SECOND-YEAR-SECOND-SEMESTER">Second Year - Second Semester</option>
+                                <option value="N-FIRST-YEAR-FIRST-SEMESTER">First Year - First Semester</option>
+                                <option value="N-FIRST-YEAR-SECOND-SEMESTER">First Year - Second Semester</option>
+                                <option value="N-SECOND-YEAR-FIRST-SEMESTER">Second Year - First Semester</option>
+                                <option value="N-SECOND-YEAR-SECOND-SEMESTER">Second Year - Second Semester</option>
+                                <option value="N-THIRD-YEAR-FIRST-SEMESTER">Third Year - First Semester</option>
+                                <option value="N-THIRD-YEAR-SECOND-SEMESTER">Third Year - Second Semester</option>
                             </select>
                             <div class="info-text"><i class="fas fa-info-circle"></i> Select the semester for carryover processing</div>
                         </div>
 
-                        <!-- UPDATED FIELD NAMES -->
                         <div class="form-group">
-                            <label for="resit_file" class="required"><i class="fas fa-file-upload"></i> ND Resit Results File (Excel)</label>
-                            <input type="file" id="resit_file" name="resit_file" accept=".xlsx,.xls" required>
-                            <div class="info-text"><i class="fas fa-info-circle"></i> Upload the National Diploma resit results Excel file</div>
+                            <label for="bn_resit_file" class="required"><i class="fas fa-file-upload"></i> BN Resit Results File (Excel)</label>
+                            <input type="file" id="bn_resit_file" name="bn_resit_file" accept=".xlsx,.xls" required>
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Upload the Basic Nursing resit results Excel file</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="pass_threshold"><i class="fas fa-percentage"></i> Pass Threshold</label>
+                            <input type="number" id="pass_threshold" name="pass_threshold" value="50.0" step="0.1" min="0" max="100">
+                            <div class="info-text"><i class="fas fa-info-circle"></i> Minimum passing score (default: 50.0)</div>
+                        </div>
+
+                        <!-- Carryover Processing Configuration -->
+                        <div class="carryover-section">
+                            <div class="carryover-header">
+                                <i class="fas fa-redo carryover-icon"></i>
+                                <h4>Carryover Processing Configuration</h4>
+                                <span class="carryover-badge">AUTO TRACKING</span>
+                            </div>
+
+                            <div class="checkbox-group">
+                                <h4><i class="fas fa-cog"></i> Carryover Options</h4>
+                                
+                                <div class="form-check">
+                                    <input type="checkbox" name="enable_carryover_tracking" id="enable_carryover_tracking" checked>
+                                    <label for="enable_carryover_tracking">
+                                        <strong><i class="fas fa-list-check"></i> Enable Carryover Course Tracking</strong><br>
+                                        <span>Automatically identify students with failed courses and track them across semesters</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input type="checkbox" name="generate_carryover_reports" id="generate_carryover_reports" checked>
+                                    <label for="generate_carryover_reports">
+                                        <strong><i class="fas fa-file-export"></i> Generate Individual Carryover Reports</strong><br>
+                                        <span>Create detailed Excel and JSON reports for each student with carryover courses</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input type="checkbox" name="save_carryover_summary" id="save_carryover_summary" checked>
+                                    <label for="save_carryover_summary">
+                                        <strong><i class="fas fa-table"></i> Save Carryover Summary</strong><br>
+                                        <span>Generate a comprehensive summary of all carryover students per semester</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-note">
+                                <i class="fas fa-info-circle"></i> <strong>📋 How It Works:</strong> 
+                                <ul style="margin-top: 10px; margin-left: 20px;">
+                                    <li>System identifies students who scored below the passing threshold</li>
+                                    <li>Creates individual carryover records with failed course details</li>
+                                    <li>Generates reports in the CARRYOVER_RECORDS subfolder</li>
+                                    <li>Tracks resit attempts when carryover files are processed later</li>
+                                </ul>
+                            </div>
                         </div>
 
                         <div class="carryover-note">
                             <i class="fas fa-info-circle"></i> 
-                            <strong>File Format:</strong> Upload an Excel file with columns: Student ID, Course Code, Score for National Diploma students.
-                        </div>
-
-                        <!-- ADDED: NEW FEATURES INFORMATION -->
-                        <div class="carryover-note" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-color: var(--success); color: #155724;">
-                            <i class="fas fa-robot"></i> 
-                            <strong>NEW AUTO-UPDATE FEATURE:</strong> This process now automatically updates the original mastersheet with passed resit scores (≥50) and recalculates GPA, TCPE, and CGPA metrics.
+                            <strong>File Format:</strong> Upload an Excel file with columns: Student ID, Course Code, Score for Basic Nursing students.
                         </div>
                     </div>
 
-                    <div class="form-note" id="nd_carryover_processing_note">
-                        <i class="fas fa-sync-alt"></i> <strong>🔄 Ready for ND Carryover Processing:</strong> Click the button below to process National Diploma carryover/resit results.
+                    <div class="form-note" id="bn_carryover_processing_note">
+                        <i class="fas fa-sync-alt"></i> <strong>🔄 Ready for BN Carryover Processing:</strong> Click the button below to process Basic Nursing carryover/resit results.
                     </div>
 
-                    <button type="submit" class="btn" id="nd_carryover_submit_btn" aria-label="Process ND Carryover Results">
+                    <button type="submit" class="btn" id="bn_carryover_submit_btn" aria-label="Process BN Carryover Results">
                         <i class="fas fa-sync-alt"></i> 
-                        <span>Process National Diploma Carryover Results</span>
+                        <span>Process Basic Nursing Carryover Results</span>
                     </button>
                 </form>
             </div>
 
-            <!-- ND Carryover Statistics Section -->
+            <!-- BN Carryover Statistics Section -->
             <div class="form-section">
                 <div class="form-header">
                     <i class="fas fa-chart-bar form-header-icon"></i>
                     <div>
-                        <h3>National Diploma Carryover Statistics</h3>
-                        <span class="program-badge">ND OVERVIEW</span>
+                        <h3>Basic Nursing Carryover Statistics</h3>
+                        <span class="program-badge">BN OVERVIEW</span>
                     </div>
                 </div>
 
                 <div class="section-description">
-                    <i class="fas fa-info-circle"></i> Overview of carryover students across National Diploma academic sets. Monitor students requiring resit examinations and track improvement progress.
+                    <i class="fas fa-info-circle"></i> Overview of carryover students across Basic Nursing academic sets. Monitor students requiring resit examinations and track improvement progress.
                 </div>
 
-                {% if nd_carryover_data %}
+                {% if bn_carryover_data and bn_carryover_data|length > 0 %}
                 <div class="stats-grid">
-                    {% for set_name, data in nd_carryover_data.items() %}
+                    {% for set_name, data in bn_carryover_data.items() %}
                     <div class="stat-card">
                         <div class="stat-number">{{ data.total_students }}</div>
-                        <div class="stat-label">Carryover Students in ND/{{ set_name }}</div>
+                        <div class="stat-label">Carryover Students in BN/{{ set_name }}</div>
                         <div class="info-text">
                             <i class="fas fa-calendar"></i> Across {{ data.total_semesters }} semester(s)
                         </div>
@@ -827,8 +926,8 @@
                 {% else %}
                 <div class="empty-state">
                     <i class="fas fa-chart-bar"></i>
-                    <h3>No ND Carryover Data Available</h3>
-                    <p>Process National Diploma examination results first to identify carryover students.</p>
+                    <h3>No BN Carryover Data Available</h3>
+                    <p>Process Basic Nursing examination results first to identify carryover students.</p>
                 </div>
                 {% endif %}
             </div>
@@ -852,28 +951,28 @@
             }
         }
 
-        function validateNDCarryoverForm() {
-            const selectedSet = document.getElementById('selected_set').value;
-            const selectedSemester = document.getElementById('selected_semester').value;
-            const resitFile = document.getElementById('resit_file').value;
+        function validateBNCarryoverForm() {
+            const bnSet = document.getElementById('bn_set').value;
+            const bnSemester = document.getElementById('bn_semester').value;
+            const bnResitFile = document.getElementById('bn_resit_file').value;
             
-            if (!selectedSet) {
-                alert('Please select a National Diploma academic set for carryover processing.');
+            if (!bnSet) {
+                alert('Please select a Basic Nursing academic set for carryover processing.');
                 return false;
             }
             
-            if (!selectedSemester) {
+            if (!bnSemester) {
                 alert('Please select a target semester for carryover processing.');
                 return false;
             }
             
-            if (!resitFile) {
-                alert('Please upload a National Diploma carryover Excel file.');
+            if (!bnResitFile) {
+                alert('Please upload a Basic Nursing carryover Excel file.');
                 return false;
             }
             
             const allowedExtensions = /(\.xlsx|\.xls)$/i;
-            if (!allowedExtensions.exec(resitFile)) {
+            if (!allowedExtensions.exec(bnResitFile)) {
                 alert('Please upload a valid Excel file (.xlsx or .xls).');
                 return false;
             }
@@ -882,25 +981,48 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            const carryoverForm = document.getElementById('nd_carryover_form');
-            carryoverForm.onsubmit = function(e) {
-                if (!validateNDCarryoverForm()) {
-                    e.preventDefault();
-                    return false;
-                }
+            const semesterSelect = document.getElementById('bn_semester');
+            
+            // Ensure BN semester options are present
+            if (semesterSelect && semesterSelect.options.length <= 1) {
+                console.log('BN Semester dropdown is empty, repopulating...');
                 
-                const submitBtn = document.getElementById('nd_carryover_submit_btn');
-                submitBtn.classList.add('disabled');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing ND Carryover...`;
+                // Add BN semester options with N- prefix (Basic Nursing standard)
+                const semesters = [
+                    {value: 'N-FIRST-YEAR-FIRST-SEMESTER', text: 'First Year - First Semester'},
+                    {value: 'N-FIRST-YEAR-SECOND-SEMESTER', text: 'First Year - Second Semester'},
+                    {value: 'N-SECOND-YEAR-FIRST-SEMESTER', text: 'Second Year - First Semester'},
+                    {value: 'N-SECOND-YEAR-SECOND-SEMESTER', text: 'Second Year - Second Semester'},
+                    {value: 'N-THIRD-YEAR-FIRST-SEMESTER', text: 'Third Year - First Semester'},
+                    {value: 'N-THIRD-YEAR-SECOND-SEMESTER', text: 'Third Year - Second Semester'}
+                ];
                 
-                setTimeout(() => {
-                    submitBtn.classList.remove('disabled');
-                    submitBtn.innerHTML = originalText;
-                }, 2000);
+                semesters.forEach(semester => {
+                    const option = document.createElement('option');
+                    option.value = semester.value;
+                    option.textContent = semester.text;
+                    semesterSelect.appendChild(option);
+                });
                 
-                return true;
-            };
+                console.log('BN Semester dropdown repopulated with', semesters.length, 'options');
+            }
+
+            const carryoverForm = document.getElementById('bn_carryover_form');
+            if (carryoverForm) {
+                carryoverForm.onsubmit = function(e) {
+                    if (!validateBNCarryoverForm()) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    
+                    const submitBtn = document.getElementById('bn_carryover_submit_btn');
+                    submitBtn.disabled = true;
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing BN Carryover...`;
+                    
+                    return true;
+                };
+            }
 
             setTimeout(function() {
                 const alerts = document.querySelectorAll('.alert');
