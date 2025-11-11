@@ -6,16 +6,18 @@ from datetime import datetime
 # Step 1: Define directories (Railway + Local compatible)
 # -----------------------------
 # Detect environment: Railway or Local
-IS_RAILWAY = os.getenv('RAILWAY_ENVIRONMENT') is not None
+IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
 
 if IS_RAILWAY:
     # Railway: BASE_DIR is set to /app/EXAMS_INTERNAL
-    BASE_DIR = os.getenv('BASE_DIR', '/app/EXAMS_INTERNAL')
+    BASE_DIR = os.getenv("BASE_DIR", "/app/EXAMS_INTERNAL")
     print("🚂 Running on Railway")
     print(f"   BASE_DIR: {BASE_DIR}")
 else:
     # Local: use home directory structure
-    BASE_DIR = os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL')
+    BASE_DIR = os.path.join(
+        os.path.expanduser("~"), "student_result_cleaner", "EXAMS_INTERNAL"
+    )
     print("💻 Running locally")
     print(f"   BASE_DIR: {BASE_DIR}")
 
@@ -77,7 +79,7 @@ def split_name(full_name):
 for file in files:
     raw_file_path = os.path.join(raw_folder, file)
     print(f"Processing: {file}")
-    
+
     try:
         # Load CSV or Excel
         if file.lower().endswith(".csv"):

@@ -67,17 +67,47 @@ DEFAULT_CLEAN_DIR = os.path.join(DEFAULT_BASE_DIR, "CLEAN_PUTME_RESULT")
 DEFAULT_PASS_THRESHOLD = 50.0
 TIMESTAMP_FMT = "%Y-%m-%d_%H:%M:%S"
 
+
 def parse_args():
     """Parse command-line arguments with defaults."""
     parser = argparse.ArgumentParser(description="UTME/PUTME Results Cleaning Script")
-    parser.add_argument("--input-dir", default=DEFAULT_RAW_DIR, help=f"Input directory for raw files (default: {DEFAULT_RAW_DIR})")
-    parser.add_argument("--candidate-dir", default=DEFAULT_CANDIDATE_DIR, help=f"Directory for candidate batch files (default: {DEFAULT_CANDIDATE_DIR})")
-    parser.add_argument("--output-dir", default=DEFAULT_CLEAN_DIR, help=f"Output directory for cleaned files (default: {DEFAULT_CLEAN_DIR})")
-    parser.add_argument("--pass-threshold", type=float, default=DEFAULT_PASS_THRESHOLD, help=f"Pass threshold for highlighting (default: {DEFAULT_PASS_THRESHOLD})")
-    parser.add_argument("--batch-id", help="Specific batch ID to process (e.g., 'Batch1A' or 'Batch 1A')")
-    parser.add_argument("--non-interactive", action="store_true", help="Skip interactive prompts (e.g., for converted score)")
-    parser.add_argument("--converted-score-max", type=int, help="Target maximum for converted score (e.g., 60 for Score/60%) when non-interactive")
+    parser.add_argument(
+        "--input-dir",
+        default=DEFAULT_RAW_DIR,
+        help=f"Input directory for raw files (default: {DEFAULT_RAW_DIR})",
+    )
+    parser.add_argument(
+        "--candidate-dir",
+        default=DEFAULT_CANDIDATE_DIR,
+        help=f"Directory for candidate batch files (default: {DEFAULT_CANDIDATE_DIR})",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=DEFAULT_CLEAN_DIR,
+        help=f"Output directory for cleaned files (default: {DEFAULT_CLEAN_DIR})",
+    )
+    parser.add_argument(
+        "--pass-threshold",
+        type=float,
+        default=DEFAULT_PASS_THRESHOLD,
+        help=f"Pass threshold for highlighting (default: {DEFAULT_PASS_THRESHOLD})",
+    )
+    parser.add_argument(
+        "--batch-id",
+        help="Specific batch ID to process (e.g., 'Batch1A' or 'Batch 1A')",
+    )
+    parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Skip interactive prompts (e.g., for converted score)",
+    )
+    parser.add_argument(
+        "--converted-score-max",
+        type=int,
+        help="Target maximum for converted score (e.g., 60 for Score/60%) when non-interactive",
+    )
     return parser.parse_args()
+
 
 # ---------------------------
 # Soft pastel color palette for states and charts
@@ -102,8 +132,9 @@ PALETTE = [
     "D8E2DC",  # Soft Neutral
     "FFE5D9",  # Soft Peach
     "A1C7E0",  # Soft Slate
-    "D4A5A5"   # Soft Rose
+    "D4A5A5",  # Soft Rose
 ]
+
 
 def state_color_for(state_name):
     """Deterministic pastel fill for a state label."""
@@ -114,12 +145,15 @@ def state_color_for(state_name):
     color = PALETTE[h % len(PALETTE)]
     return PatternFill(start_color=color, end_color=color, fill_type="solid")
 
+
 # ---------------------------
 # Helpers
 # ---------------------------
 def find_column_by_names(df, candidate_names):
-    norm_map = {col: re.sub(r'\s+', ' ', str(col).strip().lower()) for col in df.columns}
-    candidates = [re.sub(r'\s+', ' ', c.strip().lower()) for c in candidate_names]
+    norm_map = {
+        col: re.sub(r"\s+", " ", str(col).strip().lower()) for col in df.columns
+    }
+    candidates = [re.sub(r"\s+", " ", c.strip().lower()) for c in candidate_names]
     for cand in candidates:
         for col, ncol in norm_map.items():
             if ncol == cand:
@@ -131,6 +165,7 @@ def find_column_by_names(df, candidate_names):
                 return col
     return None
 
+
 def find_grade_column(df):
     for col in df.columns:
         if str(col).strip().lower().startswith("grade/"):
@@ -140,8 +175,12 @@ def find_grade_column(df):
             return col
     return None
 
+
 def to_numeric_safe(series):
-    return pd.to_numeric(series.astype(str).str.replace(",", "").str.strip(), errors="coerce")
+    return pd.to_numeric(
+        series.astype(str).str.replace(",", "").str.strip(), errors="coerce"
+    )
+
 
 def clean_phone_value(s):
     if pd.isna(s):
@@ -159,11 +198,18 @@ def clean_phone_value(s):
         digits = "0" + digits
     return digits
 
+
 def drop_overall_average_rows(df):
-    mask = df.apply(lambda row: row.astype(str).str.contains("overall average", case=False, na=False).any(), axis=1)
+    mask = df.apply(
+        lambda row: row.astype(str)
+        .str.contains("overall average", case=False, na=False)
+        .any(),
+        axis=1,
+    )
     if mask.any():
         return df[~mask].copy()
     return df
+
 
 def auto_column_width(ws, min_width=8, max_width=60):
     for i, col in enumerate(ws.columns, 1):
@@ -173,12 +219,16 @@ def auto_column_width(ws, min_width=8, max_width=60):
                 l = len(str(cell.value))
                 if l > max_len:
                     max_len = l
-        ws.column_dimensions[get_column_letter(i)].width = min(max_width, max(min_width, max_len + 2))
+        ws.column_dimensions[get_column_letter(i)].width = min(
+            max_width, max(min_width, max_len + 2)
+        )
+
 
 def normalize_id(s):
     if s is None:
         return None
     return str(s).strip().lower()
+
 
 # ---------------------------
 # Candidate batches helpers
@@ -187,12 +237,28 @@ def load_candidate_batches(folder, batch_id=None):
     """Load candidate-batch files. If batch_id is provided, load only the matching batch file; otherwise, load all with batch IDs."""
     if not os.path.isdir(folder):
         print(f"Warning: Candidate batch directory {folder} does not exist.")
-        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]), {}, {}
+        return (
+            pd.DataFrame(
+                columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]
+            ),
+            {},
+            {},
+        )
 
-    files = [f for f in os.listdir(folder) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
+    files = [
+        f
+        for f in os.listdir(folder)
+        if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")
+    ]
     if not files:
         print(f"Warning: No candidate batch files found in {folder}.")
-        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]), {}, {}
+        return (
+            pd.DataFrame(
+                columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]
+            ),
+            {},
+            {},
+        )
 
     batch_id_map = {}  # Maps normalized ID to registered BATCH_ID
     numeric_to_full = {}  # Maps numeric token to original EXAM_NO
@@ -202,8 +268,8 @@ def load_candidate_batches(folder, batch_id=None):
         batch_id_match = re.search(r"(Batch\s*\d+[A-Za-z]?)", fname, re.IGNORECASE)
         current_batch_id = batch_id_match.group(1) if batch_id_match else fname
         if batch_id:
-            batch_id_normalized = re.sub(r'\s+', '', batch_id.lower())
-            if batch_id_normalized not in re.sub(r'\s+', '', fname.lower()):
+            batch_id_normalized = re.sub(r"\s+", "", batch_id.lower())
+            if batch_id_normalized not in re.sub(r"\s+", "", fname.lower()):
                 continue
         print(f"Loading candidate batch file: {fname} (Batch ID: {current_batch_id})")
         try:
@@ -214,10 +280,35 @@ def load_candidate_batches(folder, batch_id=None):
         except Exception as e:
             print(f"Error reading candidate batch {fname}: {e}")
             continue
-        exam_col = find_column_by_names(cdf, ["username", "exam no", "reg no", "mat no", "regnum", "reg number"])
-        name_col = find_column_by_names(cdf, ["firstname", "full name", "name", "candidate name", "user full name", "RG_CANDNAME"])
-        phone_col = find_column_by_names(cdf, ["phone1", "phone", "phone number", "PHONE", "Mobile", "PhoneNumber"])
-        state_col = find_column_by_names(cdf, ["city", "city/town", "City /town", "City", "Town", "State of Origin", "STATE"])
+        exam_col = find_column_by_names(
+            cdf, ["username", "exam no", "reg no", "mat no", "regnum", "reg number"]
+        )
+        name_col = find_column_by_names(
+            cdf,
+            [
+                "firstname",
+                "full name",
+                "name",
+                "candidate name",
+                "user full name",
+                "RG_CANDNAME",
+            ],
+        )
+        phone_col = find_column_by_names(
+            cdf, ["phone1", "phone", "phone number", "PHONE", "Mobile", "PhoneNumber"]
+        )
+        state_col = find_column_by_names(
+            cdf,
+            [
+                "city",
+                "city/town",
+                "City /town",
+                "City",
+                "Town",
+                "State of Origin",
+                "STATE",
+            ],
+        )
         for _, r in cdf.iterrows():
             ex = None
             name = None
@@ -245,33 +336,62 @@ def load_candidate_batches(folder, batch_id=None):
                     m = re.search(r"\b(\d{3,})\b", s)
                     if m and not ex:
                         ex = m.group(1)
-                    if not name and re.search(r"[A-Za-z]{2,}", s) and not re.fullmatch(r"\d+", s):
+                    if (
+                        not name
+                        and re.search(r"[A-Za-z]{2,}", s)
+                        and not re.fullmatch(r"\d+", s)
+                    ):
                         name = s
                     if not phone and re.search(r"\d{10,}", s):
                         phone = s
-                    if not state and re.search(r"[A-Za-z]{2,}", s) and c.lower() in ["city", "state"]:
+                    if (
+                        not state
+                        and re.search(r"[A-Za-z]{2,}", s)
+                        and c.lower() in ["city", "state"]
+                    ):
                         state = s
             if ex:
-                rows.append({"EXAM_NO": ex, "FULL_NAME": name or "", "PHONE NUMBER": phone or "", "STATE": state or "", "BATCH_ID": current_batch_id})
+                rows.append(
+                    {
+                        "EXAM_NO": ex,
+                        "FULL_NAME": name or "",
+                        "PHONE NUMBER": phone or "",
+                        "STATE": state or "",
+                        "BATCH_ID": current_batch_id,
+                    }
+                )
                 norm_id = normalize_id(ex)
                 batch_id_map[norm_id] = current_batch_id
                 tok = extract_numeric_token(ex)
                 if tok:
                     numeric_to_full[tok] = ex
     if not rows:
-        print(f"No valid candidate records found in batch files{' for ' + batch_id if batch_id else ''}.")
-        return pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]), {}, {}
-    
+        print(
+            f"No valid candidate records found in batch files{' for ' + batch_id if batch_id else ''}."
+        )
+        return (
+            pd.DataFrame(
+                columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]
+            ),
+            {},
+            {},
+        )
+
     cdf_all = pd.DataFrame(rows)
     duplicates = cdf_all[cdf_all.duplicated(subset=["EXAM_NO"], keep=False)]
     if not duplicates.empty:
-        print(f"Found {len(duplicates)} duplicate EXAM_NO entries in candidate batches{' for ' + batch_id if batch_id else ''}:")
+        print(
+            f"Found {len(duplicates)} duplicate EXAM_NO entries in candidate batches{' for ' + batch_id if batch_id else ''}:"
+        )
         print(duplicates[["EXAM_NO", "FULL_NAME", "BATCH_ID"]].head().to_string())
     cdf_all = cdf_all.drop_duplicates(subset=["EXAM_NO"], keep="first")
-    print(f"Loaded {len(cdf_all)} unique registered candidates from batch files{' for ' + batch_id if batch_id else ''}.")
+    print(
+        f"Loaded {len(cdf_all)} unique registered candidates from batch files{' for ' + batch_id if batch_id else ''}."
+    )
     if "PHONE NUMBER" in cdf_all.columns:
         cdf_all["PHONE NUMBER"] = cdf_all["PHONE NUMBER"].apply(clean_phone_value)
     return cdf_all, batch_id_map, numeric_to_full
+
 
 # ---------------------------
 # Extract numeric tokens helper
@@ -280,14 +400,25 @@ def extract_numeric_token(s):
     """Return first sequence of 3+ digits found in string, else None."""
     if s is None:
         return None
-    s = re.sub(r'\W+', '', str(s).strip().lower())
+    s = re.sub(r"\W+", "", str(s).strip().lower())
     m = re.search(r"(\d{3,})", s)
     return m.group(1) if m else None
+
 
 # ---------------------------
 # Format Excel sheet helper
 # ---------------------------
-def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_threshold, apply_state_colors=True, highlight_passing_scores=True, title_row=None):
+def format_excel_sheet(
+    wb,
+    ws_name,
+    cleaned,
+    state_colors,
+    score_header,
+    pass_threshold,
+    apply_state_colors=True,
+    highlight_passing_scores=True,
+    title_row=None,
+):
     ws = wb[ws_name]
     header_row = 1 if title_row is None else 2
     header_font = Font(bold=True, size=12)
@@ -300,13 +431,20 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
         for cell in ws[1]:
             cell.font = Font(bold=True, size=14)
             cell.alignment = Alignment(horizontal="center", vertical="center")
-        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(cleaned.columns))
+        ws.merge_cells(
+            start_row=1, start_column=1, end_row=1, end_column=len(cleaned.columns)
+        )
         ws.cell(row=1, column=1).value = title_row
 
     if "APPLICATION ID" in cleaned.columns:
         try:
             col_idx = list(cleaned.columns).index("APPLICATION ID") + 1
-            for r in ws.iter_rows(min_row=header_row + 1, min_col=col_idx, max_col=col_idx, max_row=ws.max_row):
+            for r in ws.iter_rows(
+                min_row=header_row + 1,
+                min_col=col_idx,
+                max_col=col_idx,
+                max_row=ws.max_row,
+            ):
                 for cell in r:
                     cell.alignment = Alignment(horizontal="left")
         except Exception:
@@ -317,11 +455,16 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
 
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
-    for r in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+    for r in ws.iter_rows(
+        min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+    ):
         for cell in r:
             cell.border = border
             # Apply bold formatting to "Overall Average" row
-            if cell.row > header_row and ws.cell(row=cell.row, column=1).value == "Overall Average":
+            if (
+                cell.row > header_row
+                and ws.cell(row=cell.row, column=1).value == "Overall Average"
+            ):
                 cell.font = Font(bold=True)
 
     if apply_state_colors:
@@ -339,8 +482,12 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
             pass
 
     if highlight_passing_scores:
-        score_cols_indices = [i + 1 for i, c in enumerate(cleaned.columns) if str(c).startswith("Score/")]
-        pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        score_cols_indices = [
+            i + 1 for i, c in enumerate(cleaned.columns) if str(c).startswith("Score/")
+        ]
+        pass_fill = PatternFill(
+            start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"
+        )
         pass_font = Font(color="006100")
         for col_idx in score_cols_indices:
             for row_idx in range(header_row + 1, ws.max_row + 1):
@@ -358,38 +505,99 @@ def format_excel_sheet(wb, ws_name, cleaned, state_colors, score_header, pass_th
                 except Exception:
                     continue
 
+
 # ---------------------------
 # Create Analysis and Charts sheets
 # ---------------------------
-def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_df, batch_id_map, numeric_to_full, score_header, output_dir, ts, fname="Combined", pass_threshold=DEFAULT_PASS_THRESHOLD, current_batch_id=None, skip_batch_mismatches=False, rebatched_count=0):
+def create_analysis_and_charts(
+    wb,
+    cleaned,
+    df,
+    candidates_df,
+    full_candidates_df,
+    batch_id_map,
+    numeric_to_full,
+    score_header,
+    output_dir,
+    ts,
+    fname="Combined",
+    pass_threshold=DEFAULT_PASS_THRESHOLD,
+    current_batch_id=None,
+    skip_batch_mismatches=False,
+    rebatched_count=0,
+):
     total_candidates = len(cleaned)
-    score_series = df["_ScoreNum"].dropna().astype(float) if "_ScoreNum" in df.columns else pd.Series([], dtype=float)
+    score_series = (
+        df["_ScoreNum"].dropna().astype(float)
+        if "_ScoreNum" in df.columns
+        else pd.Series([], dtype=float)
+    )
     highest_score = score_series.max() if not score_series.empty else None
     lowest_score = score_series.min() if not score_series.empty else None
     avg_score = round(score_series.mean(), 2) if not score_series.empty else None
 
-    state_counts = df.groupby("STATE")["_ScoreNum"].count().sort_index() if "_ScoreNum" in df.columns else pd.Series(dtype=int)
-    state_avg = df.groupby("STATE")["_ScoreNum"].mean().round(2).sort_index() if "_ScoreNum" in df.columns else pd.Series(dtype=float)
-    state_pass_count = df[df["_ScoreNum"].astype(float) >= pass_threshold].groupby("STATE")["_ScoreNum"].count() if "_ScoreNum" in df.columns else pd.Series(dtype=int)
+    state_counts = (
+        df.groupby("STATE")["_ScoreNum"].count().sort_index()
+        if "_ScoreNum" in df.columns
+        else pd.Series(dtype=int)
+    )
+    state_avg = (
+        df.groupby("STATE")["_ScoreNum"].mean().round(2).sort_index()
+        if "_ScoreNum" in df.columns
+        else pd.Series(dtype=float)
+    )
+    state_pass_count = (
+        df[df["_ScoreNum"].astype(float) >= pass_threshold]
+        .groupby("STATE")["_ScoreNum"]
+        .count()
+        if "_ScoreNum" in df.columns
+        else pd.Series(dtype=int)
+    )
 
     if "Analysis" in wb.sheetnames:
         wb.remove(wb["Analysis"])
     anal = wb.create_sheet("Analysis")
     anal.append(["Metric", "Value"])
     anal.append(["Total Candidates", int(total_candidates)])
-    anal.append(["Highest Score (raw)", float(highest_score) if highest_score is not None else None])
-    anal.append(["Lowest Score (raw)", float(lowest_score) if lowest_score is not None else None])
+    anal.append(
+        [
+            "Highest Score (raw)",
+            float(highest_score) if highest_score is not None else None,
+        ]
+    )
+    anal.append(
+        [
+            "Lowest Score (raw)",
+            float(lowest_score) if lowest_score is not None else None,
+        ]
+    )
     anal.append(["Average Score (raw)", avg_score])
     anal.append([])
 
-    anal.append(["State", "Candidates", "Average Score", f"Pass Count (≥{int(pass_threshold)})", "Pass Rate (%)"])
+    anal.append(
+        [
+            "State",
+            "Candidates",
+            "Average Score",
+            f"Pass Count (≥{int(pass_threshold)})",
+            "Pass Rate (%)",
+        ]
+    )
     per_state_rows = []
     for st in sorted(set(df["STATE"].tolist())):
         cnt = int(state_counts.get(st, 0))
-        avg = float(state_avg.get(st, float("nan")) ) if st in state_avg.index else None
+        avg = float(state_avg.get(st, float("nan"))) if st in state_avg.index else None
         pcnt = int(state_pass_count.get(st, 0)) if st in state_pass_count.index else 0
         prate = round((pcnt / cnt * 100), 2) if cnt > 0 else 0.0
-        per_state_rows.append([st, cnt, avg if not (isinstance(avg, float) and math.isnan(avg)) else None, pcnt, prate])
+        per_state_rows.append(
+            [
+                st,
+                cnt,
+                avg if not (isinstance(avg, float) and math.isnan(avg)) else None,
+                pcnt,
+                prate,
+            ]
+        )
     for row in per_state_rows:
         anal.append(row)
 
@@ -405,14 +613,22 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
         sorted_by_count = sorted(per_state_rows, key=lambda r: r[1], reverse=True)
         most_state, most_cnt = sorted_by_count[0][0], sorted_by_count[0][1]
         least_state, least_cnt = sorted_by_count[-1][0], sorted_by_count[-1][1]
-        sorted_by_avg = sorted([r for r in per_state_rows if r[2] is not None], key=lambda r: r[2], reverse=True)
+        sorted_by_avg = sorted(
+            [r for r in per_state_rows if r[2] is not None],
+            key=lambda r: r[2],
+            reverse=True,
+        )
         best_avg_state = sorted_by_avg[0][0] if sorted_by_avg else None
         sorted_by_pr = sorted(per_state_rows, key=lambda r: r[4], reverse=True)
         best_pass_state = sorted_by_pr[0][0] if sorted_by_pr else None
 
         overall_pass = sum(r[3] for r in per_state_rows)
         overall_fail = total_candidates - overall_pass
-        overall_pass_rate = round(overall_pass / total_candidates * 100, 2) if total_candidates > 0 else 0.0
+        overall_pass_rate = (
+            round(overall_pass / total_candidates * 100, 2)
+            if total_candidates > 0
+            else 0.0
+        )
 
         anal.append([])
         anal.append(["Narrative Summary"])
@@ -486,8 +702,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
             c1.width = 32
             c1.height = 16
             c1.gapWidth = 50
-            data_ref = Reference(chs, min_col=2, min_row=start_row + 1, max_row=start_row + n)
-            cats_ref = Reference(chs, min_col=1, min_row=start_row + 1, max_row=start_row + n)
+            data_ref = Reference(
+                chs, min_col=2, min_row=start_row + 1, max_row=start_row + n
+            )
+            cats_ref = Reference(
+                chs, min_col=1, min_row=start_row + 1, max_row=start_row + n
+            )
             c1.add_data(data_ref, titles_from_data=True)
             c1.set_categories(cats_ref)
             c1.dLbls = DataLabelList()
@@ -512,8 +732,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
             c2.width = 32
             c2.height = 16
             c2.gapWidth = 50
-            data_ref2 = Reference(chs, min_col=3, min_row=start_row + 1, max_row=start_row + n)
-            cats_ref2 = Reference(chs, min_col=1, min_row=start_row + 1, max_row=start_row + n)
+            data_ref2 = Reference(
+                chs, min_col=3, min_row=start_row + 1, max_row=start_row + n
+            )
+            cats_ref2 = Reference(
+                chs, min_col=1, min_row=start_row + 1, max_row=start_row + n
+            )
             c2.add_data(data_ref2, titles_from_data=True)
             c2.set_categories(cats_ref2)
             c2.dLbls = DataLabelList()
@@ -538,8 +762,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
             c3.width = 32
             c3.height = 16
             c3.gapWidth = 50
-            data_ref3 = Reference(chs, min_col=4, min_row=start_row + 1, max_row=start_row + n)
-            cats_ref3 = Reference(chs, min_col=1, min_row=start_row + 1, max_row=start_row + n)
+            data_ref3 = Reference(
+                chs, min_col=4, min_row=start_row + 1, max_row=start_row + n
+            )
+            cats_ref3 = Reference(
+                chs, min_col=1, min_row=start_row + 1, max_row=start_row + n
+            )
             c3.add_data(data_ref3, titles_from_data=True)
             c3.set_categories(cats_ref3)
             c3.dLbls = DataLabelList()
@@ -579,8 +807,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
                 c4.width = 32
                 c4.height = 12
                 c4.gapWidth = 50
-                data_ref4 = Reference(chs, min_col=2, min_row=insert_row + 1, max_row=insert_row + n_bins)
-                cats_ref4 = Reference(chs, min_col=1, min_row=insert_row + 1, max_row=insert_row + n_bins)
+                data_ref4 = Reference(
+                    chs, min_col=2, min_row=insert_row + 1, max_row=insert_row + n_bins
+                )
+                cats_ref4 = Reference(
+                    chs, min_col=1, min_row=insert_row + 1, max_row=insert_row + n_bins
+                )
                 c4.add_data(data_ref4, titles_from_data=True)
                 c4.set_categories(cats_ref4)
                 c4.dLbls = DataLabelList()
@@ -611,8 +843,12 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
             pie.title = f"Overall Pass/Fail Distribution (≥ {int(pass_threshold)})"
             pie.width = 15
             pie.height = 10
-            data_ref_pie = Reference(chs, min_col=2, min_row=insert_row_pie + 1, max_row=insert_row_pie + 2)
-            cats_ref_pie = Reference(chs, min_col=1, min_row=insert_row_pie + 1, max_row=insert_row_pie + 2)
+            data_ref_pie = Reference(
+                chs, min_col=2, min_row=insert_row_pie + 1, max_row=insert_row_pie + 2
+            )
+            cats_ref_pie = Reference(
+                chs, min_col=1, min_row=insert_row_pie + 1, max_row=insert_row_pie + 2
+            )
             pie.add_data(data_ref_pie, titles_from_data=True)
             pie.set_categories(cats_ref_pie)
             pie.dLbls = DataLabelList()
@@ -629,8 +865,18 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
 
     # Calculate absent candidates and batch mismatches
     absent_count = 0
-    absent_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "Batch"])
-    mismatch_df = pd.DataFrame(columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"])
+    absent_df = pd.DataFrame(
+        columns=["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "Batch"]
+    )
+    mismatch_df = pd.DataFrame(
+        columns=[
+            "APPLICATION ID",
+            "FULL NAME",
+            "PHONE NO.",
+            "STATE",
+            "REGISTERED BATCH",
+        ]
+    )
     invalid_ids = []
     total_registered = len(candidates_df)
 
@@ -640,7 +886,9 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
         if "APPLICATION ID" in cleaned.columns:
             duplicates = cleaned[cleaned["APPLICATION ID"].duplicated(keep=False)]
             if not duplicates.empty:
-                print(f"Found {len(duplicates)} duplicate APPLICATION ID entries in {fname}:")
+                print(
+                    f"Found {len(duplicates)} duplicate APPLICATION ID entries in {fname}:"
+                )
                 print(duplicates[["APPLICATION ID", "FULL NAME"]].head().to_string())
             for index, v in cleaned["APPLICATION ID"].astype(str).items():
                 tok = extract_numeric_token(v)
@@ -654,16 +902,25 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
                     full_ex = numeric_to_full[tok]
                     norm_id = normalize_id(full_ex)
                     registered_batch = batch_id_map.get(norm_id, "")
-                if registered_batch and current_batch_id and re.sub(r'\s+', '', registered_batch.lower()) != re.sub(r'\s+', '', current_batch_id.lower()):
-                    mismatch_row = full_candidates_df[full_candidates_df["EXAM_NO"].apply(normalize_id) == norm_id]
+                if (
+                    registered_batch
+                    and current_batch_id
+                    and re.sub(r"\s+", "", registered_batch.lower())
+                    != re.sub(r"\s+", "", current_batch_id.lower())
+                ):
+                    mismatch_row = full_candidates_df[
+                        full_candidates_df["EXAM_NO"].apply(normalize_id) == norm_id
+                    ]
                     if not mismatch_row.empty:
-                        mismatch_rows.append({
-                            "APPLICATION ID": v,
-                            "FULL NAME": cleaned.at[index, "FULL NAME"],
-                            "PHONE NO.": cleaned.at[index, "PHONE NUMBER"],
-                            "STATE": cleaned.at[index, "STATE"],
-                            "REGISTERED BATCH": registered_batch
-                        })
+                        mismatch_rows.append(
+                            {
+                                "APPLICATION ID": v,
+                                "FULL NAME": cleaned.at[index, "FULL NAME"],
+                                "PHONE NO.": cleaned.at[index, "PHONE NUMBER"],
+                                "STATE": cleaned.at[index, "STATE"],
+                                "REGISTERED BATCH": registered_batch,
+                            }
+                        )
                 if tok:
                     present_ids.add(tok)
                 else:
@@ -677,42 +934,72 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
                     full_ex = numeric_to_full[tok]
                     norm_id = normalize_id(full_ex)
                     registered_batch = batch_id_map.get(norm_id, "")
-                    if current_batch_id and re.sub(r'\s+', '', registered_batch.lower()) != re.sub(r'\s+', '', current_batch_id.lower()):
-                        mismatch_row = full_candidates_df[full_candidates_df["EXAM_NO"] == full_ex]
+                    if current_batch_id and re.sub(
+                        r"\s+", "", registered_batch.lower()
+                    ) != re.sub(r"\s+", "", current_batch_id.lower()):
+                        mismatch_row = full_candidates_df[
+                            full_candidates_df["EXAM_NO"] == full_ex
+                        ]
                         if not mismatch_row.empty:
-                            mismatch_rows.append({
-                                "APPLICATION ID": full_ex,
-                                "FULL NAME": v,
-                                "PHONE NO.": cleaned.at[index, "PHONE NUMBER"],
-                                "STATE": cleaned.at[index, "STATE"],
-                                "REGISTERED BATCH": registered_batch
-                            })
+                            mismatch_rows.append(
+                                {
+                                    "APPLICATION ID": full_ex,
+                                    "FULL NAME": v,
+                                    "PHONE NO.": cleaned.at[index, "PHONE NUMBER"],
+                                    "STATE": cleaned.at[index, "STATE"],
+                                    "REGISTERED BATCH": registered_batch,
+                                }
+                            )
                     present_ids.add(tok)
 
         # Calculate absent candidates
-        candidates_df["EXAM_NO_NORMAL"] = candidates_df["EXAM_NO"].apply(lambda x: extract_numeric_token(x) or normalize_id(x))
+        candidates_df["EXAM_NO_NORMAL"] = candidates_df["EXAM_NO"].apply(
+            lambda x: extract_numeric_token(x) or normalize_id(x)
+        )
         candidate_ids = set(candidates_df["EXAM_NO_NORMAL"])
         absent_ids = sorted([cid for cid in candidate_ids if cid not in present_ids])
-        absent_df = candidates_df[candidates_df["EXAM_NO_NORMAL"].isin(absent_ids)][["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]].drop_duplicates()
-        absent_df = absent_df.rename(columns={"EXAM_NO": "APPLICATION ID", "FULL_NAME": "FULL NAME", "PHONE NUMBER": "PHONE NO.", "STATE": "STATE", "BATCH_ID": "Batch"})
+        absent_df = candidates_df[candidates_df["EXAM_NO_NORMAL"].isin(absent_ids)][
+            ["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]
+        ].drop_duplicates()
+        absent_df = absent_df.rename(
+            columns={
+                "EXAM_NO": "APPLICATION ID",
+                "FULL_NAME": "FULL NAME",
+                "PHONE NUMBER": "PHONE NO.",
+                "STATE": "STATE",
+                "BATCH_ID": "Batch",
+            }
+        )
         absent_count = len(absent_df)
 
         # Handle batch mismatches
         if mismatch_rows:
             mismatch_df = pd.DataFrame(mismatch_rows)
-            print(f"Found {len(mismatch_df)} candidates in {fname} results who were registered in a different batch:")
-            print(mismatch_df[["APPLICATION ID", "FULL NAME", "REGISTERED BATCH"]].to_string(index=False))
+            print(
+                f"Found {len(mismatch_df)} candidates in {fname} results who were registered in a different batch:"
+            )
+            print(
+                mismatch_df[
+                    ["APPLICATION ID", "FULL NAME", "REGISTERED BATCH"]
+                ].to_string(index=False)
+            )
 
         print(f"Absent candidates check for {fname}:")
-        print(f"  Total registered candidates (from RAW_CANDIDATE_BATCHES): {total_registered}")
+        print(
+            f"  Total registered candidates (from RAW_CANDIDATE_BATCHES): {total_registered}"
+        )
         print(f"  Total present candidates (sat for exam): {len(present_ids)}")
         print(f"  Total absent candidates (registered but did not sit): {absent_count}")
         if absent_count != len(absent_df):
-            print(f"Warning: Discrepancy detected: Expected {absent_count} absent candidates, but found {len(absent_df)} in absent_df")
+            print(
+                f"Warning: Discrepancy detected: Expected {absent_count} absent candidates, but found {len(absent_df)} in absent_df"
+            )
         if absent_ids:
             print(f"  Sample absent IDs (first 5): {absent_ids[:5]}")
         if invalid_ids:
-            print(f"  Note: {len(invalid_ids)} invalid APPLICATION IDs may affect absent count.")
+            print(
+                f"  Note: {len(invalid_ids)} invalid APPLICATION IDs may affect absent count."
+            )
 
     if "Absent" in wb.sheetnames:
         wb.remove(wb["Absent"])
@@ -722,19 +1009,37 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
         abs_ws.append(["No absent candidates found.", "", "", "", ""])
     else:
         for _, r in absent_df.iterrows():
-            abs_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE"), r.get("Batch")])
+            abs_ws.append(
+                [
+                    r.get("APPLICATION ID"),
+                    r.get("FULL NAME"),
+                    r.get("PHONE NO."),
+                    r.get("STATE"),
+                    r.get("Batch"),
+                ]
+            )
     auto_column_width(abs_ws)
 
     if not skip_batch_mismatches:
         if "BatchMismatches" in wb.sheetnames:
             wb.remove(wb["BatchMismatches"])
         mismatch_ws = wb.create_sheet("BatchMismatches")
-        mismatch_ws.append(["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"])
+        mismatch_ws.append(
+            ["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH"]
+        )
         if mismatch_df.empty:
             mismatch_ws.append(["No candidates found in wrong batch.", "", "", "", ""])
         else:
             for _, r in mismatch_df.iterrows():
-                mismatch_ws.append([r.get("APPLICATION ID"), r.get("FULL NAME"), r.get("PHONE NO."), r.get("STATE"), r.get("REGISTERED BATCH")])
+                mismatch_ws.append(
+                    [
+                        r.get("APPLICATION ID"),
+                        r.get("FULL NAME"),
+                        r.get("PHONE NO."),
+                        r.get("STATE"),
+                        r.get("REGISTERED BATCH"),
+                    ]
+                )
         auto_column_width(mismatch_ws)
 
     anal.append([])
@@ -758,10 +1063,20 @@ def create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_d
 
     return absent_df, mismatch_df
 
+
 # ---------------------------
 # Core processing for a single file
 # ---------------------------
-def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_batch_id_map, full_numeric_to_full, pass_threshold):
+def process_file(
+    path,
+    output_dir,
+    ts,
+    candidate_dir,
+    full_candidates_df,
+    full_batch_id_map,
+    full_numeric_to_full,
+    pass_threshold,
+):
     fname = os.path.basename(path)
     print(f"\nProcessing: {fname}")
 
@@ -771,8 +1086,12 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
         print(f"Detected batch ID: {batch_id}")
         candidates_df, _, _ = load_candidate_batches(candidate_dir, batch_id=batch_id)
     else:
-        print(f"Warning: Could not detect batch ID in filename {fname}. Using empty candidates list for batch-specific absent calculation.")
-        candidates_df = pd.DataFrame(columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"])
+        print(
+            f"Warning: Could not detect batch ID in filename {fname}. Using empty candidates list for batch-specific absent calculation."
+        )
+        candidates_df = pd.DataFrame(
+            columns=["EXAM_NO", "FULL_NAME", "PHONE NUMBER", "STATE", "BATCH_ID"]
+        )
 
     try:
         if fname.lower().endswith(".csv"):
@@ -791,23 +1110,40 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
 
     df.rename(columns=lambda c: str(c).strip(), inplace=True)
 
-    fullname_col = find_column_by_names(df, ["First name", "Firstname", "Full name", "Name", "Surname"])
+    fullname_col = find_column_by_names(
+        df, ["First name", "Firstname", "Full name", "Name", "Surname"]
+    )
     if fullname_col:
         df.rename(columns={fullname_col: "FULL NAME"}, inplace=True)
 
-    appid_col = find_column_by_names(df, ["Surname", "Mat no", "Mat No", "MAT NO.", "APPLICATION ID", "Username"])
+    appid_col = find_column_by_names(
+        df, ["Surname", "Mat no", "Mat No", "MAT NO.", "APPLICATION ID", "Username"]
+    )
     if appid_col and appid_col != fullname_col:
         df.rename(columns={appid_col: "APPLICATION ID"}, inplace=True)
 
-    phone_col = find_column_by_names(df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"])
+    phone_col = find_column_by_names(
+        df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"]
+    )
     if phone_col:
         df.rename(columns={phone_col: "PHONE NUMBER"}, inplace=True)
 
-    city_col = find_column_by_names(df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"])
+    city_col = find_column_by_names(
+        df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"]
+    )
     if city_col:
         df.rename(columns={city_col: "STATE"}, inplace=True)
 
-    for drop_col in ["Username", "Department", "State", "Started on", "Completed", "Time taken", "USERNAME", "DEPARTMENT"]:
+    for drop_col in [
+        "Username",
+        "Department",
+        "State",
+        "Started on",
+        "Completed",
+        "Time taken",
+        "USERNAME",
+        "DEPARTMENT",
+    ]:
         if drop_col in df.columns:
             df.drop(columns=[drop_col], inplace=True)
 
@@ -825,11 +1161,13 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
 
     grade_col = find_grade_column(df)
     if not grade_col:
-        print(f"Skipping {fname}: Missing required column: a 'Grade/...' or 'Grade' column was not found.")
+        print(
+            f"Skipping {fname}: Missing required column: a 'Grade/...' or 'Grade' column was not found."
+        )
         return None, None, None, None
 
     if str(grade_col).strip().lower().startswith("grade/"):
-        score_header = re.sub(r'(?i)^grade', 'Score', grade_col, flags=re.I)
+        score_header = re.sub(r"(?i)^grade", "Score", grade_col, flags=re.I)
     else:
         found = re.search(r"(\d+(?:\.\d+)?)", str(grade_col))
         suffix = found.group(1) if found else ""
@@ -850,7 +1188,12 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
 
     df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
-    df.sort_values(by=["STATE", "_ScoreNum"], ascending=[True, False], inplace=True, na_position="last")
+    df.sort_values(
+        by=["STATE", "_ScoreNum"],
+        ascending=[True, False],
+        inplace=True,
+        na_position="last",
+    )
     df.reset_index(drop=True, inplace=True)
     df.insert(0, "S/N", range(1, len(df) + 1))
     df["STATE_SN"] = df.groupby("STATE").cumcount() + 1
@@ -868,10 +1211,16 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
 
     found_max = re.search(r"(\d+(?:\.\d+)?)", str(score_header))
     original_max = float(found_max.group(1)) if found_max else 100.0
-    cleaned["Score/100"] = ((df["_ScoreNum"].astype(float) / original_max) * 100).round(0).astype("Int64")
+    cleaned["Score/100"] = (
+        ((df["_ScoreNum"].astype(float) / original_max) * 100).round(0).astype("Int64")
+    )
 
-    cleaned = cleaned[~((cleaned["FULL NAME"].astype(str).str.strip() == "") &
-                        (cleaned["PHONE NUMBER"].astype(str).str.strip() == ""))].copy()
+    cleaned = cleaned[
+        ~(
+            (cleaned["FULL NAME"].astype(str).str.strip() == "")
+            & (cleaned["PHONE NUMBER"].astype(str).str.strip() == "")
+        )
+    ].copy()
 
     base_name = f"UTME_RESULT_{os.path.splitext(fname)[0]}_{ts}"
     out_csv = os.path.join(output_dir, base_name + ".csv")
@@ -890,12 +1239,29 @@ def process_file(path, output_dir, ts, candidate_dir, full_candidates_df, full_b
     ws.title = "Results"
     format_excel_sheet(wb, "Results", cleaned, {}, score_header, pass_threshold)
 
-    absent_df, mismatch_df = create_analysis_and_charts(wb, cleaned, df, candidates_df, full_candidates_df, full_batch_id_map, full_numeric_to_full, score_header, output_dir, ts, fname=fname, pass_threshold=pass_threshold, current_batch_id=batch_id)
+    absent_df, mismatch_df = create_analysis_and_charts(
+        wb,
+        cleaned,
+        df,
+        candidates_df,
+        full_candidates_df,
+        full_batch_id_map,
+        full_numeric_to_full,
+        score_header,
+        output_dir,
+        ts,
+        fname=fname,
+        pass_threshold=pass_threshold,
+        current_batch_id=batch_id,
+    )
 
     wb.save(out_xlsx)
-    print(f"Saved processed file with Analysis, Charts, Absent, and BatchMismatches: {os.path.basename(out_xlsx)}")
+    print(
+        f"Saved processed file with Analysis, Charts, Absent, and BatchMismatches: {os.path.basename(out_xlsx)}"
+    )
 
     return cleaned, df, absent_df, mismatch_df
+
 
 # ---------------------------
 # Process file for unsorted result (minimal processing, no sorting)
@@ -924,23 +1290,40 @@ def process_file_for_unsorted(path):
 
     df.rename(columns=lambda c: str(c).strip(), inplace=True)
 
-    fullname_col = find_column_by_names(df, ["First name", "Firstname", "Full name", "Name", "Surname"])
+    fullname_col = find_column_by_names(
+        df, ["First name", "Firstname", "Full name", "Name", "Surname"]
+    )
     if fullname_col:
         df.rename(columns={fullname_col: "FULL NAME"}, inplace=True)
 
-    appid_col = find_column_by_names(df, ["Surname", "Mat no", "Mat No", "MAT NO.", "APPLICATION ID", "Username"])
+    appid_col = find_column_by_names(
+        df, ["Surname", "Mat no", "Mat No", "MAT NO.", "APPLICATION ID", "Username"]
+    )
     if appid_col and appid_col != fullname_col:
         df.rename(columns={appid_col: "APPLICATION ID"}, inplace=True)
 
-    phone_col = find_column_by_names(df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"])
+    phone_col = find_column_by_names(
+        df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"]
+    )
     if phone_col:
         df.rename(columns={phone_col: "PHONE NUMBER"}, inplace=True)
 
-    city_col = find_column_by_names(df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"])
+    city_col = find_column_by_names(
+        df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"]
+    )
     if city_col:
         df.rename(columns={city_col: "STATE"}, inplace=True)
 
-    for drop_col in ["Username", "Department", "State", "Started on", "Completed", "Time taken", "USERNAME", "DEPARTMENT"]:
+    for drop_col in [
+        "Username",
+        "Department",
+        "State",
+        "Started on",
+        "Completed",
+        "Time taken",
+        "USERNAME",
+        "DEPARTMENT",
+    ]:
         if drop_col in df.columns:
             df.drop(columns=[drop_col], inplace=True)
 
@@ -958,11 +1341,13 @@ def process_file_for_unsorted(path):
 
     grade_col = find_grade_column(df)
     if not grade_col:
-        print(f"Skipping {fname} for unsorted result: Missing required column: a 'Grade/...' or 'Grade' column was not found.")
+        print(
+            f"Skipping {fname} for unsorted result: Missing required column: a 'Grade/...' or 'Grade' column was not found."
+        )
         return None, None, None
 
     if str(grade_col).strip().lower().startswith("grade/"):
-        score_header = re.sub(r'(?i)^grade', 'Score', grade_col, flags=re.I)
+        score_header = re.sub(r"(?i)^grade", "Score", grade_col, flags=re.I)
     else:
         found = re.search(r"(\d+(?:\.\d+)?)", str(grade_col))
         suffix = found.group(1) if found else ""
@@ -978,7 +1363,9 @@ def process_file_for_unsorted(path):
     df = df[df["_ScoreNum"].notna()].copy()
 
     if df.empty:
-        print(f"No valid rows remain after cleaning {fname} for unsorted result; skipping file.")
+        print(
+            f"No valid rows remain after cleaning {fname} for unsorted result; skipping file."
+        )
         return None, None, None
 
     df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
@@ -996,14 +1383,27 @@ def process_file_for_unsorted(path):
 
     found_max = re.search(r"(\d+(?:\.\d+)?)", str(score_header))
     original_max = float(found_max.group(1)) if found_max else 100.0
-    cleaned["Score/100.00"] = ((df["_ScoreNum"].astype(float) / original_max) * 100).round(2)
+    cleaned["Score/100.00"] = (
+        (df["_ScoreNum"].astype(float) / original_max) * 100
+    ).round(2)
 
-    cleaned = cleaned[~((cleaned["FULL NAME"].astype(str).str.strip() == "") &
-                        (cleaned["PHONE NUMBER"].astype(str).str.strip() == ""))].copy()
+    cleaned = cleaned[
+        ~(
+            (cleaned["FULL NAME"].astype(str).str.strip() == "")
+            & (cleaned["PHONE NUMBER"].astype(str).str.strip() == "")
+        )
+    ].copy()
 
     cleaned.insert(0, "S/N", range(1, len(cleaned) + 1))
 
-    out_cols = ["S/N", "FULL NAME", "APPLICATION ID", "PHONE NUMBER", "STATE", "Score/100.00"]
+    out_cols = [
+        "S/N",
+        "FULL NAME",
+        "APPLICATION ID",
+        "PHONE NUMBER",
+        "STATE",
+        "Score/100.00",
+    ]
     cleaned = cleaned[out_cols].copy()
 
     # Calculate overall average for Score/100.00
@@ -1012,88 +1412,171 @@ def process_file_for_unsorted(path):
 
     return cleaned, batch_id, avg_score
 
+
 # ---------------------------
 # Combine all batches
 # ---------------------------
-def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, pass_threshold, candidate_dir, raw_dir, non_interactive=False, converted_score_max=None):
+def combine_batches(
+    cleaned_dfs,
+    dfs,
+    absent_dfs,
+    mismatch_dfs,
+    output_dir,
+    ts,
+    pass_threshold,
+    candidate_dir,
+    raw_dir,
+    non_interactive=False,
+    converted_score_max=None,
+):
     if not cleaned_dfs:
         print("No valid batches to combine.")
         return
 
     # Create unsorted combined result with batch-specific worksheets and overall averages
-    raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
+    raw_files = [
+        f
+        for f in os.listdir(raw_dir)
+        if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")
+    ]
     unsorted_dfs = []
     batch_sheets = {}
     batch_averages = {}
     for f in sorted(raw_files):  # Sort files to ensure consistent order
-        cleaned, batch_id, avg_score = process_file_for_unsorted(os.path.join(raw_dir, f))
+        cleaned, batch_id, avg_score = process_file_for_unsorted(
+            os.path.join(raw_dir, f)
+        )
         if cleaned is not None:
             unsorted_dfs.append(cleaned)
             batch_sheets[batch_id] = cleaned
             batch_averages[batch_id] = avg_score
-            print(f"Prepared unsorted data for batch: {batch_id}, Overall Average: {avg_score}")
+            print(
+                f"Prepared unsorted data for batch: {batch_id}, Overall Average: {avg_score}"
+            )
 
     if unsorted_dfs:
         unsorted_cleaned = pd.concat(unsorted_dfs, ignore_index=True)
-        unsorted_cols = ["S/N", "FULL NAME", "APPLICATION ID", "PHONE NUMBER", "STATE", "Score/100.00"]
+        unsorted_cols = [
+            "S/N",
+            "FULL NAME",
+            "APPLICATION ID",
+            "PHONE NUMBER",
+            "STATE",
+            "Score/100.00",
+        ]
         missing_cols = [c for c in unsorted_cols if c not in unsorted_cleaned.columns]
         if missing_cols:
-            print(f"Error: Missing required columns for unsorted result: {missing_cols}")
+            print(
+                f"Error: Missing required columns for unsorted result: {missing_cols}"
+            )
         else:
             unsorted_cleaned = unsorted_cleaned[unsorted_cols].copy()
             if "STATE_SN" in unsorted_cleaned.columns:
                 unsorted_cleaned = unsorted_cleaned.drop(columns=["STATE_SN"])
             # Calculate overall average for combined unsorted data
-            combined_avg = round(float(unsorted_cleaned["Score/100.00"].mean()), 2) if pd.notna(unsorted_cleaned["Score/100.00"].mean()) else None
-            out_unsorted_xlsx = os.path.join(output_dir, f"PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx")
+            combined_avg = (
+                round(float(unsorted_cleaned["Score/100.00"].mean()), 2)
+                if pd.notna(unsorted_cleaned["Score/100.00"].mean())
+                else None
+            )
+            out_unsorted_xlsx = os.path.join(
+                output_dir, f"PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx"
+            )
             try:
                 with pd.ExcelWriter(out_unsorted_xlsx, engine="openpyxl") as writer:
                     # Write Unsorted Results sheet
-                    unsorted_cleaned.to_excel(writer, sheet_name="Unsorted Results", index=False)
+                    unsorted_cleaned.to_excel(
+                        writer, sheet_name="Unsorted Results", index=False
+                    )
                     # Append overall average row
                     wb = writer.book
                     ws = wb["Unsorted Results"]
-                    avg_row = ["Overall Average"] + [""] * (len(unsorted_cols) - 2) + [combined_avg]
+                    avg_row = (
+                        ["Overall Average"]
+                        + [""] * (len(unsorted_cols) - 2)
+                        + [combined_avg]
+                    )
                     ws.append(avg_row)
                     # Write batch-specific sheets with title row
                     for batch_id, batch_df in batch_sheets.items():
-                        safe_batch_id = re.sub(r'[^\w\s]', '_', batch_id)[:31]
+                        safe_batch_id = re.sub(r"[^\w\s]", "_", batch_id)[:31]
                         title = f"{batch_id.upper()} UNSORTED"
-                        batch_df.to_excel(writer, sheet_name=safe_batch_id, index=False, startrow=1)
+                        batch_df.to_excel(
+                            writer, sheet_name=safe_batch_id, index=False, startrow=1
+                        )
                         ws_batch = wb[safe_batch_id]
                         ws_batch.insert_rows(1)
                         ws_batch.cell(row=1, column=1).value = title
-                        avg_row_batch = ["Overall Average"] + [""] * (len(unsorted_cols) - 2) + [batch_averages.get(batch_id)]
+                        avg_row_batch = (
+                            ["Overall Average"]
+                            + [""] * (len(unsorted_cols) - 2)
+                            + [batch_averages.get(batch_id)]
+                        )
                         ws_batch.append(avg_row_batch)
-                print(f"Saved unsorted combined result with batch sheets: {os.path.basename(out_unsorted_xlsx)}")
+                print(
+                    f"Saved unsorted combined result with batch sheets: {os.path.basename(out_unsorted_xlsx)}"
+                )
             except Exception as e:
                 print(f"Error saving unsorted combined result: {e}")
                 return
 
             wb_unsorted = load_workbook(out_unsorted_xlsx)
-            format_excel_sheet(wb_unsorted, "Unsorted Results", unsorted_cleaned, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False)
+            format_excel_sheet(
+                wb_unsorted,
+                "Unsorted Results",
+                unsorted_cleaned,
+                {},
+                "Score/100.00",
+                pass_threshold,
+                apply_state_colors=False,
+                highlight_passing_scores=False,
+            )
             for batch_id, batch_df in batch_sheets.items():
-                safe_batch_id = re.sub(r'[^\w\s]', '_', batch_id)[:31]
+                safe_batch_id = re.sub(r"[^\w\s]", "_", batch_id)[:31]
                 title = f"{batch_id.upper()} UNSORTED"
-                format_excel_sheet(wb_unsorted, safe_batch_id, batch_df, {}, "Score/100.00", pass_threshold, apply_state_colors=False, highlight_passing_scores=False, title_row=title)
+                format_excel_sheet(
+                    wb_unsorted,
+                    safe_batch_id,
+                    batch_df,
+                    {},
+                    "Score/100.00",
+                    pass_threshold,
+                    apply_state_colors=False,
+                    highlight_passing_scores=False,
+                    title_row=title,
+                )
             wb_unsorted.save(out_unsorted_xlsx)
-            print(f"Saved formatted unsorted combined result with batch sheets and overall averages: {os.path.basename(out_unsorted_xlsx)}")
+            print(
+                f"Saved formatted unsorted combined result with batch sheets and overall averages: {os.path.basename(out_unsorted_xlsx)}"
+            )
     else:
         print("No valid data for unsorted combined result.")
 
     # Create sorted combined result
     combined_cleaned = pd.concat(cleaned_dfs, ignore_index=True)
-    duplicates = combined_cleaned[combined_cleaned["APPLICATION ID"].duplicated(keep=False)]
+    duplicates = combined_cleaned[
+        combined_cleaned["APPLICATION ID"].duplicated(keep=False)
+    ]
     if not duplicates.empty:
-        print(f"Found {len(duplicates)} duplicate APPLICATION ID entries in combined results:")
+        print(
+            f"Found {len(duplicates)} duplicate APPLICATION ID entries in combined results:"
+        )
         print(duplicates[["APPLICATION ID", "FULL NAME"]].head().to_string())
-    combined_cleaned = combined_cleaned.drop_duplicates(subset=["APPLICATION ID"], keep="first")
-    combined_cleaned.sort_values(by=["STATE", "Score/100"], ascending=[True, False], inplace=True)
+    combined_cleaned = combined_cleaned.drop_duplicates(
+        subset=["APPLICATION ID"], keep="first"
+    )
+    combined_cleaned.sort_values(
+        by=["STATE", "Score/100"], ascending=[True, False], inplace=True
+    )
     combined_cleaned.reset_index(drop=True, inplace=True)
     combined_cleaned["S/N"] = range(1, len(combined_cleaned) + 1)
     combined_cleaned["STATE_SN"] = combined_cleaned.groupby("STATE").cumcount() + 1
 
-    score_header = [col for col in combined_cleaned.columns if col.startswith("Score/") and col != "Score/100"][0]
+    score_header = [
+        col
+        for col in combined_cleaned.columns
+        if col.startswith("Score/") and col != "Score/100"
+    ][0]
     found_max = re.search(r"(\d+(?:\.\d+)?)", str(score_header))
     original_max = float(found_max.group(1)) if found_max else 100.0
 
@@ -1101,19 +1584,33 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
         try:
             tgt = float(converted_score_max)
             new_col = f"Score/{int(tgt)}%"
-            combined_cleaned[new_col] = ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt).round(0).astype("Int64")
+            combined_cleaned[new_col] = (
+                ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt)
+                .round(0)
+                .astype("Int64")
+            )
             print(f"Added converted column '{new_col}' to combined result.")
         except Exception as e:
             print(f"Invalid conversion value; skipped converted column: {e}")
     elif not non_interactive:
         if sys.stdin.isatty():
-            add_conv = input("Add converted score column for combined result (e.g., convert Score/100 to Score/60)? (y/n): ").strip().lower()
+            add_conv = (
+                input(
+                    "Add converted score column for combined result (e.g., convert Score/100 to Score/60)? (y/n): "
+                )
+                .strip()
+                .lower()
+            )
             if add_conv in ("y", "yes"):
                 tgt_raw = input("Enter target maximum (integer), e.g., 60: ").strip()
                 try:
                     tgt = float(tgt_raw)
                     new_col = f"Score/{int(tgt)}%"
-                    combined_cleaned[new_col] = ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt).round(0).astype("Int64")
+                    combined_cleaned[new_col] = (
+                        ((combined_cleaned["Score/100"].astype(float) / 100.0) * tgt)
+                        .round(0)
+                        .astype("Int64")
+                    )
                     print(f"Added converted column '{new_col}' to combined result.")
                 except Exception as e:
                     print(f"Invalid conversion value; skipped converted column: {e}")
@@ -1130,16 +1627,24 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
     wb = load_workbook(out_xlsx)
     ws = wb.active
     ws.title = "Results"
-    format_excel_sheet(wb, "Results", combined_cleaned, {}, score_header, pass_threshold)
+    format_excel_sheet(
+        wb, "Results", combined_cleaned, {}, score_header, pass_threshold
+    )
 
-    full_candidates_df, full_batch_id_map, full_numeric_to_full = load_candidate_batches(candidate_dir)
+    full_candidates_df, full_batch_id_map, full_numeric_to_full = (
+        load_candidate_batches(candidate_dir)
+    )
 
     # Detect batch mismatches for combined results
     mismatch_rows = []
     present_ids = set()
     invalid_ids = []
     id_to_source_batch = {}
-    raw_files = [f for f in os.listdir(raw_dir) if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")]
+    raw_files = [
+        f
+        for f in os.listdir(raw_dir)
+        if f.lower().endswith((".csv", ".xlsx", ".xls")) and not f.startswith("~$")
+    ]
     for df, fname in zip(cleaned_dfs, raw_files):
         batch_id_match = re.search(r"(Batch\s*\d+[A-Za-z]?)", fname, re.IGNORECASE)
         source_batch = batch_id_match.group(1) if batch_id_match else ""
@@ -1162,23 +1667,31 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
                 registered_batch = full_batch_id_map.get(norm_id, "")
             if registered_batch:
                 source_batch = id_to_source_batch.get(norm_id, "")
-                if source_batch and re.sub(r'\s+', '', registered_batch.lower()) != re.sub(r'\s+', '', source_batch.lower()):
-                    mismatch_row = full_candidates_df[full_candidates_df["EXAM_NO"].apply(normalize_id) == norm_id]
+                if source_batch and re.sub(
+                    r"\s+", "", registered_batch.lower()
+                ) != re.sub(r"\s+", "", source_batch.lower()):
+                    mismatch_row = full_candidates_df[
+                        full_candidates_df["EXAM_NO"].apply(normalize_id) == norm_id
+                    ]
                     if not mismatch_row.empty:
-                        mismatch_rows.append({
-                            "APPLICATION ID": v,
-                            "FULL NAME": combined_cleaned.at[index, "FULL NAME"],
-                            "PHONE NO.": combined_cleaned.at[index, "PHONE NUMBER"],
-                            "STATE": combined_cleaned.at[index, "STATE"],
-                            "REGISTERED BATCH": registered_batch,
-                            "REBATCHED TO": source_batch
-                        })
+                        mismatch_rows.append(
+                            {
+                                "APPLICATION ID": v,
+                                "FULL NAME": combined_cleaned.at[index, "FULL NAME"],
+                                "PHONE NO.": combined_cleaned.at[index, "PHONE NUMBER"],
+                                "STATE": combined_cleaned.at[index, "STATE"],
+                                "REGISTERED BATCH": registered_batch,
+                                "REBATCHED TO": source_batch,
+                            }
+                        )
             if tok:
                 present_ids.add(tok)
             else:
                 invalid_ids.append((v, combined_cleaned.at[index, "FULL NAME"]))
         if invalid_ids:
-            print(f"Found {len(invalid_ids)} invalid APPLICATION ID entries in combined results (non-numeric):")
+            print(
+                f"Found {len(invalid_ids)} invalid APPLICATION ID entries in combined results (non-numeric):"
+            )
             for invalid_id, full_name in invalid_ids[:5]:
                 print(f"  APPLICATION ID: {invalid_id}, FULL NAME: {full_name}")
 
@@ -1187,21 +1700,38 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
     if "Rebatched" in wb.sheetnames:
         wb.remove(wb["Rebatched"])
     rebatched_ws = wb.create_sheet("Rebatched")
-    rebatched_ws.append(["APPLICATION ID", "FULL NAME", "PHONE NO.", "STATE", "REGISTERED BATCH", "REBATCHED TO"])
+    rebatched_ws.append(
+        [
+            "APPLICATION ID",
+            "FULL NAME",
+            "PHONE NO.",
+            "STATE",
+            "REGISTERED BATCH",
+            "REBATCHED TO",
+        ]
+    )
     if combined_mismatch_df.empty:
         rebatched_ws.append(["No candidates found rebatched.", "", "", "", "", ""])
     else:
-        print(f"Found {len(combined_mismatch_df)} candidates in combined results who were rebatched:")
-        print(combined_mismatch_df[["APPLICATION ID", "FULL NAME", "REGISTERED BATCH", "REBATCHED TO"]].to_string(index=False))
+        print(
+            f"Found {len(combined_mismatch_df)} candidates in combined results who were rebatched:"
+        )
+        print(
+            combined_mismatch_df[
+                ["APPLICATION ID", "FULL NAME", "REGISTERED BATCH", "REBATCHED TO"]
+            ].to_string(index=False)
+        )
         for _, r in combined_mismatch_df.iterrows():
-            rebatched_ws.append([
-                r.get("APPLICATION ID"),
-                r.get("FULL NAME"),
-                r.get("PHONE NO."),
-                r.get("STATE"),
-                r.get("REGISTERED BATCH"),
-                r.get("REBATCHED TO")
-            ])
+            rebatched_ws.append(
+                [
+                    r.get("APPLICATION ID"),
+                    r.get("FULL NAME"),
+                    r.get("PHONE NO."),
+                    r.get("STATE"),
+                    r.get("REGISTERED BATCH"),
+                    r.get("REBATCHED TO"),
+                ]
+            )
     auto_column_width(rebatched_ws)
 
     absent_df, _ = create_analysis_and_charts(
@@ -1218,11 +1748,14 @@ def combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, 
         fname="Combined",
         pass_threshold=pass_threshold,
         skip_batch_mismatches=True,
-        rebatched_count=len(combined_mismatch_df)
+        rebatched_count=len(combined_mismatch_df),
     )
 
     wb.save(out_xlsx)
-    print(f"Saved processed file with Analysis, Charts, Absent, and Rebatched: {os.path.basename(out_xlsx)}")
+    print(
+        f"Saved processed file with Analysis, Charts, Absent, and Rebatched: {os.path.basename(out_xlsx)}"
+    )
+
 
 # ---------------------------
 # Entrypoint
@@ -1246,16 +1779,22 @@ def main():
     os.makedirs(CANDIDATE_DIR, exist_ok=True)
 
     # Filter files based on batch_id if provided
-    files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith((".csv", ".xlsx", ".xls"))]
+    files = [
+        f for f in os.listdir(RAW_DIR) if f.lower().endswith((".csv", ".xlsx", ".xls"))
+    ]
     if BATCH_ID:
-        batch_id_normalized = re.sub(r'\s+', '', BATCH_ID.lower())
-        files = [f for f in files if batch_id_normalized in re.sub(r'\s+', '', f.lower())]
+        batch_id_normalized = re.sub(r"\s+", "", BATCH_ID.lower())
+        files = [
+            f for f in files if batch_id_normalized in re.sub(r"\s+", "", f.lower())
+        ]
         if not files:
             print(f"No raw files found matching batch ID '{BATCH_ID}' in {RAW_DIR}")
             return
 
     if not files:
-        print(f"No raw files found in {RAW_DIR}\nPut your raw file(s) there and re-run.")
+        print(
+            f"No raw files found in {RAW_DIR}\nPut your raw file(s) there and re-run."
+        )
         return
 
     ts = datetime.now().strftime(TIMESTAMP_FMT)
@@ -1263,7 +1802,9 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Load full candidates_df, batch_id_map, numeric_to_full from all candidates
-    full_candidates_df, full_batch_id_map, full_numeric_to_full = load_candidate_batches(CANDIDATE_DIR)
+    full_candidates_df, full_batch_id_map, full_numeric_to_full = (
+        load_candidate_batches(CANDIDATE_DIR)
+    )
 
     outputs = []
     cleaned_dfs = []
@@ -1273,10 +1814,28 @@ def main():
 
     for f in files:
         try:
-            cleaned, df, absent_df, mismatch_df = process_file(os.path.join(RAW_DIR, f), output_dir, ts, CANDIDATE_DIR, full_candidates_df, full_batch_id_map, full_numeric_to_full, PASS_THRESHOLD)
+            cleaned, df, absent_df, mismatch_df = process_file(
+                os.path.join(RAW_DIR, f),
+                output_dir,
+                ts,
+                CANDIDATE_DIR,
+                full_candidates_df,
+                full_batch_id_map,
+                full_numeric_to_full,
+                PASS_THRESHOLD,
+            )
             if cleaned is not None:
-                outputs.append((os.path.join(output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.csv"),
-                                os.path.join(output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.xlsx")))
+                outputs.append(
+                    (
+                        os.path.join(
+                            output_dir, f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.csv"
+                        ),
+                        os.path.join(
+                            output_dir,
+                            f"UTME_RESULT_{os.path.splitext(f)[0]}_{ts}.xlsx",
+                        ),
+                    )
+                )
                 cleaned_dfs.append(cleaned)
                 dfs.append(df)
                 absent_dfs.append(absent_df)
@@ -1284,15 +1843,32 @@ def main():
         except Exception as e:
             print(f"Error processing {f}: {e}", file=sys.stderr)
 
-    combine_batches(cleaned_dfs, dfs, absent_dfs, mismatch_dfs, output_dir, ts, PASS_THRESHOLD, CANDIDATE_DIR, RAW_DIR, NON_INTERACTIVE, CONVERTED_SCORE_MAX)
+    combine_batches(
+        cleaned_dfs,
+        dfs,
+        absent_dfs,
+        mismatch_dfs,
+        output_dir,
+        ts,
+        PASS_THRESHOLD,
+        CANDIDATE_DIR,
+        RAW_DIR,
+        NON_INTERACTIVE,
+        CONVERTED_SCORE_MAX,
+    )
 
     print("\nProcessing completed successfully.")
     if outputs:
         for csvp, xl in outputs:
             print(f" - Saved processed file: {os.path.basename(csvp)}")
             print(f" - Saved processed file: {os.path.basename(xl)}")
-    print(f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_{ts}.xlsx'))}")
-    print(f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx'))}")
+    print(
+        f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_{ts}.xlsx'))}"
+    )
+    print(
+        f" - Saved processed file: {os.path.basename(os.path.join(output_dir, f'PUTME_COMBINE_RESULT_UNSORTED_{ts}.xlsx'))}"
+    )
+
 
 if __name__ == "__main__":
     main()

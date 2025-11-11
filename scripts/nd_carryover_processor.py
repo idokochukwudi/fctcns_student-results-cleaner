@@ -56,19 +56,21 @@ import tempfile
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+
+
 # ----------------------------
 # Configuration and Constants
 # ----------------------------
 def get_base_directory():
     """Get base directory - ENHANCED VERSION."""
     # First try environment variable
-    if os.getenv('BASE_DIR'):
-        base_dir = os.getenv('BASE_DIR')
+    if os.getenv("BASE_DIR"):
+        base_dir = os.getenv("BASE_DIR")
         if os.path.exists(base_dir):
             return base_dir
     # Try the user's home directory with student_result_cleaner
-    home_dir = os.path.expanduser('~')
-    default_dir = os.path.join(home_dir, 'student_result_cleaner')
+    home_dir = os.path.expanduser("~")
+    default_dir = os.path.join(home_dir, "student_result_cleaner")
     # Check if EXAMS_INTERNAL exists in the default directory
     if os.path.exists(os.path.join(default_dir, "EXAMS_INTERNAL")):
         return default_dir
@@ -82,25 +84,40 @@ def get_base_directory():
         return parent_dir
     # Final fallback
     return default_dir
+
+
 BASE_DIR = get_base_directory()
 TIMESTAMP_FMT = "%d-%m-%Y_%H%M%S"
 DEFAULT_PASS_THRESHOLD = 50.0
 DEFAULT_LOGO_PATH = os.path.join(os.path.dirname(__file__), "logo.png")
+
+
 # ----------------------------
 # Utility Functions
 # ----------------------------
 def sanitize_filename(filename):
     """Remove or replace characters that are not safe for filenames."""
-    return re.sub(r'[^\w\-_.]', '_', filename)
+    return re.sub(r"[^\w\-_.]", "_", filename)
+
+
 def find_exam_number_column(df):
     """Find the exam number column in a DataFrame."""
-    possible_names = ['EXAM NUMBER', 'REG. No', 'REG NO', 'REGISTRATION NUMBER', 'MAT NO', 'STUDENT ID']
+    possible_names = [
+        "EXAM NUMBER",
+        "REG. No",
+        "REG NO",
+        "REGISTRATION NUMBER",
+        "MAT NO",
+        "STUDENT ID",
+    ]
     for col in df.columns:
         col_upper = str(col).upper()
         for possible_name in possible_names:
             if possible_name in col_upper:
                 return col
     return None
+
+
 def standardize_semester_key(semester_key):
     """Standardize semester key to canonical format - ND ONLY."""
     if not semester_key:
@@ -112,17 +129,14 @@ def standardize_semester_key(semester_key):
         ("FIRST", "YEAR", "FIRST", "SEMESTER"): "ND-FIRST-YEAR-FIRST-SEMESTER",
         ("1ST", "YEAR", "1ST", "SEMESTER"): "ND-FIRST-YEAR-FIRST-SEMESTER",
         ("YEAR", "1", "SEMESTER", "1"): "ND-FIRST-YEAR-FIRST-SEMESTER",
-    
         # ND First Year Second Semester variants
         ("FIRST", "YEAR", "SECOND", "SEMESTER"): "ND-FIRST-YEAR-SECOND-SEMESTER",
         ("1ST", "YEAR", "2ND", "SEMESTER"): "ND-FIRST-YEAR-SECOND-SEMESTER",
         ("YEAR", "1", "SEMESTER", "2"): "ND-FIRST-YEAR-SECOND-SEMESTER",
-    
         # ND Second Year First Semester variants
         ("SECOND", "YEAR", "FIRST", "SEMESTER"): "ND-SECOND-YEAR-FIRST-SEMESTER",
         ("2ND", "YEAR", "1ST", "SEMESTER"): "ND-SECOND-YEAR-FIRST-SEMESTER",
         ("YEAR", "2", "SEMESTER", "1"): "ND-SECOND-YEAR-FIRST-SEMESTER",
-    
         # ND Second Year Second Semester variants
         ("SECOND", "YEAR", "SECOND", "SEMESTER"): "ND-SECOND-YEAR-SECOND-SEMESTER",
         ("2ND", "YEAR", "2ND", "SEMESTER"): "ND-SECOND-YEAR-SECOND-SEMESTER",
@@ -130,10 +144,10 @@ def standardize_semester_key(semester_key):
     }
     # ND-only patterns
     patterns = [
-        r'(FIRST|1ST|YEAR.?1).*?(FIRST|1ST|SEMESTER.?1)',
-        r'(FIRST|1ST|YEAR.?1).*?(SECOND|2ND|SEMESTER.?2)',
-        r'(SECOND|2ND|YEAR.?2).*?(FIRST|1ST|SEMESTER.?1)',
-        r'(SECOND|2ND|YEAR.?2).*?(SECOND|2ND|SEMESTER.?2)',
+        r"(FIRST|1ST|YEAR.?1).*?(FIRST|1ST|SEMESTER.?1)",
+        r"(FIRST|1ST|YEAR.?1).*?(SECOND|2ND|SEMESTER.?2)",
+        r"(SECOND|2ND|YEAR.?2).*?(FIRST|1ST|SEMESTER.?1)",
+        r"(SECOND|2ND|YEAR.?2).*?(SECOND|2ND|SEMESTER.?2)",
     ]
     for pattern_idx, pattern in enumerate(patterns):
         if re.search(pattern, key_upper):
@@ -148,57 +162,75 @@ def standardize_semester_key(semester_key):
     # If no match, return original
     print(f"Could not standardize semester key: {semester_key}")
     return semester_key
+
+
 def standardize_semester_name(semester_name):
     """Standardize semester name - alias for standardize_semester_key for compatibility."""
     return standardize_semester_key(semester_name)
+
+
 def extract_semester_from_filename(filename):
     """Extract semester from carryover filename - FIXED VERSION"""
     try:
         # Handle both .json and .xlsx files
-        if filename.endswith('.json') or filename.endswith('.xlsx'):
+        if filename.endswith(".json") or filename.endswith(".xlsx"):
             # Pattern: co_student_ND-2024_ND-SECOND-YEAR-FIRST-SEMESTER_20251107_100522.json
             # Extract the part between the second 'ND-' and the timestamp
-            pattern = r'co_student_ND-\d+_(ND-.*?)_\d+_\d+\.(json|xlsx)'
+            pattern = r"co_student_ND-\d+_(ND-.*?)_\d+_\d+\.(json|xlsx)"
             match = re.search(pattern, filename)
             if match:
                 semester = match.group(1)
-                return semester.upper().replace('-', ' ').replace('_', ' ')
-    
+                return semester.upper().replace("-", " ").replace("_", " ")
+
         # Fallback: try to extract any ND- pattern
-        match = re.search(r'(ND-[A-Za-z-]+(?:YEAR|SEMESTER)[A-Za-z-]*)', filename, re.IGNORECASE)
+        match = re.search(
+            r"(ND-[A-Za-z-]+(?:YEAR|SEMESTER)[A-Za-z-]*)", filename, re.IGNORECASE
+        )
         if match:
-            return match.group(1).upper().replace('-', ' ').replace('_', ' ')
-    
+            return match.group(1).upper().replace("-", " ").replace("_", " ")
+
         return None
     except Exception as e:
         print(f"Error extracting semester from {filename}: {e}")
         return None
+
+
 def get_semester_display_info(semester_key):
     """Get display information for ND semester key ONLY."""
     semester_lower = semester_key.lower()
     # ND ONLY
-    if 'first-year-first-semester' in semester_lower:
+    if "first-year-first-semester" in semester_lower:
         return 1, 1, "YEAR ONE", "FIRST SEMESTER", "NDI", "Semester 1"
-    elif 'first-year-second-semester' in semester_lower:
+    elif "first-year-second-semester" in semester_lower:
         return 1, 2, "YEAR ONE", "SECOND SEMESTER", "NDI", "Semester 2"
-    elif 'second-year-first-semester' in semester_lower:
+    elif "second-year-first-semester" in semester_lower:
         return 2, 1, "YEAR TWO", "FIRST SEMESTER", "NDII", "Semester 3"
-    elif 'second-year-second-semester' in semester_lower:
+    elif "second-year-second-semester" in semester_lower:
         return 2, 2, "YEAR TWO", "SECOND SEMESTER", "NDII", "Semester 4"
     else:
         return 1, 1, "YEAR ONE", "FIRST SEMESTER", "NDI", "Semester 1"
+
+
 def get_grade_point(score):
     """Determine grade point based on score - NIGERIAN 5.0 SCALE."""
     try:
         score = float(score)
-        if score >= 70: return 5.0
-        elif score >= 60: return 4.0
-        elif score >= 50: return 3.0
-        elif score >= 45: return 2.0
-        elif score >= 40: return 1.0
-        else: return 0.0
+        if score >= 70:
+            return 5.0
+        elif score >= 60:
+            return 4.0
+        elif score >= 50:
+            return 3.0
+        elif score >= 45:
+            return 2.0
+        elif score >= 40:
+            return 1.0
+        else:
+            return 0.0
     except (ValueError, TypeError):
         return 0.0
+
+
 def get_previous_semester(semester_key):
     """Get the previous semester key for ND carryover ONLY."""
     standardized = standardize_semester_key(semester_key)
@@ -210,7 +242,9 @@ def get_previous_semester(semester_key):
     elif standardized == "ND-SECOND-YEAR-SECOND-SEMESTER":
         return "ND-SECOND-YEAR-FIRST-SEMESTER"
     else:
-        return None # No previous for first semester
+        return None  # No previous for first semester
+
+
 def get_previous_semesters_for_display(current_semester_key):
     """Get list of previous semesters for ND GPA display in mastersheet."""
     current_standard = standardize_semester_key(current_semester_key)
@@ -219,13 +253,18 @@ def get_previous_semesters_for_display(current_semester_key):
         "ND-FIRST-YEAR-FIRST-SEMESTER": [],
         "ND-FIRST-YEAR-SECOND-SEMESTER": ["Semester 1"],
         "ND-SECOND-YEAR-FIRST-SEMESTER": ["Semester 1", "Semester 2"],
-        "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"]
+        "ND-SECOND-YEAR-SECOND-SEMESTER": ["Semester 1", "Semester 2", "Semester 3"],
     }
     return semester_mapping.get(current_standard, [])
+
+
 def generate_remarks(resit_courses):
     """Generate remarks for resit performance."""
-    passed_count = sum(1 for course_data in resit_courses.values()
-                      if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD)
+    passed_count = sum(
+        1
+        for course_data in resit_courses.values()
+        if course_data["resit_score"] >= DEFAULT_PASS_THRESHOLD
+    )
     total_count = len(resit_courses)
     if passed_count == total_count:
         return "All courses passed in resit"
@@ -233,22 +272,36 @@ def generate_remarks(resit_courses):
         return f"{passed_count}/{total_count} courses passed in resit"
     else:
         return "No improvement in resit"
+
+
 def extract_class_from_set_name(set_name):
     """Extract class name from set_name (e.g., 'ND-2024' from 'ND-2024')"""
     # set_name is already in format like "ND-2024"
     return set_name
+
+
 # ----------------------------
 # Course Data Management
 # ----------------------------
 def load_course_data():
     """Load ND course data ONLY."""
     return load_nd_course_data()
+
+
 def load_nd_course_data():
     """Load ND course data from course-code-creditUnit.xlsx."""
     possible_course_files = [
-        os.path.join(BASE_DIR, "EXAMS_INTERNAL", "ND", "ND-COURSES", "course-code-creditUnit.xlsx"),
+        os.path.join(
+            BASE_DIR,
+            "EXAMS_INTERNAL",
+            "ND",
+            "ND-COURSES",
+            "course-code-creditUnit.xlsx",
+        ),
         os.path.join(BASE_DIR, "ND", "ND-COURSES", "course-code-creditUnit.xlsx"),
-        os.path.join(BASE_DIR, "EXAMS_INTERNAL", "ND-COURSES", "course-code-creditUnit.xlsx"),
+        os.path.join(
+            BASE_DIR, "EXAMS_INTERNAL", "ND-COURSES", "course-code-creditUnit.xlsx"
+        ),
         os.path.join(BASE_DIR, "course-code-creditUnit.xlsx"),
     ]
     course_file = None
@@ -268,6 +321,8 @@ def load_nd_course_data():
             return {}, {}, {}, {}
     print(f"📚 Loading ND course data from: {course_file}")
     return _load_course_data_from_file(course_file)
+
+
 def _load_course_data_from_file(course_file):
     """Generic function to load course data from Excel file - FIXED VERSION."""
     try:
@@ -276,75 +331,106 @@ def _load_course_data_from_file(course_file):
         semester_credit_units = {}
         course_code_to_title = {}
         course_code_to_unit = {}
-    
+
         print(f"📖 Available sheets: {xl.sheet_names}")
-    
+
         for sheet in xl.sheet_names:
             sheet_standard = standardize_semester_key(sheet)
             print(f"📖 Reading sheet: {sheet} (standardized: {sheet_standard})")
             try:
-                df = pd.read_excel(course_file, sheet_name=sheet, engine='openpyxl', header=0)
-            
+                df = pd.read_excel(
+                    course_file, sheet_name=sheet, engine="openpyxl", header=0
+                )
+
                 # Convert columns to string and clean
                 df.columns = [str(c).strip().upper() for c in df.columns]
-            
+
                 # Look for course code, title, and credit unit columns with flexible matching
                 code_col = None
                 title_col = None
                 unit_col = None
-            
+
                 for col in df.columns:
                     col_clean = str(col).upper()
-                    if any(keyword in col_clean for keyword in ['COURSE CODE', 'CODE', 'COURSECODE']):
+                    if any(
+                        keyword in col_clean
+                        for keyword in ["COURSE CODE", "CODE", "COURSECODE"]
+                    ):
                         code_col = col
-                    elif any(keyword in col_clean for keyword in ['COURSE TITLE', 'TITLE', 'COURSENAME']):
+                    elif any(
+                        keyword in col_clean
+                        for keyword in ["COURSE TITLE", "TITLE", "COURSENAME"]
+                    ):
                         title_col = col
-                    elif any(keyword in col_clean for keyword in ['CU', 'CREDIT', 'UNIT', 'CREDIT UNIT']):
+                    elif any(
+                        keyword in col_clean
+                        for keyword in ["CU", "CREDIT", "UNIT", "CREDIT UNIT"]
+                    ):
                         unit_col = col
-            
-                print(f"🔍 Detected columns - Code: {code_col}, Title: {title_col}, Unit: {unit_col}")
-            
+
+                print(
+                    f"🔍 Detected columns - Code: {code_col}, Title: {title_col}, Unit: {unit_col}"
+                )
+
                 if not all([code_col, title_col, unit_col]):
-                    print(f"⚠️ Sheet '{sheet}' missing required columns - found: code={code_col}, title={title_col}, unit={unit_col}")
+                    print(
+                        f"⚠️ Sheet '{sheet}' missing required columns - found: code={code_col}, title={title_col}, unit={unit_col}"
+                    )
                     # Try to use first three columns as fallback
                     if len(df.columns) >= 3:
-                        code_col, title_col, unit_col = df.columns[0], df.columns[1], df.columns[2]
-                        print(f"🔄 Using fallback columns: {code_col}, {title_col}, {unit_col}")
+                        code_col, title_col, unit_col = (
+                            df.columns[0],
+                            df.columns[1],
+                            df.columns[2],
+                        )
+                        print(
+                            f"🔄 Using fallback columns: {code_col}, {title_col}, {unit_col}"
+                        )
                     else:
-                        print(f"❌ Sheet '{sheet}' doesn't have enough columns - skipped")
+                        print(
+                            f"❌ Sheet '{sheet}' doesn't have enough columns - skipped"
+                        )
                         continue
-            
+
                 # Clean the data
                 df_clean = df.dropna(subset=[code_col]).copy()
                 if df_clean.empty:
                     print(f"⚠️ Sheet '{sheet}' has no data after cleaning - skipped")
                     continue
-            
+
                 # Convert credit units to numeric, handling errors
-                df_clean[unit_col] = pd.to_numeric(df_clean[unit_col], errors='coerce')
+                df_clean[unit_col] = pd.to_numeric(df_clean[unit_col], errors="coerce")
                 df_clean = df_clean.dropna(subset=[unit_col])
-            
+
                 # FIXED: Remove rows with "TOTAL" in course code
-                df_clean = df_clean[~df_clean[code_col].astype(str).str.contains('TOTAL', case=False, na=False)]
-            
+                df_clean = df_clean[
+                    ~df_clean[code_col]
+                    .astype(str)
+                    .str.contains("TOTAL", case=False, na=False)
+                ]
+
                 if df_clean.empty:
-                    print(f"⚠️ Sheet '{sheet}' has no valid rows after cleaning - skipped")
+                    print(
+                        f"⚠️ Sheet '{sheet}' has no valid rows after cleaning - skipped"
+                    )
                     continue
-            
+
                 codes = df_clean[code_col].astype(str).str.strip().tolist()
                 titles = df_clean[title_col].astype(str).str.strip().tolist()
                 units = df_clean[unit_col].astype(float).tolist()
                 print(f"📋 Found {len(codes)} courses in {sheet}:")
-                for i, (code, title, unit) in enumerate(zip(codes[:5], titles[:5], units[:5])):
+                for i, (code, title, unit) in enumerate(
+                    zip(codes[:5], titles[:5], units[:5])
+                ):
                     print(f" - '{code}': '{title}' (CU: {unit})")
                 # Create mapping dictionaries with ENHANCED normalization strategies
                 sheet_titles = {}
                 sheet_units = {}
-            
+
                 for code, title, unit in zip(codes, titles, units):
-                    if not code or code.upper() in ['NAN', 'NONE', '']:
+                    if not code or code.upper() in ["NAN", "NONE", ""]:
                         continue
-                
+
                     # ENHANCED: Create comprehensive normalization variants for robust matching
                     variants = [
                         # Basic variants
@@ -353,23 +439,19 @@ def _load_course_data_from_file(course_file):
                         code.upper(),
                         code.lower(),
                         code.title(),
-                    
                         # Space removal variants
-                        code.upper().replace(' ', ''),
-                        code.replace(' ', ''),
-                        re.sub(r'\s+', '', code.upper()),
-                        re.sub(r'\s+', '', code),
-                    
+                        code.upper().replace(" ", ""),
+                        code.replace(" ", ""),
+                        re.sub(r"\s+", "", code.upper()),
+                        re.sub(r"\s+", "", code),
                         # Special character removal (keep only alphanumeric)
-                        re.sub(r'[^a-zA-Z0-9]', '', code.upper()),
-                        re.sub(r'[^a-zA-Z0-9]', '', code),
-                    
+                        re.sub(r"[^a-zA-Z0-9]", "", code.upper()),
+                        re.sub(r"[^a-zA-Z0-9]", "", code),
                         # Dash and underscore variants
-                        code.upper().replace('-', ''),
-                        code.upper().replace('_', ''),
-                        code.replace('-', '').replace('_', ''),
-                        code.upper().replace('-', '').replace('_', '').replace(' ', ''),
-                    
+                        code.upper().replace("-", ""),
+                        code.upper().replace("_", ""),
+                        code.replace("-", "").replace("_", ""),
+                        code.upper().replace("-", "").replace("_", "").replace(" ", ""),
                         # WITH common prefixes (for matching with prefix)
                         f"NUR{code.upper()}",
                         f"NUR{code.upper().replace(' ', '')}",
@@ -377,55 +459,67 @@ def _load_course_data_from_file(course_file):
                         f"NSC{code.upper()}",
                         f"NSC{code.upper().replace(' ', '')}",
                         f"NSC{re.sub(r'[^a-zA-Z0-9]', '', code.upper())}",
-                    
                         # WITHOUT common prefixes (for matching without prefix)
-                        code.upper().replace('NUR', '').strip(),
-                        code.upper().replace('NSC', '').strip(),
-                        re.sub(r'^(NUR|NSC)', '', code.upper()).strip(),
-                        re.sub(r'^(NUR|NSC)', '', code.upper()).replace(' ', '').strip(),
-                    
+                        code.upper().replace("NUR", "").strip(),
+                        code.upper().replace("NSC", "").strip(),
+                        re.sub(r"^(NUR|NSC)", "", code.upper()).strip(),
+                        re.sub(r"^(NUR|NSC)", "", code.upper())
+                        .replace(" ", "")
+                        .strip(),
                         # Number-focused variants (for codes like "101", "201")
-                        re.sub(r'[^0-9]', '', code),
-                    
+                        re.sub(r"[^0-9]", "", code),
                         # Common variations with dots
-                        code.upper().replace('.', ''),
-                        code.replace('.', ''),
+                        code.upper().replace(".", ""),
+                        code.replace(".", ""),
                     ]
-                
+
                     # Remove duplicates while preserving order
-                    variants = list(dict.fromkeys([v for v in variants if v and v not in ['NAN', 'NONE', '']]))
-                
+                    variants = list(
+                        dict.fromkeys(
+                            [v for v in variants if v and v not in ["NAN", "NONE", ""]]
+                        )
+                    )
+
                     # Add all variants to mappings
                     for variant in variants:
                         sheet_titles[variant] = title
                         sheet_units[variant] = unit
                         course_code_to_title[variant] = title
                         course_code_to_unit[variant] = unit
-            
+
                 semester_course_titles[sheet_standard] = sheet_titles
                 semester_credit_units[sheet_standard] = sheet_units
-            
+
             except Exception as e:
                 print(f"❌ Error processing sheet '{sheet}': {e}")
                 traceback.print_exc()
                 continue
-    
-        print(f"✅ Loaded course data for sheets: {list(semester_course_titles.keys())}")
+
+        print(
+            f"✅ Loaded course data for sheets: {list(semester_course_titles.keys())}"
+        )
         print(f"📊 Total course mappings: {len(course_code_to_title)}")
-    
+
         # Debug: Show some course mappings
         print("🔍 Sample course mappings:")
         sample_items = list(course_code_to_title.items())[:15]
         for code, title in sample_items:
             unit = course_code_to_unit.get(code, 0)
             print(f" '{code}' -> '{title}' (CU: {unit})")
-        
-        return semester_course_titles, semester_credit_units, course_code_to_title, course_code_to_unit
-    
+
+        return (
+            semester_course_titles,
+            semester_credit_units,
+            course_code_to_title,
+            course_code_to_unit,
+        )
+
     except Exception as e:
         print(f"❌ Error loading course data: {e}")
         traceback.print_exc()
         return {}, {}, {}, {}
+
+
 def find_alternative_course_files():
     """Look for alternative course files for ND."""
     base_dirs = [
@@ -438,10 +532,12 @@ def find_alternative_course_files():
     for base_dir in base_dirs:
         if os.path.exists(base_dir):
             for file in os.listdir(base_dir):
-                if 'course' in file.lower() and file.endswith(('.xlsx', '.xls')):
+                if "course" in file.lower() and file.endswith((".xlsx", ".xls")):
                     full_path = os.path.join(base_dir, file)
                     course_files.append(full_path)
     return course_files
+
+
 def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_unit):
     """Debug function to check why course codes aren't matching - ENHANCED."""
     print(f"\n🔍 DEBUGGING ND COURSE MATCHING")
@@ -452,7 +548,7 @@ def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_
     # Get all course codes from resit file
     resit_courses = []
     for col in resit_df.columns:
-        if col != resit_exam_col and col != 'NAME' and not 'Unnamed' in str(col):
+        if col != resit_exam_col and col != "NAME" and not "Unnamed" in str(col):
             resit_courses.append(col)
     print(f"📋 ND Course codes from resit file: {resit_courses}")
     print(f"📊 Total courses in ND resit file: {len(resit_courses)}")
@@ -460,7 +556,7 @@ def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_
     for course in resit_courses:
         print(f"\n🔍 Checking ND course: '{course}'")
         original_code = str(course).strip()
-    
+
         # Generate ENHANCED variants for matching
         variants = [
             original_code.upper().strip(),
@@ -469,34 +565,34 @@ def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_
             original_code,
             original_code.lower(),
             original_code.title(),
-            original_code.upper().replace(' ', ''),
-            original_code.replace(' ', ''),
-            re.sub(r'\s+', '', original_code.upper()),
-            re.sub(r'\s+', '', original_code),
-            re.sub(r'[^a-zA-Z0-9]', '', original_code.upper()),
-            re.sub(r'[^a-zA-Z0-9]', '', original_code),
-            original_code.upper().replace('-', ''),
-            original_code.upper().replace('_', ''),
-            original_code.replace('-', '').replace('_', ''),
-            original_code.upper().replace('-', '').replace('_', '').replace(' ', ''),
+            original_code.upper().replace(" ", ""),
+            original_code.replace(" ", ""),
+            re.sub(r"\s+", "", original_code.upper()),
+            re.sub(r"\s+", "", original_code),
+            re.sub(r"[^a-zA-Z0-9]", "", original_code.upper()),
+            re.sub(r"[^a-zA-Z0-9]", "", original_code),
+            original_code.upper().replace("-", ""),
+            original_code.upper().replace("_", ""),
+            original_code.replace("-", "").replace("_", ""),
+            original_code.upper().replace("-", "").replace("_", "").replace(" ", ""),
             f"NUR{original_code.upper()}",
             f"NUR{original_code.upper().replace(' ', '')}",
             f"NSC{original_code.upper()}",
             f"NSC{original_code.upper().replace(' ', '')}",
-            original_code.upper().replace('NUR', '').strip(),
-            original_code.upper().replace('NSC', '').strip(),
-            re.sub(r'^(NUR|NSC)', '', original_code.upper()).strip(),
-            re.sub(r'^(NUR|NSC)', '', original_code.upper()).replace(' ', '').strip(),
-            re.sub(r'[^0-9]', '', original_code),
-            original_code.upper().replace('.', ''),
-            original_code.replace('.', ''),
+            original_code.upper().replace("NUR", "").strip(),
+            original_code.upper().replace("NSC", "").strip(),
+            re.sub(r"^(NUR|NSC)", "", original_code.upper()).strip(),
+            re.sub(r"^(NUR|NSC)", "", original_code.upper()).replace(" ", "").strip(),
+            re.sub(r"[^0-9]", "", original_code),
+            original_code.upper().replace(".", ""),
+            original_code.replace(".", ""),
         ]
-    
+
         # Remove duplicates
-        variants = list(dict.fromkeys([v for v in variants if v and v != 'NAN']))
-    
+        variants = list(dict.fromkeys([v for v in variants if v and v != "NAN"]))
+
         print(f" Generated {len(variants)} variants to try")
-    
+
         found = False
         for variant in variants:
             if variant in course_code_to_title:
@@ -505,23 +601,31 @@ def debug_course_matching(resit_file_path, course_code_to_title, course_code_to_
                 print(f" ✅ FOUND: '{variant}' -> '{title}' (CU: {unit})")
                 found = True
                 break
-    
+
         if not found:
             print(f" ❌ NOT FOUND: No match for '{course}'")
             # Show some similar keys from course file
             similar_keys = []
             # Check for partial matches
-            for key in list(course_code_to_title.keys())[:50]: # Check first 50 keys
-                if any(part in key.upper() for part in original_code.upper().split() if len(part) > 2):
+            for key in list(course_code_to_title.keys())[:50]:  # Check first 50 keys
+                if any(
+                    part in key.upper()
+                    for part in original_code.upper().split()
+                    if len(part) > 2
+                ):
                     similar_keys.append(key)
-        
+
             if similar_keys:
                 print(f" 💡 Similar keys found: {similar_keys[:5]}")
             else:
-                print(f" 💡 Sample available keys: {list(course_code_to_title.keys())[:10]}")
+                print(
+                    f" 💡 Sample available keys: {list(course_code_to_title.keys())[:10]}"
+                )
+
+
 def find_course_title(course_code, course_titles_dict, course_code_to_title):
     """Robust function to find course title with comprehensive matching strategies - ENHANCED."""
-    if not course_code or str(course_code).upper() in ['NAN', 'NONE', '']:
+    if not course_code or str(course_code).upper() in ["NAN", "NONE", ""]:
         return str(course_code) if course_code else "Unknown Course"
     original_code = str(course_code).strip()
     # Generate ENHANCED comprehensive matching variants
@@ -533,23 +637,19 @@ def find_course_title(course_code, course_titles_dict, course_code_to_title):
         original_code,
         original_code.lower(),
         original_code.title(),
-    
         # Space handling variations
-        original_code.upper().replace(' ', ''),
-        original_code.replace(' ', ''),
-        re.sub(r'\s+', '', original_code.upper()),
-        re.sub(r'\s+', '', original_code),
-    
+        original_code.upper().replace(" ", ""),
+        original_code.replace(" ", ""),
+        re.sub(r"\s+", "", original_code.upper()),
+        re.sub(r"\s+", "", original_code),
         # Special character handling
-        re.sub(r'[^a-zA-Z0-9]', '', original_code.upper()),
-        re.sub(r'[^a-zA-Z0-9]', '', original_code),
-    
+        re.sub(r"[^a-zA-Z0-9]", "", original_code.upper()),
+        re.sub(r"[^a-zA-Z0-9]", "", original_code),
         # Common formatting issues
-        original_code.upper().replace('-', ''),
-        original_code.upper().replace('_', ''),
-        original_code.replace('-', '').replace('_', ''),
-        original_code.upper().replace('-', '').replace('_', '').replace(' ', ''),
-    
+        original_code.upper().replace("-", ""),
+        original_code.upper().replace("_", ""),
+        original_code.replace("-", "").replace("_", ""),
+        original_code.upper().replace("-", "").replace("_", "").replace(" ", ""),
         # WITH common prefixes
         f"NUR{original_code.upper()}",
         f"NUR{original_code.upper().replace(' ', '')}",
@@ -557,42 +657,45 @@ def find_course_title(course_code, course_titles_dict, course_code_to_title):
         f"NSC{original_code.upper()}",
         f"NSC{original_code.upper().replace(' ', '')}",
         f"NSC{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
-    
         # WITHOUT common prefixes
-        original_code.upper().replace('NUR', '').strip(),
-        original_code.upper().replace('NSC', '').strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).replace(' ', '').strip(),
-    
+        original_code.upper().replace("NUR", "").strip(),
+        original_code.upper().replace("NSC", "").strip(),
+        re.sub(r"^(NUR|NSC)", "", original_code.upper()).strip(),
+        re.sub(r"^(NUR|NSC)", "", original_code.upper()).replace(" ", "").strip(),
         # Number-focused variants
-        re.sub(r'[^0-9]', '', original_code),
-    
+        re.sub(r"[^0-9]", "", original_code),
         # Dot removal
-        original_code.upper().replace('.', ''),
-        original_code.replace('.', ''),
+        original_code.upper().replace(".", ""),
+        original_code.replace(".", ""),
     ]
     # Remove duplicates
-    variants = list(dict.fromkeys([v for v in variants if v and v != 'NAN']))
+    variants = list(dict.fromkeys([v for v in variants if v and v != "NAN"]))
     # Try each strategy in order
     for variant in variants:
         # Try course_titles_dict first (semester-specific)
         if variant in course_titles_dict:
             title = course_titles_dict[variant]
-            print(f"✅ Found title for '{original_code}' using variant '{variant}': '{title}'")
+            print(
+                f"✅ Found title for '{original_code}' using variant '{variant}': '{title}'"
+            )
             return title
-    
+
         # Try global course_code_to_title
         if variant in course_code_to_title:
             title = course_code_to_title[variant]
-            print(f"✅ Found title for '{original_code}' using global variant '{variant}': '{title}'")
+            print(
+                f"✅ Found title for '{original_code}' using global variant '{variant}': '{title}'"
+            )
             return title
     # If no match found, log and return descriptive original code
     print(f"⚠️ Could not find course title for: '{original_code}'")
     print(f" Tried {len(variants)} variants without success")
     return f"{original_code} (Title Not Found)"
+
+
 def find_credit_unit(course_code, credit_units_dict, course_code_to_unit):
     """Robust function to find credit unit with comprehensive matching strategies - ENHANCED."""
-    if not course_code or str(course_code).upper() in ['NAN', 'NONE', '']:
+    if not course_code or str(course_code).upper() in ["NAN", "NONE", ""]:
         return 0
     original_code = str(course_code).strip()
     # Generate the same ENHANCED variants as title matching
@@ -603,43 +706,45 @@ def find_credit_unit(course_code, credit_units_dict, course_code_to_unit):
         original_code,
         original_code.lower(),
         original_code.title(),
-        original_code.upper().replace(' ', ''),
-        original_code.replace(' ', ''),
-        re.sub(r'\s+', '', original_code.upper()),
-        re.sub(r'\s+', '', original_code),
-        re.sub(r'[^a-zA-Z0-9]', '', original_code.upper()),
-        re.sub(r'[^a-zA-Z0-9]', '', original_code),
-        original_code.upper().replace('-', ''),
-        original_code.upper().replace('_', ''),
-        original_code.replace('-', '').replace('_', ''),
-        original_code.upper().replace('-', '').replace('_', '').replace(' ', ''),
+        original_code.upper().replace(" ", ""),
+        original_code.replace(" ", ""),
+        re.sub(r"\s+", "", original_code.upper()),
+        re.sub(r"\s+", "", original_code),
+        re.sub(r"[^a-zA-Z0-9]", "", original_code.upper()),
+        re.sub(r"[^a-zA-Z0-9]", "", original_code),
+        original_code.upper().replace("-", ""),
+        original_code.upper().replace("_", ""),
+        original_code.replace("-", "").replace("_", ""),
+        original_code.upper().replace("-", "").replace("_", "").replace(" ", ""),
         f"NUR{original_code.upper()}",
         f"NUR{original_code.upper().replace(' ', '')}",
         f"NUR{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
         f"NSC{original_code.upper()}",
         f"NSC{original_code.upper().replace(' ', '')}",
         f"NSC{re.sub(r'[^a-zA-Z0-9]', '', original_code.upper())}",
-        original_code.upper().replace('NUR', '').strip(),
-        original_code.upper().replace('NSC', '').strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).strip(),
-        re.sub(r'^(NUR|NSC)', '', original_code.upper()).replace(' ', '').strip(),
-        re.sub(r'[^0-9]', '', original_code),
-        original_code.upper().replace('.', ''),
-        original_code.replace('.', ''),
+        original_code.upper().replace("NUR", "").strip(),
+        original_code.upper().replace("NSC", "").strip(),
+        re.sub(r"^(NUR|NSC)", "", original_code.upper()).strip(),
+        re.sub(r"^(NUR|NSC)", "", original_code.upper()).replace(" ", "").strip(),
+        re.sub(r"[^0-9]", "", original_code),
+        original_code.upper().replace(".", ""),
+        original_code.replace(".", ""),
     ]
     # Remove duplicates
-    variants = list(dict.fromkeys([v for v in variants if v and v != 'NAN']))
+    variants = list(dict.fromkeys([v for v in variants if v and v != "NAN"]))
     # Try each strategy
     for variant in variants:
         if variant in credit_units_dict:
             unit = credit_units_dict[variant]
             return unit
-    
+
         if variant in course_code_to_unit:
             unit = course_code_to_unit[variant]
             return unit
     print(f"⚠️ Could not find credit unit for: '{original_code}', defaulting to 2")
-    return 2 # Default credit unit
+    return 2  # Default credit unit
+
+
 # ----------------------------
 # File and ZIP Handling
 # ----------------------------
@@ -647,32 +752,40 @@ def extract_mastersheet_from_zip(zip_path, semester_key):
     """Extract mastersheet from ZIP file and return temporary file path."""
     try:
         print(f"📦 Looking for mastersheet in ZIP: {zip_path}")
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
             all_files = zip_ref.namelist()
             print(f"📁 Files in ZIP: {all_files}")
-        
-            mastersheet_files = [f for f in all_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
-        
+
+            mastersheet_files = [
+                f
+                for f in all_files
+                if "mastersheet" in f.lower() and f.endswith(".xlsx")
+            ]
+
             if not mastersheet_files:
                 print(f"❌ No mastersheet found in ZIP")
                 return None, None
-        
+
             mastersheet_name = mastersheet_files[0]
             print(f"✅ Found mastersheet: {mastersheet_name}")
-        
+
             temp_dir = tempfile.mkdtemp()
-            temp_mastersheet_path = os.path.join(temp_dir, f"mastersheet_{semester_key}.xlsx")
-        
-            with open(temp_mastersheet_path, 'wb') as f:
+            temp_mastersheet_path = os.path.join(
+                temp_dir, f"mastersheet_{semester_key}.xlsx"
+            )
+
+            with open(temp_mastersheet_path, "wb") as f:
                 f.write(zip_ref.read(mastersheet_name))
-        
+
             print(f"✅ Extracted mastersheet to: {temp_mastersheet_path}")
             return temp_mastersheet_path, temp_dir
-        
+
     except Exception as e:
         print(f"❌ Error extracting mastersheet from ZIP: {e}")
         traceback.print_exc()
         return None, None
+
+
 def find_latest_zip_file(clean_dir):
     """Find the latest ZIP file in clean results directory."""
     print(f"🔍 Looking for ND ZIP files in: {clean_dir}")
@@ -682,19 +795,23 @@ def find_latest_zip_file(clean_dir):
     all_files = os.listdir(clean_dir)
     zip_files = []
     for f in all_files:
-        if f.lower().endswith('.zip'):
-            if 'carryover' in f.lower():
+        if f.lower().endswith(".zip"):
+            if "carryover" in f.lower():
                 print(f"⚠️ Skipping ND carryover ZIP: {f}")
                 continue
-        
-            if any(pattern in f for pattern in ['_RESULT-', 'RESULT_', 'RESULT-']):
+
+            if any(pattern in f for pattern in ["_RESULT-", "RESULT_", "RESULT-"]):
                 zip_files.append(f)
                 print(f"✅ Found ND regular results ZIP: {f}")
             else:
                 print(f"ℹ️ Found other ND ZIP (not a result file): {f}")
     if not zip_files:
         print(f"❌ No ND regular results ZIP files found (excluding carryover files)")
-        fallback_zips = [f for f in all_files if f.lower().endswith('.zip') and 'carryover' not in f.lower()]
+        fallback_zips = [
+            f
+            for f in all_files
+            if f.lower().endswith(".zip") and "carryover" not in f.lower()
+        ]
         if fallback_zips:
             print(f"⚠️ Using fallback ND ZIP files: {fallback_zips}")
             zip_files = fallback_zips
@@ -706,6 +823,8 @@ def find_latest_zip_file(clean_dir):
     latest_zip = sorted(zip_files_with_path, key=os.path.getmtime, reverse=True)[0]
     print(f"🎯 Using latest ND ZIP: {latest_zip}")
     return latest_zip
+
+
 def find_latest_result_folder(clean_dir, set_name):
     """Find the latest result folder in clean results directory."""
     print(f"🔍 Looking for ND result folders in: {clean_dir}")
@@ -713,7 +832,12 @@ def find_latest_result_folder(clean_dir, set_name):
         print(f"❌ ND clean directory doesn't exist: {clean_dir}")
         return None
     all_items = os.listdir(clean_dir)
-    result_folders = [f for f in all_items if os.path.isdir(os.path.join(clean_dir, f)) and f.startswith(f"{set_name}_RESULT-")]
+    result_folders = [
+        f
+        for f in all_items
+        if os.path.isdir(os.path.join(clean_dir, f))
+        and f.startswith(f"{set_name}_RESULT-")
+    ]
     if not result_folders:
         print(f"❌ No ND result folders found")
         return None
@@ -722,6 +846,8 @@ def find_latest_result_folder(clean_dir, set_name):
     latest_folder = sorted(folders_with_path, key=os.path.getmtime, reverse=True)[0]
     print(f"🎯 Using latest ND result folder: {latest_folder}")
     return latest_folder
+
+
 def find_latest_mastersheet_source(clean_dir, set_name):
     """Find the latest source for mastersheet: prefer ZIP, fallback to folder."""
     print(f"🔍 Looking for ND mastersheet source in: {clean_dir}")
@@ -732,12 +858,16 @@ def find_latest_mastersheet_source(clean_dir, set_name):
     if zip_path:
         print(f"✅ Using ND ZIP source: {zip_path}")
         try:
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_files = zip_ref.namelist()
-                mastersheet_files = [f for f in zip_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
+                mastersheet_files = [
+                    f
+                    for f in zip_files
+                    if "mastersheet" in f.lower() and f.endswith(".xlsx")
+                ]
                 if mastersheet_files:
                     print(f"✅ ND ZIP contains mastersheet files: {mastersheet_files}")
-                    return zip_path, 'zip'
+                    return zip_path, "zip"
                 else:
                     print(f"⚠️ ND ZIP found but no mastersheet inside: {zip_path}")
         except Exception as e:
@@ -745,74 +875,91 @@ def find_latest_mastersheet_source(clean_dir, set_name):
     folder_path = find_latest_result_folder(clean_dir, set_name)
     if folder_path:
         print(f"✅ Using ND folder source: {folder_path}")
-        return folder_path, 'folder'
+        return folder_path, "folder"
     print(f"❌ No valid ND ZIP files or result folders found in {clean_dir}")
     return None, None
+
+
 def get_mastersheet_path(source_path, source_type, semester_key):
     """Get mastersheet path based on source type (zip or folder)."""
     temp_dir = None
-    if source_type == 'zip':
-        temp_mastersheet_path, temp_dir = extract_mastersheet_from_zip(source_path, semester_key)
+    if source_type == "zip":
+        temp_mastersheet_path, temp_dir = extract_mastersheet_from_zip(
+            source_path, semester_key
+        )
         if not temp_mastersheet_path:
             print("❌ Failed to extract mastersheet from ZIP")
             return None, None
-    elif source_type == 'folder':
+    elif source_type == "folder":
         all_files = os.listdir(source_path)
-        mastersheet_files = [f for f in all_files if 'mastersheet' in f.lower() and f.endswith('.xlsx')]
-    
+        mastersheet_files = [
+            f for f in all_files if "mastersheet" in f.lower() and f.endswith(".xlsx")
+        ]
+
         if not mastersheet_files:
             print(f"❌ No mastersheet found in folder {source_path}")
             return None, None
-    
+
         mastersheet_name = mastersheet_files[0]
         temp_mastersheet_path = os.path.join(source_path, mastersheet_name)
         print(f"✅ Found mastersheet in folder: {temp_mastersheet_path}")
     else:
         return None, None
     return temp_mastersheet_path, temp_dir
+
+
 def get_matching_sheet(xl, target_key):
     """Find matching sheet name with variants."""
-    target_upper = target_key.upper().replace('-', ' ').replace('_', ' ').replace('.', ' ')
-    target_upper = ' '.join(target_upper.split())
+    target_upper = (
+        target_key.upper().replace("-", " ").replace("_", " ").replace(".", " ")
+    )
+    target_upper = " ".join(target_upper.split())
     possible_keys = [
         target_key,
         target_key.upper(),
         target_key.lower(),
         target_key.title(),
-        target_key.replace('-', ' ').upper(),
-        target_key.replace('-', ' ').lower(),
-        target_key.replace('-', ' ').title(),
-        target_key.replace('-', '_').upper(),
-        target_key.replace('-', '_').lower(),
-        target_key.replace('-', '_').title(),
-        target_key.replace('First', '1st'),
-        target_key.replace('Second', '2nd'),
-        target_key.replace('Third', '3rd'),
-        target_key.replace('YEAR', 'YR'),
-        target_key.replace('SEMESTER', 'SEM'),
+        target_key.replace("-", " ").upper(),
+        target_key.replace("-", " ").lower(),
+        target_key.replace("-", " ").title(),
+        target_key.replace("-", "_").upper(),
+        target_key.replace("-", "_").lower(),
+        target_key.replace("-", "_").title(),
+        target_key.replace("First", "1st"),
+        target_key.replace("Second", "2nd"),
+        target_key.replace("Third", "3rd"),
+        target_key.replace("YEAR", "YR"),
+        target_key.replace("SEMESTER", "SEM"),
         target_upper,
-        target_upper.replace('FIRST', '1ST'),
-        target_upper.replace('SECOND', '2ND'),
-        target_upper.replace('THIRD', '3RD'),
-        target_upper.replace('YEAR', 'YR'),
-        target_upper.replace('SEMESTER', 'SEM'),
+        target_upper.replace("FIRST", "1ST"),
+        target_upper.replace("SECOND", "2ND"),
+        target_upper.replace("THIRD", "3RD"),
+        target_upper.replace("YEAR", "YR"),
+        target_upper.replace("SEMESTER", "SEM"),
     ]
     possible_keys = list(set([k for k in possible_keys if k]))
     print(f"🔍 Trying sheet variants for '{target_key}': {possible_keys}")
     for sheet in xl.sheet_names:
-        sheet_normalized = sheet.upper().replace('-', ' ').replace('_', ' ').replace('.', ' ')
-        sheet_normalized = ' '.join(sheet_normalized.split())
-    
-        if any(p == sheet or p in sheet or p == sheet_normalized or p in sheet_normalized for p in possible_keys):
+        sheet_normalized = (
+            sheet.upper().replace("-", " ").replace("_", " ").replace(".", " ")
+        )
+        sheet_normalized = " ".join(sheet_normalized.split())
+
+        if any(
+            p == sheet or p in sheet or p == sheet_normalized or p in sheet_normalized
+            for p in possible_keys
+        ):
             print(f"✅ Found matching sheet: '{sheet}' for '{target_key}'")
             return sheet
     print(f"❌ No matching sheet found for '{target_key}'")
     print(f"📖 Available sheets: {xl.sheet_names}")
     return None
+
+
 def create_carryover_zip(source_dir, zip_path):
     """Create ZIP file of carryover results."""
     try:
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(source_dir):
                 for file in files:
                     file_path = os.path.join(root, file)
@@ -823,6 +970,8 @@ def create_carryover_zip(source_dir, zip_path):
     except Exception as e:
         print(f"❌ Error creating ZIP: {e}")
         return False
+
+
 # ----------------------------
 # GPA/CGPA Management
 # ----------------------------
@@ -834,8 +983,15 @@ def load_previous_gpas(mastersheet_path, current_semester_key):
     all_semesters = {
         "ND-FIRST-YEAR-FIRST-SEMESTER": [],
         "ND-FIRST-YEAR-SECOND-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER"],
-        "ND-SECOND-YEAR-FIRST-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER"],
-        "ND-SECOND-YEAR-SECOND-SEMESTER": ["ND-FIRST-YEAR-FIRST-SEMESTER", "ND-FIRST-YEAR-SECOND-SEMESTER", "ND-SECOND-YEAR-FIRST-SEMESTER"]
+        "ND-SECOND-YEAR-FIRST-SEMESTER": [
+            "ND-FIRST-YEAR-FIRST-SEMESTER",
+            "ND-FIRST-YEAR-SECOND-SEMESTER",
+        ],
+        "ND-SECOND-YEAR-SECOND-SEMESTER": [
+            "ND-FIRST-YEAR-FIRST-SEMESTER",
+            "ND-FIRST-YEAR-SECOND-SEMESTER",
+            "ND-SECOND-YEAR-FIRST-SEMESTER",
+        ],
     }
     semesters_to_load = all_semesters.get(current_standard, [])
     print(f"📊 Loading previous ND GPAs for {current_standard}: {semesters_to_load}")
@@ -854,80 +1010,98 @@ def load_previous_gpas(mastersheet_path, current_semester_key):
             if not sheet_name:
                 print(f"⚠️ Skipping ND semester {semester} - no matching sheet found")
                 continue
-        
+
             print(f"📖 Reading ND sheet '{sheet_name}' for semester {semester}")
             df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=5)
-        
+
             if df.empty or len(df.columns) < 3:
                 df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=0)
                 print(f"🔄 Using header row 0 for ND sheet '{sheet_name}'")
-        
+
             exam_col = find_exam_number_column(df)
             gpa_col = None
             credit_col = None
-        
+
             # ENHANCED: Prioritize total attempted credits for CGPA accuracy
             for col in df.columns:
                 col_str = str(col).upper()
-                if 'GPA' in col_str and 'CGPA' not in col_str:
+                if "GPA" in col_str and "CGPA" not in col_str:
                     gpa_col = col
-                if 'TCPE' in col_str or 'TOTAL CREDIT' in col_str or 'TOTAL UNIT' in col_str:
-                    credit_col = col # Prioritize total attempted credits
-                elif 'CU PASSED' in col_str or 'CREDIT' in col_str or 'UNIT' in col_str:
-                    credit_col = col # Fallback
-        
-            print(f"🔍 Columns found - Exam: {exam_col}, GPA: {gpa_col}, Credits: {credit_col}")
-        
+                if (
+                    "TCPE" in col_str
+                    or "TOTAL CREDIT" in col_str
+                    or "TOTAL UNIT" in col_str
+                ):
+                    credit_col = col  # Prioritize total attempted credits
+                elif "CU PASSED" in col_str or "CREDIT" in col_str or "UNIT" in col_str:
+                    credit_col = col  # Fallback
+
+            print(
+                f"🔍 Columns found - Exam: {exam_col}, GPA: {gpa_col}, Credits: {credit_col}"
+            )
+
             if exam_col and gpa_col:
                 for idx, row in df.iterrows():
                     try:
                         exam_no = str(row[exam_col]).strip()
-                        if pd.isna(exam_no) or exam_no in ['', 'NAN', 'NONE']:
+                        if pd.isna(exam_no) or exam_no in ["", "NAN", "NONE"]:
                             continue
-                        
+
                         gpa_value = row[gpa_col]
                         if pd.isna(gpa_value):
                             continue
-                        
+
                         credits = 30
-                        if credit_col and credit_col in row and pd.notna(row[credit_col]):
+                        if (
+                            credit_col
+                            and credit_col in row
+                            and pd.notna(row[credit_col])
+                        ):
                             try:
                                 credits = int(float(row[credit_col]))
                             except (ValueError, TypeError):
                                 credits = 30
-                    
+
                         if exam_no not in all_student_data:
-                            all_student_data[exam_no] = {'gpas': [], 'credits': []}
-                    
-                        all_student_data[exam_no]['gpas'].append(float(gpa_value))
-                        all_student_data[exam_no]['credits'].append(credits)
-                    
+                            all_student_data[exam_no] = {"gpas": [], "credits": []}
+
+                        all_student_data[exam_no]["gpas"].append(float(gpa_value))
+                        all_student_data[exam_no]["credits"].append(credits)
+
                         if idx < 3:
-                            print(f"📊 Loaded ND GPA for {exam_no}: {gpa_value} with {credits} credits")
-                        
+                            print(
+                                f"📊 Loaded ND GPA for {exam_no}: {gpa_value} with {credits} credits"
+                            )
+
                     except (ValueError, TypeError) as e:
                         print(f"⚠️ Error processing row {idx} for ND {semester}: {e}")
                         continue
             else:
-                print(f"⚠️ Missing required columns in ND {sheet_name}: exam_col={exam_col}, gpa_col={gpa_col}")
-            
+                print(
+                    f"⚠️ Missing required columns in ND {sheet_name}: exam_col={exam_col}, gpa_col={gpa_col}"
+                )
+
         except Exception as e:
             print(f"⚠️ Could not load data from ND {semester}: {e}")
             traceback.print_exc()
     print(f"📊 Loaded cumulative ND data for {len(all_student_data)} students")
     return all_student_data
+
+
 def calculate_cgpa(student_data, current_gpa, current_credits):
     """Calculate Cumulative GPA for ND."""
-    if not student_data or not student_data.get('gpas'):
+    if not student_data or not student_data.get("gpas"):
         print(f"⚠️ No previous ND GPA data, using current GPA: {current_gpa}")
         return current_gpa
     total_grade_points = 0.0
     total_credits = 0
     print(f"🔢 Calculating ND CGPA from {len(student_data['gpas'])} previous semesters")
-    for prev_gpa, prev_credits in zip(student_data['gpas'], student_data['credits']):
+    for prev_gpa, prev_credits in zip(student_data["gpas"], student_data["credits"]):
         total_grade_points += prev_gpa * prev_credits
         total_credits += prev_credits
-        print(f" - GPA: {prev_gpa}, Credits: {prev_credits}, Running Total: {total_grade_points}/{total_credits}")
+        print(
+            f" - GPA: {prev_gpa}, Credits: {prev_credits}, Running Total: {total_grade_points}/{total_credits}"
+        )
     total_grade_points += current_gpa * current_credits
     total_credits += current_credits
     print(f"📊 Final ND calculation: {total_grade_points} / {total_credits}")
@@ -938,6 +1112,8 @@ def calculate_cgpa(student_data, current_gpa, current_credits):
     else:
         print(f"⚠️ No ND credits, returning current GPA: {current_gpa}")
         return current_gpa
+
+
 # ----------------------------
 # Mastersheet Update Functions (CRITICAL FIXES)
 # ----------------------------
@@ -945,12 +1121,12 @@ def find_sheet_structure(ws):
     """FIXED: Find the header row and build headers dictionary"""
     header_row = None
     headers = {}
-   
+
     # Look for header row (contains 'EXAM NUMBER')
-    for row_idx in range(1, 30): # Check first 30 rows
+    for row_idx in range(1, 30):  # Check first 30 rows
         for col_idx in range(1, ws.max_column + 1):
             cell_value = ws.cell(row=row_idx, column=col_idx).value
-            if cell_value and 'EXAM NUMBER' in str(cell_value).upper():
+            if cell_value and "EXAM NUMBER" in str(cell_value).upper():
                 header_row = row_idx
                 # Build headers dictionary
                 for col in range(1, ws.max_column + 1):
@@ -959,120 +1135,142 @@ def find_sheet_structure(ws):
                         headers[str(header_val).strip()] = col
                 print(f"✅ Found header row at: {header_row}")
                 return header_row, headers
-   
+
     print(f"❌ Could not find header row")
     return None, {}
+
+
 def apply_student_sorting(ws, header_row, headers_dict):
     """Apply sorting to students - compatibility function for ANALYSIS sheet"""
     # This is just an alias for the main sorting function
     apply_student_sorting_with_serial_numbers(ws, header_row, headers_dict)
+
+
 def apply_student_sorting_with_serial_numbers(ws, header_row, headers_dict):
     """Apply sorting to students with PROPER serial numbers - FIXED VERSION"""
     from openpyxl.styles import Font, PatternFill
-   
-    exam_col = headers_dict.get('EXAM NUMBER')
-    remarks_col = headers_dict.get('REMARKS')
-    gpa_col = headers_dict.get('GPA')
-    serial_col = 1 # Serial number is always column 1
-   
+
+    exam_col = headers_dict.get("EXAM NUMBER")
+    remarks_col = headers_dict.get("REMARKS")
+    gpa_col = headers_dict.get("GPA")
+    serial_col = 1  # Serial number is always column 1
+
     if not all([exam_col, remarks_col, gpa_col]):
         return
-   
+
     # Collect all student rows
     student_rows = []
     for row in range(header_row + 1, ws.max_row + 1):
         exam_no = ws.cell(row, exam_col).value
         if not exam_no or "SUMMARY" in str(exam_no).upper():
             break
-           
+
         # Get basic row data (values only, not styles)
         row_data = []
         for col in range(1, ws.max_column + 1):
             cell = ws.cell(row, col)
-            row_data.append({
-                'value': cell.value,
-                'number_format': cell.number_format
-            })
-       
-        remarks = ws.cell(row, remarks_col).value or ''
+            row_data.append({"value": cell.value, "number_format": cell.number_format})
+
+        remarks = ws.cell(row, remarks_col).value or ""
         remarks_upper = str(remarks).upper()
-       
+
         # Assign priority for sorting
         if "WITHDRAW" in remarks_upper:
-            priority = 3 # Withdrawn - last
-        elif "RESIT" in remarks_upper or "CARRYOVER" in remarks_upper or "PROBATION" in remarks_upper:
-            priority = 2 # Carryover - middle
+            priority = 3  # Withdrawn - last
+        elif (
+            "RESIT" in remarks_upper
+            or "CARRYOVER" in remarks_upper
+            or "PROBATION" in remarks_upper
+        ):
+            priority = 2  # Carryover - middle
         else:
-            priority = 1 # Passed - first
-           
-        student_rows.append({
-            'row_num': row,
-            'priority': priority,
-            'gpa': ws.cell(row, gpa_col).value or 0,
-            'row_data': row_data,
-            'remarks': remarks_upper,
-            'exam_no': exam_no # Store exam number for secondary sorting
-        })
-   
+            priority = 1  # Passed - first
+
+        student_rows.append(
+            {
+                "row_num": row,
+                "priority": priority,
+                "gpa": ws.cell(row, gpa_col).value or 0,
+                "row_data": row_data,
+                "remarks": remarks_upper,
+                "exam_no": exam_no,  # Store exam number for secondary sorting
+            }
+        )
+
     # Sort by priority (Passed first, then Carryover, then Withdrawn)
     # Within each group, sort by GPA (descending), then by exam number
-    student_rows.sort(key=lambda x: (x['priority'], -float(x['gpa'] if x['gpa'] else 0), x['exam_no']))
-   
+    student_rows.sort(
+        key=lambda x: (x["priority"], -float(x["gpa"] if x["gpa"] else 0), x["exam_no"])
+    )
+
     # Write sorted data back to worksheet
     for idx, student in enumerate(student_rows):
         target_row = header_row + 1 + idx
-        row_data = student['row_data']
-       
+        row_data = student["row_data"]
+
         for col_idx, cell_data in enumerate(row_data, 1):
             cell = ws.cell(target_row, col_idx)
-            cell.value = cell_data['value']
-           
+            cell.value = cell_data["value"]
+
             # Apply number format if present
-            if cell_data.get('number_format'):
-                cell.number_format = cell_data['number_format']
-           
+            if cell_data.get("number_format"):
+                cell.number_format = cell_data["number_format"]
+
             # CRITICAL FIX: Update serial numbers to be consecutive
-            if col_idx == serial_col: # Serial number column
+            if col_idx == serial_col:  # Serial number column
                 cell.value = idx + 1
-           
+
             # Re-apply styling based on content and student status
-            if student['priority'] == 3: # Withdrawn
-                cell.fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
-                if "WITHDRAW" in student['remarks']:
+            if student["priority"] == 3:  # Withdrawn
+                cell.fill = PatternFill(
+                    start_color="FFE6E6", end_color="FFE6E6", fill_type="solid"
+                )
+                if "WITHDRAW" in student["remarks"]:
                     cell.font = Font(bold=True, color="FF0000")
-            elif idx % 2 == 0: # Alternate row coloring
-                cell.fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
-           
+            elif idx % 2 == 0:  # Alternate row coloring
+                cell.fill = PatternFill(
+                    start_color="F8F8F8", end_color="F8F8F8", fill_type="solid"
+                )
+
             # Apply GPA styling for GPA column
-            if col_idx == headers_dict.get('GPA'):
+            if col_idx == headers_dict.get("GPA"):
                 try:
                     gpa_val = float(cell.value) if cell.value else 0
                     if gpa_val >= 3.5:
-                        cell.font = Font(bold=True, color="006400") # Dark green for high GPA
+                        cell.font = Font(
+                            bold=True, color="006400"
+                        )  # Dark green for high GPA
                     elif gpa_val < 2.0:
-                        cell.font = Font(bold=True, color="FF0000") # Red for low GPA
+                        cell.font = Font(bold=True, color="FF0000")  # Red for low GPA
                 except (ValueError, TypeError):
                     pass
-    print(f" ✅ Applied student sorting with proper serial numbers (1 to {len(student_rows)})")
+    print(
+        f" ✅ Applied student sorting with proper serial numbers (1 to {len(student_rows)})"
+    )
+
+
 # CRITICAL FIX #1: Proper course column identification
 def identify_course_columns_properly(headers):
     """Identify course columns using PROPER pattern matching"""
     import re
+
     course_columns = {}
- 
+
     for header, col_idx in headers.items():
         # Match patterns like: NUR101, NSC201, etc. (3 letters + 3 digits)
         # Also match GNS111, etc.
-        if re.match(r'^[A-Z]{3}\d{3}$', str(header).strip()):
+        if re.match(r"^[A-Z]{3}\d{3}$", str(header).strip()):
             course_columns[header] = col_idx
             print(f"✅ Identified course column: '{header}' at index {col_idx}")
- 
+
     print(f"📊 Total course columns identified: {len(course_columns)}")
     return course_columns
+
+
 def update_summary_section_fixed(ws, headers, header_row, course_columns):
     """Update SUMMARY section - FIXED VERSION with embedded number updates and aligned fails"""
     print(f" 📊 Updating summary section...")
- 
+
     try:
         # Find SUMMARY section
         summary_start_row = None
@@ -1081,36 +1279,37 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
             if cell_value and "SUMMARY" in str(cell_value).upper():
                 summary_start_row = row_idx
                 break
-     
+
         if not summary_start_row:
             print(" ℹ️ No SUMMARY section found")
             return
-     
+
         # Find exam column
         exam_col_idx = None
         for col_name, col_idx in headers.items():
-            if 'EXAM NUMBER' in col_name.upper():
+            if "EXAM NUMBER" in col_name.upper():
                 exam_col_idx = col_idx
                 break
-     
+
         if not exam_col_idx:
             print(" ❌ No exam column found")
             return
-     
+
         # CRITICAL FIX: Re-read headers to ensure we have fresh column mappings
         fresh_headers = {}
         for col_idx in range(1, ws.max_column + 1):
             header_val = ws.cell(row=header_row, column=col_idx).value
             if header_val:
                 fresh_headers[str(header_val).strip()] = col_idx
-       
+
         # CRITICAL FIX: Re-identify course columns from fresh headers
         import re
+
         fresh_course_columns = {}
         for header, col_idx in fresh_headers.items():
-            if re.match(r'^[A-Z]{3}\d{3}$', str(header).strip()):
+            if re.match(r"^[A-Z]{3}\d{3}$", str(header).strip()):
                 fresh_course_columns[header] = col_idx
-     
+
         # Count statistics from CURRENT data (reading directly from worksheet)
         total_students = 0
         passed_students = 0
@@ -1118,22 +1317,22 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
         probation_students = 0
         withdrawn_students = 0
         course_failures = {course: 0 for course in fresh_course_columns}
-     
+
         for row_idx in range(header_row + 1, ws.max_row + 1):
             exam_no = ws.cell(row=row_idx, column=exam_col_idx).value
-         
+
             # Stop at summary
             if not exam_no or "SUMMARY" in str(exam_no).upper():
                 break
-         
-            if str(exam_no).strip() in ['', 'NAN', 'NONE']:
+
+            if str(exam_no).strip() in ["", "NAN", "NONE"]:
                 continue
-         
+
             total_students += 1
-         
+
             # Count remarks
             for col_name, col_idx in headers.items():
-                if 'REMARKS' in col_name.upper():
+                if "REMARKS" in col_name.upper():
                     remarks = ws.cell(row=row_idx, column=col_idx).value
                     if remarks:
                         remarks_upper = str(remarks).upper()
@@ -1146,19 +1345,19 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
                         elif "WITHDRAW" in remarks_upper:
                             withdrawn_students += 1
                     break
-         
+
             # Count ACTUAL failures from CURRENT scores (INCLUDING updated resit scores)
             for course in fresh_course_columns:
                 if course in fresh_headers:
                     col_idx = fresh_headers[course]
                     score = ws.cell(row=row_idx, column=col_idx).value
-                    if score is not None and score != '':
+                    if score is not None and score != "":
                         try:
                             if float(score) < 50:
                                 course_failures[course] += 1
                         except (ValueError, TypeError):
                             continue
-     
+
         # Update fails per course (aligned to course columns)
         fails_row = None
         # Search for the fails per course row in the first three columns
@@ -1170,110 +1369,146 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
                     break
             if fails_row:
                 break
-     
+
         if fails_row:
             print(f"✅ Found fails per course row at row {fails_row}")
-            sorted_courses = sorted(fresh_course_columns, key=lambda k: fresh_course_columns[k])
+            sorted_courses = sorted(
+                fresh_course_columns, key=lambda k: fresh_course_columns[k]
+            )
             for i, course in enumerate(sorted_courses):
                 col = fresh_course_columns[course]
                 ws.cell(row=fails_row, column=col).value = course_failures[course]
-                print(f" ✅ Updated {course} failures: {course_failures[course]} at column {col}")
+                print(
+                    f" ✅ Updated {course} failures: {course_failures[course]} at column {col}"
+                )
         else:
             print("❌ Could not find fails per course row")
-     
+
         # Update summary rows with embedded numbers
         current_row = summary_start_row + 1
-     
+
         while current_row <= ws.max_row:
             cell_value = ws.cell(row=current_row, column=1).value
             if not cell_value:
                 break
-         
+
             cell_str = str(cell_value).upper()
-         
+
             if "REGISTERED AND SAT" in cell_str:
-                new_value = re.sub(r'A TOTAL OF \d+ STUDENTS', f'A total of {total_students} students', cell_value, flags=re.I)
+                new_value = re.sub(
+                    r"A TOTAL OF \d+ STUDENTS",
+                    f"A total of {total_students} students",
+                    cell_value,
+                    flags=re.I,
+                )
                 ws.cell(row=current_row, column=1).value = new_value
                 print(f" ✅ Updated total students: {total_students}")
-         
-            elif "PASSED IN ALL COURSES REGISTERED" in cell_str and "FAILED" not in cell_str:
-                new_value = re.sub(r'A TOTAL OF \d+ STUDENTS', f'A total of {passed_students} students', cell_value, flags=re.I)
+
+            elif (
+                "PASSED IN ALL COURSES REGISTERED" in cell_str
+                and "FAILED" not in cell_str
+            ):
+                new_value = re.sub(
+                    r"A TOTAL OF \d+ STUDENTS",
+                    f"A total of {passed_students} students",
+                    cell_value,
+                    flags=re.I,
+                )
                 ws.cell(row=current_row, column=1).value = new_value
                 print(f" ✅ Updated passed: {passed_students}")
-         
+
             elif "GRADE POINT AVERAGE (GPA) OF 2.00 AND ABOVE FAILED" in cell_str:
-                new_value = re.sub(r'A TOTAL OF \d+ STUDENTS', f'A total of {resit_students} students', cell_value, flags=re.I)
+                new_value = re.sub(
+                    r"A TOTAL OF \d+ STUDENTS",
+                    f"A total of {resit_students} students",
+                    cell_value,
+                    flags=re.I,
+                )
                 ws.cell(row=current_row, column=1).value = new_value
                 print(f" ✅ Updated resit (GPA >=2.00): {resit_students}")
-         
+
             elif "GRADE POINT AVERAGE (GPA) BELOW 2.00 FAILED" in cell_str:
-                new_value = re.sub(r'A TOTAL OF \d+ STUDENTS', f'A total of {probation_students} students', cell_value, flags=re.I)
+                new_value = re.sub(
+                    r"A TOTAL OF \d+ STUDENTS",
+                    f"A total of {probation_students} students",
+                    cell_value,
+                    flags=re.I,
+                )
                 ws.cell(row=current_row, column=1).value = new_value
                 print(f" ✅ Updated probation: {probation_students}")
-         
+
             elif "FAILED IN MORE THAN 45%" in cell_str:
-                new_value = re.sub(r'A TOTAL OF \d+ STUDENTS', f'A total of {withdrawn_students} students', cell_value, flags=re.I)
+                new_value = re.sub(
+                    r"A TOTAL OF \d+ STUDENTS",
+                    f"A total of {withdrawn_students} students",
+                    cell_value,
+                    flags=re.I,
+                )
                 ws.cell(row=current_row, column=1).value = new_value
                 print(f" ✅ Updated withdrawn: {withdrawn_students}")
-         
+
             current_row += 1
-     
+
         print(f" ✅ Summary section updated")
-     
+
     except Exception as e:
         print(f" ❌ Error updating summary: {e}")
         traceback.print_exc()
+
+
 def ensure_required_sheets_exist(wb):
     """Ensure CGPA_SUMMARY and ANALYSIS sheets exist in workbook"""
     from openpyxl.styles import Font, Alignment, PatternFill
-   
+
     print(f"\n🔍 CHECKING FOR REQUIRED SHEETS...")
     print(f" Current sheets: {wb.sheetnames}")
-   
+
     # Create CGPA_SUMMARY if it doesn't exist
-    if 'CGPA_SUMMARY' not in wb.sheetnames:
+    if "CGPA_SUMMARY" not in wb.sheetnames:
         print(f"⚠️ CGPA_SUMMARY sheet not found - creating it...")
-        cgpa_ws = wb.create_sheet('CGPA_SUMMARY')
-       
+        cgpa_ws = wb.create_sheet("CGPA_SUMMARY")
+
         # Add basic structure
-        cgpa_ws['A1'] = "CGPA SUMMARY"
-        cgpa_ws['A1'].font = Font(bold=True, size=14)
-        cgpa_ws['A1'].alignment = Alignment(horizontal='center')
-       
+        cgpa_ws["A1"] = "CGPA SUMMARY"
+        cgpa_ws["A1"].font = Font(bold=True, size=14)
+        cgpa_ws["A1"].alignment = Alignment(horizontal="center")
+
         print(f"✅ Created CGPA_SUMMARY sheet")
     else:
         print(f"✅ CGPA_SUMMARY sheet exists")
-   
+
     # Create ANALYSIS if it doesn't exist
-    if 'ANALYSIS' not in wb.sheetnames:
+    if "ANALYSIS" not in wb.sheetnames:
         print(f"⚠️ ANALYSIS sheet not found - creating it...")
-        analysis_ws = wb.create_sheet('ANALYSIS')
-       
+        analysis_ws = wb.create_sheet("ANALYSIS")
+
         # Add basic structure
-        analysis_ws['A1'] = "PERFORMANCE ANALYSIS"
-        analysis_ws['A1'].font = Font(bold=True, size=14)
-        analysis_ws['A1'].alignment = Alignment(horizontal='center')
-       
+        analysis_ws["A1"] = "PERFORMANCE ANALYSIS"
+        analysis_ws["A1"].font = Font(bold=True, size=14)
+        analysis_ws["A1"].alignment = Alignment(horizontal="center")
+
         print(f"✅ Created ANALYSIS sheet")
     else:
         print(f"✅ ANALYSIS sheet exists")
-   
+
     print(f"✅ All required sheets verified")
     return True
+
+
 def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
     """Update CGPA_SUMMARY sheet - COMPLETELY FIXED VERSION"""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
     from datetime import datetime
- 
+
     print(f" 📈 Updating CGPA_SUMMARY...")
- 
-    if 'CGPA_SUMMARY' not in wb.sheetnames:
+
+    if "CGPA_SUMMARY" not in wb.sheetnames:
         print(" ℹ️ No CGPA_SUMMARY sheet")
         return
- 
-    cgpa_ws = wb['CGPA_SUMMARY']
- 
+
+    cgpa_ws = wb["CGPA_SUMMARY"]
+
     # FIXED: Properly handle merged cells by unmerging first
     try:
         merged_ranges = list(cgpa_ws.merged_cells.ranges)
@@ -1282,78 +1517,94 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
         print(f" ✅ Unmerged {len(merged_ranges)} cell ranges")
     except Exception as e:
         print(f" ⚠️ Could not unmerge cells: {e}")
- 
+
     # Clear ALL old data (including headers)
     for row in range(1, cgpa_ws.max_row + 1):
         for col in range(1, cgpa_ws.max_column + 1):
             cgpa_ws.cell(row, col).value = None
-            cgpa_ws.cell(row, col).fill = PatternFill() # Clear formatting
+            cgpa_ws.cell(row, col).fill = PatternFill()  # Clear formatting
             cgpa_ws.cell(row, col).font = Font()
             cgpa_ws.cell(row, col).border = Border()
- 
+
     # ===================================================================
     # STEP 1: CREATE PROFESSIONAL HEADER SECTION
     # ===================================================================
-   
+
     class_name = set_name
-   
+
     # Get semester info
-    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
-   
+    year, sem_num, level, sem_display, set_code, current_semester_name = (
+        get_semester_display_info(semester_key)
+    )
+
     # Calculate total columns needed (9 columns for our data)
     total_columns = 9
     last_column = get_column_letter(total_columns)
-   
+
     # Row 1: Institution Name (Merged and Centered)
-    cgpa_ws.merge_cells(f'A1:{last_column}1')
-    title_cell = cgpa_ws['A1']
+    cgpa_ws.merge_cells(f"A1:{last_column}1")
+    title_cell = cgpa_ws["A1"]
     title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
-    title_cell.font = Font(bold=True, size=14, name='Calibri')
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    title_cell.font = Font(bold=True, size=14, name="Calibri")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 2: Department (Merged and Centered)
-    cgpa_ws.merge_cells(f'A2:{last_column}2')
-    dept_cell = cgpa_ws['A2']
+    cgpa_ws.merge_cells(f"A2:{last_column}2")
+    dept_cell = cgpa_ws["A2"]
     dept_cell.value = "DEPARTMENT OF NURSING"
-    dept_cell.font = Font(bold=True, size=12, name='Calibri')
-    dept_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    dept_cell.font = Font(bold=True, size=12, name="Calibri")
+    dept_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 3: Class and Sheet Title (Merged and Centered)
-    cgpa_ws.merge_cells(f'A3:{last_column}3')
-    class_cell = cgpa_ws['A3']
+    cgpa_ws.merge_cells(f"A3:{last_column}3")
+    class_cell = cgpa_ws["A3"]
     class_cell.value = f"{class_name} CLASS - CUMULATIVE GPA SUMMARY"
-    class_cell.font = Font(bold=True, size=13, name='Calibri', color="FFFFFF")
-    class_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    class_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    class_cell.font = Font(bold=True, size=13, name="Calibri", color="FFFFFF")
+    class_cell.fill = PatternFill(
+        start_color="366092", end_color="366092", fill_type="solid"
+    )
+    class_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 4: Date and Academic Session (Merged and Centered)
-    cgpa_ws.merge_cells(f'A4:{last_column}4')
-    date_cell = cgpa_ws['A4']
+    cgpa_ws.merge_cells(f"A4:{last_column}4")
+    date_cell = cgpa_ws["A4"]
     current_year = datetime.now().year
     date_cell.value = f"{current_year}/{current_year + 1} Academic Session - Generated on {datetime.now().strftime('%B %d, %Y')}"
-    date_cell.font = Font(size=11, name='Calibri', italic=True)
-    date_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    date_cell.font = Font(size=11, name="Calibri", italic=True)
+    date_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 5: Empty spacer
     cgpa_ws.row_dimensions[5].height = 5
-   
+
     # ===================================================================
     # STEP 2: CREATE COLUMN HEADERS
     # ===================================================================
-   
+
     # Row 6: Column Headers
-    headers = ['S/N', 'EXAM NUMBER', 'NAME', 'Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'CGPA', 'WITHDRAWN']
-   
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True, size=11, name='Calibri')
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+    headers = [
+        "S/N",
+        "EXAM NUMBER",
+        "NAME",
+        "Semester 1",
+        "Semester 2",
+        "Semester 3",
+        "Semester 4",
+        "CGPA",
+        "WITHDRAWN",
+    ]
+
+    header_fill = PatternFill(
+        start_color="366092", end_color="366092", fill_type="solid"
     )
-    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
-   
+    header_font = Font(color="FFFFFF", bold=True, size=11, name="Calibri")
+    border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
     for col_idx, header in enumerate(headers, 1):
         cell = cgpa_ws.cell(row=6, column=col_idx)
         cell.value = header
@@ -1361,26 +1612,26 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
         cell.font = header_font
         cell.alignment = center_align
         cell.border = border
-   
+
     # Set row height for header
     cgpa_ws.row_dimensions[6].height = 25
- 
+
     # ===================================================================
     # STEP 3: COLLECT AND POPULATE DATA WITH PROPER WITHDRAWN TRACKING
     # ===================================================================
-   
+
     # Collect data from all semesters using SINGLE workbook session
     semester_keys = [
         "ND-FIRST-YEAR-FIRST-SEMESTER",
         "ND-FIRST-YEAR-SECOND-SEMESTER",
         "ND-SECOND-YEAR-FIRST-SEMESTER",
-        "ND-SECOND-YEAR-SECOND-SEMESTER"
+        "ND-SECOND-YEAR-SECOND-SEMESTER",
     ]
     semester_data = {}
-   
+
     # Track ALL historically withdrawn students across ALL semesters - CRITICAL FIX
     all_withdrawn_students = set()
-   
+
     # FIRST PASS: Identify ALL historically withdrawn students from ALL semesters
     print(f" 🔍 FIRST PASS: Identifying ALL historically withdrawn students...")
     for key in semester_keys:
@@ -1389,36 +1640,40 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
             if key.upper() in sheet.upper():
                 sheet_name = sheet
                 break
-               
+
         if sheet_name and sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
             header_row_found, headers_dict = find_sheet_structure(ws)
             if not header_row_found:
                 continue
-               
-            exam_col = headers_dict.get('EXAM NUMBER')
-            remarks_col = headers_dict.get('REMARKS')
-           
+
+            exam_col = headers_dict.get("EXAM NUMBER")
+            remarks_col = headers_dict.get("REMARKS")
+
             if not all([exam_col, remarks_col]):
                 continue
-           
+
             # Collect withdrawn students from this semester
             for row in range(header_row_found + 1, ws.max_row + 1):
                 exam_no = ws.cell(row, exam_col).value
                 if not exam_no or "SUMMARY" in str(exam_no).upper():
                     break
-                   
+
                 exam_no_clean = str(exam_no).strip().upper()
-                remarks = ws.cell(row, remarks_col).value or ''
+                remarks = ws.cell(row, remarks_col).value or ""
                 remarks_upper = str(remarks).upper()
-               
+
                 # CRITICAL FIX: Track ALL students who were EVER withdrawn
                 if "WITHDRAW" in remarks_upper:
                     all_withdrawn_students.add(exam_no_clean)
-                    print(f" 📝 Found historically withdrawn: {exam_no_clean} in {sheet_name}")
-   
-    print(f" ✅ Identified {len(all_withdrawn_students)} historically withdrawn students")
-   
+                    print(
+                        f" 📝 Found historically withdrawn: {exam_no_clean} in {sheet_name}"
+                    )
+
+    print(
+        f" ✅ Identified {len(all_withdrawn_students)} historically withdrawn students"
+    )
+
     # SECOND PASS: Collect semester data with PERSISTENT withdrawn status
     for key in semester_keys:
         sheet_name = None
@@ -1426,248 +1681,267 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
             if key.upper() in sheet.upper():
                 sheet_name = sheet
                 break
-               
+
         if sheet_name and sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
             header_row_found, headers_dict = find_sheet_structure(ws)
             if not header_row_found:
                 continue
-               
-            exam_col = headers_dict.get('EXAM NUMBER')
-            name_col = headers_dict.get('NAME')
-            gpa_col = headers_dict.get('GPA')
-            credits_col = headers_dict.get('TCPE')
-            remarks_col = headers_dict.get('REMARKS')
-           
+
+            exam_col = headers_dict.get("EXAM NUMBER")
+            name_col = headers_dict.get("NAME")
+            gpa_col = headers_dict.get("GPA")
+            credits_col = headers_dict.get("TCPE")
+            remarks_col = headers_dict.get("REMARKS")
+
             if not all([exam_col, name_col, gpa_col]):
                 continue
-               
+
             data = {}
             for row in range(header_row_found + 1, ws.max_row + 1):
                 exam_no_cell = ws.cell(row, exam_col).value
                 if not exam_no_cell or "SUMMARY" in str(exam_no_cell).upper():
                     break
-                   
+
                 exam_no = str(exam_no_cell).strip().upper()
                 name = ws.cell(row, name_col).value
                 gpa_val = ws.cell(row, gpa_col).value
                 credits_val = ws.cell(row, credits_col).value if credits_col else 0
-                remarks = ws.cell(row, remarks_col).value if remarks_col else ''
-               
+                remarks = ws.cell(row, remarks_col).value if remarks_col else ""
+
                 # CRITICAL FIX: Check if student is historically withdrawn (PERSISTENT STATUS)
-                is_withdrawn = (exam_no in all_withdrawn_students)
-               
+                is_withdrawn = exam_no in all_withdrawn_students
+
                 try:
                     gpa = float(gpa_val) if gpa_val else 0
                     credits = float(credits_val) if credits_val else 0
                     data[exam_no] = {
-                        'name': name,
-                        'gpa': gpa,
-                        'credits': credits,
-                        'remarks': remarks,
-                        'withdrawn': is_withdrawn # Store withdrawn status
+                        "name": name,
+                        "gpa": gpa,
+                        "credits": credits,
+                        "remarks": remarks,
+                        "withdrawn": is_withdrawn,  # Store withdrawn status
                     }
                 except (ValueError, TypeError):
                     continue
-                   
+
             semester_data[key] = data
- 
+
     # Collect unique students
     all_exam_no = set()
     for d in semester_data.values():
         all_exam_no.update(d.keys())
- 
+
     students = []
     for exam_no in all_exam_no:
         total_gp = 0.0
         total_cr = 0.0
         gpas = {}
         name = None
-       
+
         # CRITICAL FIX: Check if student is withdrawn in ANY semester
         withdrawn = False
         for key, d in semester_data.items():
             if exam_no in d:
                 data = d[exam_no]
-                gpas[key] = data['gpa']
-                total_gp += data['gpa'] * data['credits']
-                total_cr += data['credits']
+                gpas[key] = data["gpa"]
+                total_gp += data["gpa"] * data["credits"]
+                total_cr += data["credits"]
                 # If student is withdrawn in ANY semester, mark as withdrawn
-                if data['withdrawn']:
+                if data["withdrawn"]:
                     withdrawn = True
                     print(f" 🔒 Student {exam_no} marked as withdrawn (found in {key})")
                 if not name:
-                    name = data['name']
-                   
+                    name = data["name"]
+
         cgpa = round(total_gp / total_cr, 2) if total_cr > 0 else 0.0
-        students.append({
-            'exam_no': exam_no,
-            'name': name,
-            'gpas': gpas,
-            'cgpa': cgpa,
-            'withdrawn': withdrawn # PERSISTENT withdrawn status
-        })
- 
+        students.append(
+            {
+                "exam_no": exam_no,
+                "name": name,
+                "gpas": gpas,
+                "cgpa": cgpa,
+                "withdrawn": withdrawn,  # PERSISTENT withdrawn status
+            }
+        )
+
     # Sort: non-withdrawn by CGPA (descending), then withdrawn by CGPA (descending)
-    non_withdrawn = [s for s in students if not s['withdrawn']]
-    withdrawn_list = [s for s in students if s['withdrawn']]
-   
+    non_withdrawn = [s for s in students if not s["withdrawn"]]
+    withdrawn_list = [s for s in students if s["withdrawn"]]
+
     # CRITICAL FIX: Sort by CGPA descending, then by exam number for consistency
-    non_withdrawn.sort(key=lambda s: (-s['cgpa'], s['exam_no']))
-    withdrawn_list.sort(key=lambda s: (-s['cgpa'], s['exam_no']))
-   
+    non_withdrawn.sort(key=lambda s: (-s["cgpa"], s["exam_no"]))
+    withdrawn_list.sort(key=lambda s: (-s["cgpa"], s["exam_no"]))
+
     sorted_students = non_withdrawn + withdrawn_list
- 
+
     # ===================================================================
     # STEP 4: WRITE STUDENT DATA WITH FORMATTING AND PROPER SERIAL NUMBERS
     # ===================================================================
-   
-    row = 7 # Start from row 7 (after header)
+
+    row = 7  # Start from row 7 (after header)
     data_border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
     )
-   
+
     # Alternate row colors
-    even_row_fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
-    withdrawn_fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
-   
+    even_row_fill = PatternFill(
+        start_color="F8F8F8", end_color="F8F8F8", fill_type="solid"
+    )
+    withdrawn_fill = PatternFill(
+        start_color="FFE6E6", end_color="FFE6E6", fill_type="solid"
+    )
+
     # CRITICAL FIX: Proper serial numbers from 1 to n
     serial_number = 1
-   
+
     for idx, s in enumerate(sorted_students):
         # Determine row fill
-        if s['withdrawn']:
+        if s["withdrawn"]:
             row_fill = withdrawn_fill
         elif idx % 2 == 0:
             row_fill = even_row_fill
         else:
-            row_fill = PatternFill() # White
-       
+            row_fill = PatternFill()  # White
+
         # Serial Number (PROPERLY SORTED from 1 to n)
         cell = cgpa_ws.cell(row, 1, value=serial_number)
         cell.border = data_border
         cell.fill = row_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         serial_number += 1
-       
+
         # Exam Number
-        cell = cgpa_ws.cell(row, 2, value=s['exam_no'])
+        cell = cgpa_ws.cell(row, 2, value=s["exam_no"])
         cell.border = data_border
         cell.fill = row_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-       
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
         # Name
-        cell = cgpa_ws.cell(row, 3, value=s['name'])
+        cell = cgpa_ws.cell(row, 3, value=s["name"])
         cell.border = data_border
         cell.fill = row_fill
-        cell.alignment = Alignment(horizontal='left', vertical='center')
-       
+        cell.alignment = Alignment(horizontal="left", vertical="center")
+
         # Semester GPAs
-        for col_idx, sem_key in enumerate(['ND-FIRST-YEAR-FIRST-SEMESTER',
-                                            'ND-FIRST-YEAR-SECOND-SEMESTER',
-                                            'ND-SECOND-YEAR-FIRST-SEMESTER',
-                                            'ND-SECOND-YEAR-SECOND-SEMESTER'], 4):
-            gpa_value = s['gpas'].get(sem_key, '')
+        for col_idx, sem_key in enumerate(
+            [
+                "ND-FIRST-YEAR-FIRST-SEMESTER",
+                "ND-FIRST-YEAR-SECOND-SEMESTER",
+                "ND-SECOND-YEAR-FIRST-SEMESTER",
+                "ND-SECOND-YEAR-SECOND-SEMESTER",
+            ],
+            4,
+        ):
+            gpa_value = s["gpas"].get(sem_key, "")
             cell = cgpa_ws.cell(row, col_idx, value=gpa_value)
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.alignment = Alignment(horizontal="center", vertical="center")
             if gpa_value:
-                cell.number_format = '0.00'
-       
+                cell.number_format = "0.00"
+
         # CGPA
-        cell = cgpa_ws.cell(row, 8, value=s['cgpa'])
+        cell = cgpa_ws.cell(row, 8, value=s["cgpa"])
         cell.border = data_border
         cell.fill = row_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        cell.number_format = '0.00'
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.number_format = "0.00"
         cell.font = Font(bold=True)
-       
+
         # Withdrawn status - CRITICAL FIX: Show "Yes" for withdrawn students
-        withdrawn_status = 'Yes' if s['withdrawn'] else 'No'
+        withdrawn_status = "Yes" if s["withdrawn"] else "No"
         cell = cgpa_ws.cell(row, 9, value=withdrawn_status)
         cell.border = data_border
         cell.fill = row_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        if s['withdrawn']:
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        if s["withdrawn"]:
             cell.font = Font(bold=True, color="FF0000")
             print(f" ✅ Marked {s['exam_no']} as WITHDRAWN in CGPA_SUMMARY")
-       
+
         row += 1
- 
+
     # ===================================================================
     # STEP 5: ADD SUMMARY STATISTICS
     # ===================================================================
-   
+
     summary_start_row = row + 2
-   
+
     total_students = len(students)
-    avg_cgpa = round(sum(s['cgpa'] for s in students) / total_students, 2) if total_students > 0 else 0
-    highest_cgpa = max(s['cgpa'] for s in students) if students else 0
-    lowest_cgpa = min(s['cgpa'] for s in students if s['cgpa'] > 0) if students else 0
+    avg_cgpa = (
+        round(sum(s["cgpa"] for s in students) / total_students, 2)
+        if total_students > 0
+        else 0
+    )
+    highest_cgpa = max(s["cgpa"] for s in students) if students else 0
+    lowest_cgpa = min(s["cgpa"] for s in students if s["cgpa"] > 0) if students else 0
     withdrawn_count = len(withdrawn_list)
- 
+
     # Summary header
-    cgpa_ws.merge_cells(f'A{summary_start_row}:{last_column}{summary_start_row}')
+    cgpa_ws.merge_cells(f"A{summary_start_row}:{last_column}{summary_start_row}")
     summary_header = cgpa_ws.cell(summary_start_row, 1)
     summary_header.value = "SUMMARY STATISTICS"
-    summary_header.font = Font(bold=True, size=12, name='Calibri')
-    summary_header.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    summary_header.alignment = Alignment(horizontal='center', vertical='center')
-    summary_header.border = Border(
-        left=Side(style='medium'),
-        right=Side(style='medium'),
-        top=Side(style='medium'),
-        bottom=Side(style='thin')
+    summary_header.font = Font(bold=True, size=12, name="Calibri")
+    summary_header.fill = PatternFill(
+        start_color="D9E1F2", end_color="D9E1F2", fill_type="solid"
     )
-   
+    summary_header.alignment = Alignment(horizontal="center", vertical="center")
+    summary_header.border = Border(
+        left=Side(style="medium"),
+        right=Side(style="medium"),
+        top=Side(style="medium"),
+        bottom=Side(style="thin"),
+    )
+
     # Summary data
     summary_data = [
         ("Total Students:", total_students),
         ("Average Cumulative CGPA:", avg_cgpa),
         ("Highest Cumulative CGPA:", highest_cgpa),
         ("Lowest Cumulative CGPA:", lowest_cgpa),
-        ("Withdrawn Students:", withdrawn_count)
+        ("Withdrawn Students:", withdrawn_count),
     ]
-   
-    summary_fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-   
+
+    summary_fill = PatternFill(
+        start_color="F2F2F2", end_color="F2F2F2", fill_type="solid"
+    )
+
     for i, (label, value) in enumerate(summary_data):
         current_row = summary_start_row + 1 + i
-       
+
         # Label (columns A-D merged)
-        cgpa_ws.merge_cells(f'A{current_row}:D{current_row}')
+        cgpa_ws.merge_cells(f"A{current_row}:D{current_row}")
         label_cell = cgpa_ws.cell(current_row, 1)
         label_cell.value = label
-        label_cell.font = Font(bold=True, size=11, name='Calibri')
+        label_cell.font = Font(bold=True, size=11, name="Calibri")
         label_cell.fill = summary_fill
-        label_cell.alignment = Alignment(horizontal='right', vertical='center')
+        label_cell.alignment = Alignment(horizontal="right", vertical="center")
         label_cell.border = Border(
-            left=Side(style='medium'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
+            left=Side(style="medium"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
         )
-       
+
         # Value (columns E-I merged)
-        cgpa_ws.merge_cells(f'E{current_row}:{last_column}{current_row}')
+        cgpa_ws.merge_cells(f"E{current_row}:{last_column}{current_row}")
         value_cell = cgpa_ws.cell(current_row, 5)
         value_cell.value = value
-        value_cell.font = Font(bold=True, size=11, name='Calibri')
-        value_cell.alignment = Alignment(horizontal='center', vertical='center')
+        value_cell.font = Font(bold=True, size=11, name="Calibri")
+        value_cell.alignment = Alignment(horizontal="center", vertical="center")
         value_cell.border = Border(
-            left=Side(style='thin'),
-            right=Side(style='medium'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
+            left=Side(style="thin"),
+            right=Side(style="medium"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
         )
-       
+
         if isinstance(value, float):
-            value_cell.number_format = '0.00'
-   
+            value_cell.number_format = "0.00"
+
     # Bottom border for summary section
     last_summary_row = summary_start_row + len(summary_data)
     for col in range(1, total_columns + 1):
@@ -1676,91 +1950,101 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
             left=cell.border.left,
             right=cell.border.right,
             top=cell.border.top,
-            bottom=Side(style='medium')
+            bottom=Side(style="medium"),
         )
- 
+
     # ===================================================================
     # STEP 6: ADJUST COLUMN WIDTHS
     # ===================================================================
-   
-    cgpa_ws.column_dimensions['A'].width = 8 # S/N
-    cgpa_ws.column_dimensions['B'].width = 18 # EXAM NUMBER
-    cgpa_ws.column_dimensions['C'].width = 35 # NAME
-    cgpa_ws.column_dimensions['D'].width = 12 # Semester 1
-    cgpa_ws.column_dimensions['E'].width = 12 # Semester 2
-    cgpa_ws.column_dimensions['F'].width = 12 # Semester 3
-    cgpa_ws.column_dimensions['G'].width = 12 # Semester 4
-    cgpa_ws.column_dimensions['H'].width = 12 # CGPA
-    cgpa_ws.column_dimensions['I'].width = 12 # WITHDRAWN
-   
+
+    cgpa_ws.column_dimensions["A"].width = 8  # S/N
+    cgpa_ws.column_dimensions["B"].width = 18  # EXAM NUMBER
+    cgpa_ws.column_dimensions["C"].width = 35  # NAME
+    cgpa_ws.column_dimensions["D"].width = 12  # Semester 1
+    cgpa_ws.column_dimensions["E"].width = 12  # Semester 2
+    cgpa_ws.column_dimensions["F"].width = 12  # Semester 3
+    cgpa_ws.column_dimensions["G"].width = 12  # Semester 4
+    cgpa_ws.column_dimensions["H"].width = 12  # CGPA
+    cgpa_ws.column_dimensions["I"].width = 12  # WITHDRAWN
+
     # Set specific row heights
-    cgpa_ws.row_dimensions[1].height = 20 # Title
-    cgpa_ws.row_dimensions[2].height = 18 # Department
-    cgpa_ws.row_dimensions[3].height = 20 # Class/Title
-    cgpa_ws.row_dimensions[4].height = 16 # Date
- 
-    print(f" ✅ CGPA_SUMMARY updated with {len(students)} students, {withdrawn_count} withdrawn, and proper serial numbers")
-    print(f" ✅ Withdrawn students properly marked: {[s['exam_no'] for s in withdrawn_list]}")
+    cgpa_ws.row_dimensions[1].height = 20  # Title
+    cgpa_ws.row_dimensions[2].height = 18  # Department
+    cgpa_ws.row_dimensions[3].height = 20  # Class/Title
+    cgpa_ws.row_dimensions[4].height = 16  # Date
+
+    print(
+        f" ✅ CGPA_SUMMARY updated with {len(students)} students, {withdrawn_count} withdrawn, and proper serial numbers"
+    )
+    print(
+        f" ✅ Withdrawn students properly marked: {[s['exam_no'] for s in withdrawn_list]}"
+    )
+
+
 def update_cgpa_summary_with_withdrawn(wb, withdrawn_students):
     """Update CGPA SUMMARY sheet with PERSISTENT withdrawn status and apply sorting"""
-    if 'CGPA SUMMARY' not in wb.sheetnames:
+    if "CGPA SUMMARY" not in wb.sheetnames:
         return
-       
-    cgpa_ws = wb['CGPA SUMMARY']
+
+    cgpa_ws = wb["CGPA SUMMARY"]
     header_row_found, headers_dict = find_sheet_structure(cgpa_ws)
-   
+
     if not header_row_found:
         return
-       
-    exam_col = headers_dict.get('EXAM NUMBER')
-    remarks_col = headers_dict.get('REMARKS')
-    cgpa_col = headers_dict.get('CGPA')
+
+    exam_col = headers_dict.get("EXAM NUMBER")
+    remarks_col = headers_dict.get("REMARKS")
+    cgpa_col = headers_dict.get("CGPA")
     withdrawn_col = None
-   
+
     # Find withdrawn column if it exists
     for header, col in headers_dict.items():
-        if 'WITHDRAWN' in header.upper():
+        if "WITHDRAWN" in header.upper():
             withdrawn_col = col
             break
-   
+
     if not all([exam_col, remarks_col, cgpa_col]):
         return
-   
+
     # Update remarks AND withdrawn column for withdrawn students
     for row in range(header_row_found + 1, cgpa_ws.max_row + 1):
         exam_no = cgpa_ws.cell(row, exam_col).value
         if not exam_no or "SUMMARY" in str(exam_no).upper():
             break
-           
+
         exam_no_clean = str(exam_no).strip()
         if exam_no_clean in withdrawn_students:
             # Update remarks to ensure withdrawn status
             cgpa_ws.cell(row, remarks_col).value = "WITHDRAWN"
-           
+
             # Update withdrawn column if it exists
             if withdrawn_col:
                 cgpa_ws.cell(row, withdrawn_col).value = "Yes"
-           
+
             print(f" 🔒 Maintaining withdrawn status in CGPA: {exam_no_clean}")
-   
+
     # Apply sorting to CGPA SUMMARY
     apply_student_sorting(cgpa_ws, header_row_found, headers_dict)
-   
+
     print(f" ✅ CGPA SUMMARY updated with PERSISTENT withdrawn status")
-def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, header_row, set_name):
+
+
+def update_analysis_sheet_fixed(
+    wb, semester_key, course_columns, headers, header_row, set_name
+):
     """Update ANALYSIS sheet - ENHANCED VERSION with PERSISTENT withdrawn tracking and sorting"""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
     from datetime import datetime
- 
+
     print(f" 📊 Updating ANALYSIS with PERSISTENT withdrawn tracking...")
- 
-    if 'ANALYSIS' not in wb.sheetnames:
+
+    if "ANALYSIS" not in wb.sheetnames:
         print(" ℹ️ No ANALYSIS sheet")
         return
- 
-    analysis_ws = wb['ANALYSIS']
- 
+
+    analysis_ws = wb["ANALYSIS"]
+
     # FIXED: Properly handle merged cells by unmerging first
     try:
         merged_ranges = list(analysis_ws.merged_cells.ranges)
@@ -1769,7 +2053,7 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
         print(f" ✅ Unmerged {len(merged_ranges)} cell ranges in ANALYSIS sheet")
     except Exception as e:
         print(f" ⚠️ Could not unmerge cells in ANALYSIS sheet: {e}")
- 
+
     # Clear ALL old data (including headers)
     for row in range(1, analysis_ws.max_row + 1):
         for col in range(1, analysis_ws.max_column + 1):
@@ -1785,66 +2069,80 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
     # ===================================================================
     # STEP 1: CREATE PROFESSIONAL HEADER SECTION
     # ===================================================================
-   
+
     class_name = set_name
-   
+
     # Get semester info
-    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
-   
+    year, sem_num, level, sem_display, set_code, current_semester_name = (
+        get_semester_display_info(semester_key)
+    )
+
     # Calculate total columns needed (7 columns for our data)
     total_columns = 7
     last_column = get_column_letter(total_columns)
-   
+
     # Row 1: Institution Name
-    analysis_ws.merge_cells(f'A1:{last_column}1')
-    title_cell = analysis_ws['A1']
+    analysis_ws.merge_cells(f"A1:{last_column}1")
+    title_cell = analysis_ws["A1"]
     title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
-    title_cell.font = Font(bold=True, size=14, name='Calibri')
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    title_cell.font = Font(bold=True, size=14, name="Calibri")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 2: Department
-    analysis_ws.merge_cells(f'A2:{last_column}2')
-    dept_cell = analysis_ws['A2']
+    analysis_ws.merge_cells(f"A2:{last_column}2")
+    dept_cell = analysis_ws["A2"]
     dept_cell.value = "DEPARTMENT OF NURSING"
-    dept_cell.font = Font(bold=True, size=12, name='Calibri')
-    dept_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    dept_cell.font = Font(bold=True, size=12, name="Calibri")
+    dept_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 3: Class and Sheet Title
-    analysis_ws.merge_cells(f'A3:{last_column}3')
-    class_cell = analysis_ws['A3']
+    analysis_ws.merge_cells(f"A3:{last_column}3")
+    class_cell = analysis_ws["A3"]
     class_cell.value = f"{class_name} CLASS - PERFORMANCE ANALYSIS"
-    class_cell.font = Font(bold=True, size=13, name='Calibri', color="FFFFFF")
-    class_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    class_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    class_cell.font = Font(bold=True, size=13, name="Calibri", color="FFFFFF")
+    class_cell.fill = PatternFill(
+        start_color="366092", end_color="366092", fill_type="solid"
+    )
+    class_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 4: Date and Academic Session
-    analysis_ws.merge_cells(f'A4:{last_column}4')
-    date_cell = analysis_ws['A4']
+    analysis_ws.merge_cells(f"A4:{last_column}4")
+    date_cell = analysis_ws["A4"]
     current_year = datetime.now().year
     date_cell.value = f"{current_year}/{current_year + 1} Academic Session - Generated on {datetime.now().strftime('%B %d, %Y')}"
-    date_cell.font = Font(size=11, name='Calibri', italic=True)
-    date_cell.alignment = Alignment(horizontal='center', vertical='center')
-   
+    date_cell.font = Font(size=11, name="Calibri", italic=True)
+    date_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     # Row 5: Empty spacer
     analysis_ws.row_dimensions[5].height = 5
-   
+
     # ===================================================================
     # STEP 2: CREATE COLUMN HEADERS
     # ===================================================================
-   
+
     # Row 6: Column Headers
-    headers_list = ['SEMESTER', 'TOTAL', 'PASSED', 'CARRYOVER', 'WITHDRAWN', 'AVG GPA', 'PASS RATE (%)']
-   
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_font = Font(color="FFFFFF", bold=True, size=11, name='Calibri')
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+    headers_list = [
+        "SEMESTER",
+        "TOTAL",
+        "PASSED",
+        "CARRYOVER",
+        "WITHDRAWN",
+        "AVG GPA",
+        "PASS RATE (%)",
+    ]
+
+    header_fill = PatternFill(
+        start_color="366092", end_color="366092", fill_type="solid"
     )
-    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
-   
+    header_font = Font(color="FFFFFF", bold=True, size=11, name="Calibri")
+    border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
     for col_idx, header in enumerate(headers_list, 1):
         cell = analysis_ws.cell(row=6, column=col_idx)
         cell.value = header
@@ -1852,26 +2150,26 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
         cell.font = header_font
         cell.alignment = center_align
         cell.border = border
-   
+
     analysis_ws.row_dimensions[6].height = 25
     # ===================================================================
     # STEP 3: ENHANCED DATA COLLECTION WITH PERSISTENT WITHDRAWN TRACKING
     # ===================================================================
-   
+
     semester_keys = [
         "ND-FIRST-YEAR-FIRST-SEMESTER",
         "ND-FIRST-YEAR-SECOND-SEMESTER",
         "ND-SECOND-YEAR-FIRST-SEMESTER",
-        "ND-SECOND-YEAR-SECOND-SEMESTER"
+        "ND-SECOND-YEAR-SECOND-SEMESTER",
     ]
-   
+
     semester_display_names = {
         "ND-FIRST-YEAR-FIRST-SEMESTER": "Year 1 - Semester 1",
         "ND-FIRST-YEAR-SECOND-SEMESTER": "Year 1 - Semester 2",
         "ND-SECOND-YEAR-FIRST-SEMESTER": "Year 2 - Semester 1",
-        "ND-SECOND-YEAR-SECOND-SEMESTER": "Year 2 - Semester 2"
+        "ND-SECOND-YEAR-SECOND-SEMESTER": "Year 2 - Semester 2",
     }
-   
+
     semester_stats = {}
     overall_total = 0
     overall_passed = 0
@@ -1879,132 +2177,140 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
     overall_withdrawn = 0
     overall_gpa_sum = 0
     overall_students_for_gpa = 0
-   
+
     # Track withdrawn students across ALL semesters - CRITICAL FIX
     all_withdrawn_students = set()
-   
+
     # FIRST PASS: Identify ALL historically withdrawn students from ALL semesters
     print(f" 🔍 FIRST PASS: Identifying ALL historically withdrawn students...")
-   
+
     for key in semester_keys:
         sheet_name = None
         for sheet in wb.sheetnames:
             if key.upper() in sheet.upper():
                 sheet_name = sheet
                 break
-               
+
         if sheet_name and sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
             header_row_found, headers_dict = find_sheet_structure(ws)
             if not header_row_found:
                 continue
-               
-            exam_col = headers_dict.get('EXAM NUMBER')
-            remarks_col = headers_dict.get('REMARKS')
-           
+
+            exam_col = headers_dict.get("EXAM NUMBER")
+            remarks_col = headers_dict.get("REMARKS")
+
             if not all([exam_col, remarks_col]):
                 continue
-           
+
             # Collect withdrawn students from this semester
             for row in range(header_row_found + 1, ws.max_row + 1):
                 exam_no = ws.cell(row, exam_col).value
                 if not exam_no or "SUMMARY" in str(exam_no).upper():
                     break
-                   
+
                 exam_no_clean = str(exam_no).strip()
-                remarks = ws.cell(row, remarks_col).value or ''
+                remarks = ws.cell(row, remarks_col).value or ""
                 remarks_upper = str(remarks).upper()
-               
+
                 # CRITICAL FIX: Track ALL students who were EVER withdrawn
                 if "WITHDRAW" in remarks_upper:
                     all_withdrawn_students.add(exam_no_clean)
-                    print(f" 📝 Found historically withdrawn: {exam_no_clean} in {sheet_name}")
-   
-    print(f" ✅ Identified {len(all_withdrawn_students)} historically withdrawn students")
-   
+                    print(
+                        f" 📝 Found historically withdrawn: {exam_no_clean} in {sheet_name}"
+                    )
+
+    print(
+        f" ✅ Identified {len(all_withdrawn_students)} historically withdrawn students"
+    )
+
     # SECOND PASS: Process each semester with PERSISTENT withdrawn status
     print(f" 🔍 SECOND PASS: Processing semesters with persistent withdrawn status...")
-   
+
     for key in semester_keys:
         sheet_name = None
         for sheet in wb.sheetnames:
             if key.upper() in sheet.upper():
                 sheet_name = sheet
                 break
-               
+
         if sheet_name and sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
             header_row_found, headers_dict = find_sheet_structure(ws)
             if not header_row_found:
                 continue
-               
-            exam_col = headers_dict.get('EXAM NUMBER')
-            gpa_col = headers_dict.get('GPA')
-            remarks_col = headers_dict.get('REMARKS')
-           
+
+            exam_col = headers_dict.get("EXAM NUMBER")
+            gpa_col = headers_dict.get("GPA")
+            remarks_col = headers_dict.get("REMARKS")
+
             if not all([exam_col, gpa_col, remarks_col]):
                 continue
-               
+
             total = 0
             passed = 0
             resit = 0
             probation = 0
             withdrawn = 0
             gpa_sum = 0
-           
+
             # Track students for this semester
             semester_students = set()
-           
+
             for row in range(header_row_found + 1, ws.max_row + 1):
                 exam_no = ws.cell(row, exam_col).value
                 if not exam_no or "SUMMARY" in str(exam_no).upper():
                     break
-                   
+
                 exam_no_clean = str(exam_no).strip()
                 semester_students.add(exam_no_clean)
                 total += 1
-               
-                remarks = ws.cell(row, remarks_col).value or ''
+
+                remarks = ws.cell(row, remarks_col).value or ""
                 remarks_upper = str(remarks).upper()
                 gpa_val = ws.cell(row, gpa_col).value
-               
+
                 # CRITICAL FIX: Check if student is historically withdrawn (PERSISTENT STATUS)
-                is_withdrawn = (exam_no_clean in all_withdrawn_students)
-               
+                is_withdrawn = exam_no_clean in all_withdrawn_students
+
                 if is_withdrawn:
                     withdrawn += 1
                     # ENSURE withdrawn status is maintained in remarks
                     if "WITHDRAW" not in remarks_upper:
                         ws.cell(row, remarks_col).value = "WITHDRAWN"
-                        print(f" 🔒 Maintaining withdrawn status for: {exam_no_clean} in {sheet_name}")
+                        print(
+                            f" 🔒 Maintaining withdrawn status for: {exam_no_clean} in {sheet_name}"
+                        )
                 elif "PASSED" in remarks_upper:
                     passed += 1
                 elif "RESIT" in remarks_upper or "CARRYOVER" in remarks_upper:
                     resit += 1
                 elif "PROBATION" in remarks_upper:
                     probation += 1
-                   
+
                 try:
                     gpa_sum += float(gpa_val) if gpa_val else 0
                 except (ValueError, TypeError):
                     pass
-           
+
             # Apply sorting to semester sheet (Passed -> Carryover -> Withdrawn)
-            apply_student_sorting_with_serial_numbers(ws, header_row_found, headers_dict)
-           
+            apply_student_sorting_with_serial_numbers(
+                ws, header_row_found, headers_dict
+            )
+
             avg_gpa = round(gpa_sum / total, 2) if total > 0 else 0
             pass_rate = round(passed / total * 100, 2) if total > 0 else 0
             carryover = resit + probation
-           
+
             semester_stats[key] = {
-                'total': total,
-                'passed': passed,
-                'carryover': carryover,
-                'withdrawn': withdrawn,
-                'avg_gpa': avg_gpa,
-                'pass_rate': pass_rate
+                "total": total,
+                "passed": passed,
+                "carryover": carryover,
+                "withdrawn": withdrawn,
+                "avg_gpa": avg_gpa,
+                "pass_rate": pass_rate,
             }
-           
+
             overall_total += total
             overall_passed += passed
             overall_carryover += carryover
@@ -2016,154 +2322,181 @@ def update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, heade
     # ===================================================================
     # STEP 4: WRITE SEMESTER DATA WITH FORMATTING
     # ===================================================================
-   
-    row = 7 # Start from row 7 (after header)
+
+    row = 7  # Start from row 7 (after header)
     data_border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
     )
-   
+
     # Alternate row colors
-    even_row_fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
-   
+    even_row_fill = PatternFill(
+        start_color="F8F8F8", end_color="F8F8F8", fill_type="solid"
+    )
+
     for idx, key in enumerate(semester_keys):
         if key in semester_stats:
             stats = semester_stats[key]
-           
+
             # Determine row fill
             row_fill = even_row_fill if idx % 2 == 0 else PatternFill()
-           
+
             # Semester name
             cell = analysis_ws.cell(row, 1, value=semester_display_names[key])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='left', vertical='center')
+            cell.alignment = Alignment(horizontal="left", vertical="center")
             cell.font = Font(bold=True)
-           
+
             # Total students
-            cell = analysis_ws.cell(row, 2, value=stats['total'])
+            cell = analysis_ws.cell(row, 2, value=stats["total"])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-           
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
             # Passed
-            cell = analysis_ws.cell(row, 3, value=stats['passed'])
+            cell = analysis_ws.cell(row, 3, value=stats["passed"])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-           
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
             # Carryover
-            cell = analysis_ws.cell(row, 4, value=stats['carryover'])
+            cell = analysis_ws.cell(row, 4, value=stats["carryover"])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-           
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
             # Withdrawn
-            cell = analysis_ws.cell(row, 5, value=stats['withdrawn'])
+            cell = analysis_ws.cell(row, 5, value=stats["withdrawn"])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-           
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
             # Average GPA
-            cell = analysis_ws.cell(row, 6, value=stats['avg_gpa'])
+            cell = analysis_ws.cell(row, 6, value=stats["avg_gpa"])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.number_format = '0.00'
-           
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.number_format = "0.00"
+
             # Pass Rate
-            cell = analysis_ws.cell(row, 7, value=stats['pass_rate'])
+            cell = analysis_ws.cell(row, 7, value=stats["pass_rate"])
             cell.border = data_border
             cell.fill = row_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.number_format = '0.00'
-           
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.number_format = "0.00"
+
             row += 1
     # ===================================================================
     # STEP 5: ADD OVERALL SUMMARY ROW
     # ===================================================================
-   
-    row += 1 # Skip a row
-   
-    overall_avg_gpa = round(overall_gpa_sum / overall_students_for_gpa, 2) if overall_students_for_gpa > 0 else 0
-    overall_pass_rate = round(overall_passed / overall_total * 100, 2) if overall_total > 0 else 0
-   
-    overall_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    overall_border = Border(
-        left=Side(style='medium'),
-        right=Side(style='medium'),
-        top=Side(style='medium'),
-        bottom=Side(style='medium')
+
+    row += 1  # Skip a row
+
+    overall_avg_gpa = (
+        round(overall_gpa_sum / overall_students_for_gpa, 2)
+        if overall_students_for_gpa > 0
+        else 0
     )
-   
+    overall_pass_rate = (
+        round(overall_passed / overall_total * 100, 2) if overall_total > 0 else 0
+    )
+
+    overall_fill = PatternFill(
+        start_color="D9E1F2", end_color="D9E1F2", fill_type="solid"
+    )
+    overall_border = Border(
+        left=Side(style="medium"),
+        right=Side(style="medium"),
+        top=Side(style="medium"),
+        bottom=Side(style="medium"),
+    )
+
     # OVERALL label
     cell = analysis_ws.cell(row, 1, value="OVERALL")
     cell.border = overall_border
     cell.fill = overall_fill
-    cell.alignment = Alignment(horizontal='left', vertical='center')
+    cell.alignment = Alignment(horizontal="left", vertical="center")
     cell.font = Font(bold=True, size=12)
-   
+
     # Overall stats
-    overall_data = [overall_total, overall_passed, overall_carryover, overall_withdrawn, overall_avg_gpa, overall_pass_rate]
-   
+    overall_data = [
+        overall_total,
+        overall_passed,
+        overall_carryover,
+        overall_withdrawn,
+        overall_avg_gpa,
+        overall_pass_rate,
+    ]
+
     for col_idx, value in enumerate(overall_data, 2):
         cell = analysis_ws.cell(row, col_idx, value=value)
         cell.border = overall_border
         cell.fill = overall_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.font = Font(bold=True, size=11)
-       
-        if col_idx >= 6: # GPA and Pass Rate
-            cell.number_format = '0.00'
+
+        if col_idx >= 6:  # GPA and Pass Rate
+            cell.number_format = "0.00"
     # ===================================================================
     # STEP 6: ADJUST COLUMN WIDTHS
     # ===================================================================
-   
-    analysis_ws.column_dimensions['A'].width = 25 # SEMESTER
-    analysis_ws.column_dimensions['B'].width = 12 # TOTAL
-    analysis_ws.column_dimensions['C'].width = 12 # PASSED
-    analysis_ws.column_dimensions['D'].width = 14 # CARRYOVER
-    analysis_ws.column_dimensions['E'].width = 14 # WITHDRAWN
-    analysis_ws.column_dimensions['F'].width = 12 # AVG GPA
-    analysis_ws.column_dimensions['G'].width = 15 # PASS RATE (%)
-   
+
+    analysis_ws.column_dimensions["A"].width = 25  # SEMESTER
+    analysis_ws.column_dimensions["B"].width = 12  # TOTAL
+    analysis_ws.column_dimensions["C"].width = 12  # PASSED
+    analysis_ws.column_dimensions["D"].width = 14  # CARRYOVER
+    analysis_ws.column_dimensions["E"].width = 14  # WITHDRAWN
+    analysis_ws.column_dimensions["F"].width = 12  # AVG GPA
+    analysis_ws.column_dimensions["G"].width = 15  # PASS RATE (%)
+
     # Set specific row heights
-    analysis_ws.row_dimensions[1].height = 20 # Title
-    analysis_ws.row_dimensions[2].height = 18 # Department
-    analysis_ws.row_dimensions[3].height = 20 # Class/Title
-    analysis_ws.row_dimensions[4].height = 16 # Date
-   
-    print(f" ✅ ANALYSIS updated with PERSISTENT withdrawn tracking: {overall_withdrawn} withdrawn students")
+    analysis_ws.row_dimensions[1].height = 20  # Title
+    analysis_ws.row_dimensions[2].height = 18  # Department
+    analysis_ws.row_dimensions[3].height = 20  # Class/Title
+    analysis_ws.row_dimensions[4].height = 16  # Date
+
+    print(
+        f" ✅ ANALYSIS updated with PERSISTENT withdrawn tracking: {overall_withdrawn} withdrawn students"
+    )
     print(f" ✅ Student sorting applied across all sheets")
+
+
 def apply_complete_professional_formatting(wb, semester_key, header_row, set_name):
     """Apply complete professional formatting"""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
     from datetime import datetime
- 
+
     print(f" 🎨 Applying formatting...")
- 
+
     # Find sheet
     current_sheet = None
     for sheet in wb.sheetnames:
         if semester_key.upper() in sheet.upper():
             current_sheet = sheet
             break
- 
+
     if not current_sheet:
         return
- 
+
     ws = wb[current_sheet]
- 
+
     # Define styles
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_fill = PatternFill(
+        start_color="366092", end_color="366092", fill_type="solid"
+    )
     header_font = Font(color="FFFFFF", bold=True, size=11)
-    border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                   top=Side(style='thin'), bottom=Side(style='thin'))
-    center_align = Alignment(horizontal='center', vertical='center')
- 
+    border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+    center_align = Alignment(horizontal="center", vertical="center")
+
     # Format header row
     for col_idx in range(1, ws.max_column + 1):
         cell = ws.cell(row=header_row, column=col_idx)
@@ -2172,120 +2505,143 @@ def apply_complete_professional_formatting(wb, semester_key, header_row, set_nam
             cell.font = header_font
             cell.alignment = center_align
             cell.border = border
- 
+
     # Adjust column widths
     for col_idx in range(1, ws.max_column + 1):
         ws.column_dimensions[get_column_letter(col_idx)].width = 15
- 
+
     # Set specific widths
     if header_row > 0:
         for col_idx in range(1, ws.max_column + 1):
             header_val = ws.cell(row=header_row, column=col_idx).value
             if header_val:
                 header_str = str(header_val).upper()
-                if 'EXAM NUMBER' in header_str:
+                if "EXAM NUMBER" in header_str:
                     ws.column_dimensions[get_column_letter(col_idx)].width = 20
-                elif 'NAME' in header_str:
+                elif "NAME" in header_str:
                     ws.column_dimensions[get_column_letter(col_idx)].width = 35
- 
+
     print(f" ✅ Formatting applied")
+
+
 # CRITICAL FIX #2: SINGLE WORKBOOK SESSION VERSION - NO CORRUPTION
-def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semester_key,
-                                                 original_zip_path, course_titles_dict,
-                                                 course_units_dict, set_name):
+def update_mastersheet_with_recalculation_FINAL(
+    mastersheet_path,
+    updates,
+    semester_key,
+    original_zip_path,
+    course_titles_dict,
+    course_units_dict,
+    set_name,
+):
     """FINAL FIXED VERSION - SINGLE workbook session to prevent Excel corruption"""
     print(f"\n{'='*80}")
     print(f"🔄 FINAL FIX: UPDATING MASTERSHEET WITH SINGLE SESSION")
     print(f" SET NAME: '{set_name}'")
     print(f"{'='*80}")
-  
+
     # Create backup first
-    backup_path = mastersheet_path.replace('.xlsx', '_BACKUP.xlsx')
+    backup_path = mastersheet_path.replace(".xlsx", "_BACKUP.xlsx")
     try:
         shutil.copy2(mastersheet_path, backup_path)
         print(f"💾 Created backup: {backup_path}")
     except Exception as e:
         print(f"⚠️ Could not create backup: {e}")
-  
+
     wb = None
     try:
         # SINGLE WORKBOOK LOAD - No repeated loading/closing
         print(f"📖 Loading workbook ONCE...")
         wb = load_workbook(mastersheet_path)
-       
+
         # ⭐ ADD THIS CRITICAL LINE ⭐
         ensure_required_sheets_exist(wb)
-      
+
         # Find semester sheet
         sheet_name = None
         for sheet in wb.sheetnames:
             if semester_key.upper() in sheet.upper():
                 sheet_name = sheet
                 break
-      
+
         if not sheet_name:
             print(f"❌ No sheet found for: {semester_key}")
             return False
-      
+
         ws = wb[sheet_name]
         print(f"✅ Working on sheet: {sheet_name}")
-      
+
         # Find header row using the fixed function
         header_row, headers = find_sheet_structure(ws)
-      
+
         if not header_row or not headers:
             print(f"❌ Could not find header row")
             return False
-      
+
         print(f"✅ Found header row at: {header_row}")
-      
+
         # Identify course columns properly
         course_columns = identify_course_columns_properly(headers)
-      
+
         if not course_columns:
             print(f"❌ No course columns found!")
             return False
-      
+
         print(f"✅ Found {len(course_columns)} course columns")
-      
+
         # Find summary columns
         summary_columns = {}
-        summary_keys = ['FAILED COURSES', 'REMARKS', 'CU Passed', 'CU Failed', 'TCPE', 'GPA', 'AVERAGE', 'CGPA']
-      
+        summary_keys = [
+            "FAILED COURSES",
+            "REMARKS",
+            "CU Passed",
+            "CU Failed",
+            "TCPE",
+            "GPA",
+            "AVERAGE",
+            "CGPA",
+        ]
+
         for key in summary_keys:
             for header, col_idx in headers.items():
                 if key.upper() in header.upper():
                     summary_columns[key] = col_idx
                     break
-      
+
         # Helper functions
         def get_grade_point(score):
             try:
                 score = float(score)
-                if score >= 70: return 5.0
-                elif score >= 60: return 4.0
-                elif score >= 50: return 3.0
-                elif score >= 45: return 2.0
-                elif score >= 40: return 1.0
-                else: return 0.0
+                if score >= 70:
+                    return 5.0
+                elif score >= 60:
+                    return 4.0
+                elif score >= 50:
+                    return 3.0
+                elif score >= 45:
+                    return 2.0
+                elif score >= 40:
+                    return 1.0
+                else:
+                    return 0.0
             except:
                 return 0.0
-      
+
         def find_credit_unit_simple(course_code, units_dict):
             if course_code in units_dict:
                 return units_dict[course_code]
-            code_no_space = course_code.replace(' ', '')
+            code_no_space = course_code.replace(" ", "")
             if code_no_space in units_dict:
                 return units_dict[code_no_space]
             return 2
-      
+
         # =============================================================
         # STEP 1: Apply ALL score updates (PASSED AND FAILED RESITS)
         # =============================================================
         print(f"\n📝 STEP 1: APPLYING ALL SCORE UPDATES (PASSED AND FAILED RESITS)...")
         students_updated = 0
         courses_updated = 0
-       
+
         # DEBUG: Verify updates are being applied
         print(f"🔍 DEBUG: Checking if updates are being applied...")
         for exam_no, course_updates in updates.items():
@@ -2295,101 +2651,119 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         # Also add debug to verify we're finding the right students
         exam_col = None
         for header, col_idx in headers.items():
-            if 'EXAM NUMBER' in header.upper():
+            if "EXAM NUMBER" in header.upper():
                 exam_col = col_idx
                 break
-               
+
         if not exam_col:
             print("❌ No exam column found")
             return False
         for row_idx in range(header_row + 1, ws.max_row + 1):
             exam_no = ws.cell(row_idx, column=exam_col)
             exam_no = str(exam_no.value).strip().upper() if exam_no.value else None
-           
-            if not exam_no or exam_no in ['', 'NAN', 'NONE']:
+
+            if not exam_no or exam_no in ["", "NAN", "NONE"]:
                 continue
-           
+
             if "SUMMARY" in str(exam_no).upper():
                 break
-           
+
             if exam_no in updates:
-                print(f"🎯 FOUND student {exam_no} at row {row_idx} - will update {len(updates[exam_no])} courses")
-      
+                print(
+                    f"🎯 FOUND student {exam_no} at row {row_idx} - will update {len(updates[exam_no])} courses"
+                )
+
         for row_idx in range(header_row + 1, ws.max_row + 1):
             exam_no_cell = ws.cell(row=row_idx, column=exam_col)
-            exam_no = str(exam_no_cell.value).strip().upper() if exam_no_cell.value else None
-          
-            if not exam_no or exam_no in ['', 'NAN', 'NONE']:
+            exam_no = (
+                str(exam_no_cell.value).strip().upper() if exam_no_cell.value else None
+            )
+
+            if not exam_no or exam_no in ["", "NAN", "NONE"]:
                 continue
-          
+
             if "SUMMARY" in str(exam_no).upper():
                 break
-          
+
             if exam_no in updates:
                 for course_code, new_score in updates[exam_no].items():
                     if course_code in course_columns:
                         course_col = course_columns[course_code]
                         old_score = ws.cell(row=row_idx, column=course_col).value
-                      
+
                         # CRITICAL FIX: Update ALL resit scores (both passed and failed)
                         # This ensures failed resit values are also recorded
                         ws.cell(row=row_idx, column=course_col).value = new_score
-                      
+
                         # Apply color coding based on pass/fail status
                         if new_score >= DEFAULT_PASS_THRESHOLD:
                             # GREEN for passed resits
                             ws.cell(row=row_idx, column=course_col).fill = PatternFill(
                                 start_color="90EE90",
                                 end_color="90EE90",
-                                fill_type="solid"
+                                fill_type="solid",
                             )
                         else:
                             # ORANGE for failed resits (to distinguish from original fails)
                             ws.cell(row=row_idx, column=course_col).fill = PatternFill(
                                 start_color="FFD580",
                                 end_color="FFD580",
-                                fill_type="solid"
+                                fill_type="solid",
                             )
-                      
+
                         ws.cell(row=row_idx, column=course_col).font = Font(bold=True)
-                      
-                        print(f" ✅ {exam_no} - {course_code}: {old_score} → {new_score} ({'PASSED' if new_score >= DEFAULT_PASS_THRESHOLD else 'FAILED'})")
+
+                        print(
+                            f" ✅ {exam_no} - {course_code}: {old_score} → {new_score} ({'PASSED' if new_score >= DEFAULT_PASS_THRESHOLD else 'FAILED'})"
+                        )
                         courses_updated += 1
-              
+
                 students_updated += 1
         # VERIFICATION: Check if scores were actually updated
         print(f"🔍 VERIFICATION: Checking if scores were updated...")
         for exam_no in updates:
             for row_idx in range(header_row + 1, ws.max_row + 1):
                 exam_no_cell = ws.cell(row_idx, column=exam_col)
-                current_exam_no = str(exam_no_cell.value).strip().upper() if exam_no_cell.value else None
-               
+                current_exam_no = (
+                    str(exam_no_cell.value).strip().upper()
+                    if exam_no_cell.value
+                    else None
+                )
+
                 if current_exam_no == exam_no:
                     for course_code, expected_score in updates[exam_no].items():
                         if course_code in course_columns:
                             course_col = course_columns[course_code]
                             actual_score = ws.cell(row_idx, column=course_col).value
-                            print(f" {exam_no} - {course_code}: Expected {expected_score}, Got {actual_score}")
+                            print(
+                                f" {exam_no} - {course_code}: Expected {expected_score}, Got {actual_score}"
+                            )
                     break
-      
-        print(f"✅ Step 1 Complete: Updated {courses_updated} scores ({students_updated} students)")
-      
+
+        print(
+            f"✅ Step 1 Complete: Updated {courses_updated} scores ({students_updated} students)"
+        )
+
         # =============================================================
         # STEP 2: Recalculate student records with CURRENT scores
         # =============================================================
         print(f"\n🧮 STEP 2: RECALCULATING WITH CURRENT SCORES...")
-      
+
         for row_idx in range(header_row + 1, ws.max_row + 1):
             try:
                 exam_no_cell = ws.cell(row=row_idx, column=exam_col)
-                exam_no = str(exam_no_cell.value).strip().upper() if exam_no_cell.value else None
-              
-                if not exam_no or exam_no in ['', 'NAN', 'NONE']:
+                exam_no = (
+                    str(exam_no_cell.value).strip().upper()
+                    if exam_no_cell.value
+                    else None
+                )
+
+                if not exam_no or exam_no in ["", "NAN", "NONE"]:
                     continue
-              
+
                 if "SUMMARY" in str(exam_no).upper():
                     break
-              
+
                 # Read CURRENT scores from worksheet (including updated resit scores)
                 failed_courses = []
                 cu_passed = 0
@@ -2398,23 +2772,25 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
                 total_grade_points = 0.0
                 total_score = 0.0
                 valid_courses = 0
-              
+
                 for course_code, course_col in course_columns.items():
                     score_cell = ws.cell(row=row_idx, column=course_col)
                     score_value = score_cell.value
-                  
-                    if score_value is not None and score_value != '':
+
+                    if score_value is not None and score_value != "":
                         try:
                             score = float(score_value)
                             total_score += score
                             valid_courses += 1
-                          
-                            credit_unit = find_credit_unit_simple(course_code, course_units_dict)
+
+                            credit_unit = find_credit_unit_simple(
+                                course_code, course_units_dict
+                            )
                             total_credits += credit_unit
-                          
+
                             grade_point = get_grade_point(score)
                             total_grade_points += grade_point * credit_unit
-                          
+
                             if score >= 50:
                                 cu_passed += credit_unit
                             else:
@@ -2422,12 +2798,18 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
                                 failed_courses.append(course_code)
                         except (ValueError, TypeError):
                             continue
-              
+
                 # Calculate metrics
-                gpa = round(total_grade_points / total_credits, 2) if total_credits > 0 else 0.0
-                average = round(total_score / valid_courses, 2) if valid_courses > 0 else 0.0
-                cgpa = gpa # Placeholder, updated later if needed
-              
+                gpa = (
+                    round(total_grade_points / total_credits, 2)
+                    if total_credits > 0
+                    else 0.0
+                )
+                average = (
+                    round(total_score / valid_courses, 2) if valid_courses > 0 else 0.0
+                )
+                cgpa = gpa  # Placeholder, updated later if needed
+
                 # Determine remarks with fixed logic
                 passed_percent = cu_passed / total_credits if total_credits > 0 else 0
                 if passed_percent < 0.45:
@@ -2439,96 +2821,108 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
                         remarks = "RESIT"
                     else:
                         remarks = "PROBATION"
-              
+
                 # Update all columns
-                if 'FAILED COURSES' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['FAILED COURSES']).value = ', '.join(failed_courses) if failed_courses else "NONE"
-              
-                if 'REMARKS' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['REMARKS']).value = remarks
-              
-                if 'CU Passed' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['CU Passed']).value = cu_passed
-              
-                if 'CU Failed' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['CU Failed']).value = cu_failed
-              
-                if 'TCPE' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['TCPE']).value = total_credits
-              
-                if 'GPA' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['GPA']).value = gpa
-              
-                if 'AVERAGE' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['AVERAGE']).value = average
-              
-                if 'CGPA' in summary_columns:
-                    ws.cell(row=row_idx, column=summary_columns['CGPA']).value = cgpa
-              
+                if "FAILED COURSES" in summary_columns:
+                    ws.cell(
+                        row=row_idx, column=summary_columns["FAILED COURSES"]
+                    ).value = (", ".join(failed_courses) if failed_courses else "NONE")
+
+                if "REMARKS" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["REMARKS"]).value = (
+                        remarks
+                    )
+
+                if "CU Passed" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["CU Passed"]).value = (
+                        cu_passed
+                    )
+
+                if "CU Failed" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["CU Failed"]).value = (
+                        cu_failed
+                    )
+
+                if "TCPE" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["TCPE"]).value = (
+                        total_credits
+                    )
+
+                if "GPA" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["GPA"]).value = gpa
+
+                if "AVERAGE" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["AVERAGE"]).value = (
+                        average
+                    )
+
+                if "CGPA" in summary_columns:
+                    ws.cell(row=row_idx, column=summary_columns["CGPA"]).value = cgpa
+
                 # Highlight updated students
                 if exam_no in updates:
                     for col_idx in summary_columns.values():
                         ws.cell(row=row_idx, column=col_idx).fill = PatternFill(
-                            start_color="FFFFE0",
-                            end_color="FFFFE0",
-                            fill_type="solid"
+                            start_color="FFFFE0", end_color="FFFFE0", fill_type="solid"
                         )
-          
+
             except Exception as e:
                 print(f"⚠️ Error processing row {row_idx}: {e}")
                 continue
-      
+
         print(f"✅ Step 2 Complete: Recalculated all records")
-      
+
         # =============================================================
         # STEP 3: Update SUMMARY section with CURRENT data
         # =============================================================
         print(f"\n📊 STEP 3: UPDATING SUMMARY SECTION...")
-      
+
         update_summary_section_fixed(ws, headers, header_row, course_columns)
-      
+
         print(f"✅ Step 3 Complete: Summary section updated")
-      
+
         # =============================================================
         # STEP 4: Update CGPA_SUMMARY - FIXED VERSION with SINGLE session
         # =============================================================
         print(f"\n📈 STEP 4: UPDATING CGPA_SUMMARY...")
         print(f" Available sheets: {wb.sheetnames}")
         print(f" set_name parameter: '{set_name}'")
-      
-        if 'CGPA_SUMMARY' in wb.sheetnames:
+
+        if "CGPA_SUMMARY" in wb.sheetnames:
             print(f"✅ Calling update_cgpa_summary_sheet_fixed...")
             update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name)
             print(f"✅ Step 4 Complete: CGPA_SUMMARY updated")
         else:
             print(f"❌ CGPA_SUMMARY sheet still not found!")
-      
+
         # =============================================================
         # STEP 5: Update ANALYSIS
         # =============================================================
         print(f"\n📊 STEP 5: UPDATING ANALYSIS...")
         print(f" Available sheets: {wb.sheetnames}")
         print(f" set_name parameter: '{set_name}'")
-      
-        if 'ANALYSIS' in wb.sheetnames:
+
+        if "ANALYSIS" in wb.sheetnames:
             print(f"✅ Calling update_analysis_sheet_fixed...")
-            update_analysis_sheet_fixed(wb, semester_key, course_columns, headers, header_row, set_name)
+            update_analysis_sheet_fixed(
+                wb, semester_key, course_columns, headers, header_row, set_name
+            )
             print(f"✅ Step 5 Complete: ANALYSIS updated")
         else:
             print(f"❌ ANALYSIS sheet still not found!")
-      
+
         # =============================================================
         # STEP 6: Apply formatting and PROPER sorting
         # =============================================================
         print(f"\n🎨 STEP 6: APPLYING FORMATTING AND PROPER SORTING...")
-      
+
         apply_complete_professional_formatting(wb, semester_key, header_row, set_name)
-       
+
         # Apply student sorting to maintain proper order with CORRECT serial numbers
         apply_student_sorting_with_serial_numbers(ws, header_row, headers)
-       
+
         print(f"✅ Step 6 Complete: Formatting and proper sorting applied")
-      
+
         # =============================================================
         # FINAL SINGLE SAVE - CRITICAL FIX: Only save once at the end
         # =============================================================
@@ -2536,14 +2930,14 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
         try:
             wb.save(mastersheet_path)
             print(f"✅ FINAL SAVE COMPLETE")
-           
+
             # Verify file integrity
             file_size = os.path.getsize(mastersheet_path)
             print(f"📁 File size: {file_size} bytes")
-           
-            if file_size > 10000: # Reasonable minimum size for Excel file
+
+            if file_size > 10000:  # Reasonable minimum size for Excel file
                 print(f"✅ File integrity verified - Size looks good")
-               
+
                 # Quick test load
                 try:
                     test_wb = load_workbook(mastersheet_path)
@@ -2562,7 +2956,7 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
             else:
                 print(f"❌ File too small - likely corrupted")
                 return False
-              
+
         except Exception as save_error:
             print(f"❌ Error during final save: {save_error}")
             # Restore from backup
@@ -2572,13 +2966,14 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
             except:
                 pass
             return False
-      
+
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
-       
+
     finally:
         # CRITICAL: Always close workbook if it exists
         if wb:
@@ -2587,6 +2982,8 @@ def update_mastersheet_with_recalculation_FINAL(mastersheet_path, updates, semes
                 print("✅ Workbook properly closed")
             except:
                 pass
+
+
 # ----------------------------
 # Carryover Processing Functions
 # ----------------------------
@@ -2595,32 +2992,38 @@ def load_carryover_files(carryover_dir, semester_key=None):
     carryover_files = []
     for file in os.listdir(carryover_dir):
         # Look for both JSON and Excel carryover files
-        if file.startswith("co_student_") and (file.endswith(".json") or file.endswith(".xlsx")):
+        if file.startswith("co_student_") and (
+            file.endswith(".json") or file.endswith(".xlsx")
+        ):
             file_semester = extract_semester_from_filename(file)
-            file_semester_standardized = standardize_semester_name(file_semester) if file_semester else None
-        
+            file_semester_standardized = (
+                standardize_semester_name(file_semester) if file_semester else None
+            )
+
             # Skip if semester doesn't match filter
             if semester_key and file_semester_standardized != semester_key:
                 continue
-            
+
             file_path = os.path.join(carryover_dir, file)
             try:
                 if file.endswith(".json"):
-                    with open(file_path, 'r') as f:
+                    with open(file_path, "r") as f:
                         data = json.load(f)
-                else: # .xlsx
+                else:  # .xlsx
                     df = pd.read_excel(file_path)
-                    data = df.to_dict('records')
-            
-                carryover_files.append({
-                    'filename': file,
-                    'semester': file_semester_standardized,
-                    'data': data,
-                    'count': len(data),
-                    'file_path': file_path
-                })
+                    data = df.to_dict("records")
+
+                carryover_files.append(
+                    {
+                        "filename": file,
+                        "semester": file_semester_standardized,
+                        "data": data,
+                        "count": len(data),
+                        "file_path": file_path,
+                    }
+                )
                 print(f"✅ Loaded {len(data)} records from {file}")
-            
+
             except Exception as e:
                 print(f"❌ Error loading {file}: {e}")
     if not carryover_files:
@@ -2628,6 +3031,8 @@ def load_carryover_files(carryover_dir, semester_key=None):
         return []
     print(f"📚 Total carryover files loaded: {len(carryover_files)}")
     return carryover_files
+
+
 def save_carryover_json_records(carryover_data, carryover_output_dir, semester_key):
     """
     Save carryover records as JSON files
@@ -2639,54 +3044,56 @@ def save_carryover_json_records(carryover_data, carryover_output_dir, semester_k
     # Convert carryover_data to JSON-friendly format
     json_records = {}
     for student in carryover_data:
-        exam_no = student['EXAM NUMBER']
-    
+        exam_no = student["EXAM NUMBER"]
+
         # Build the JSON record structure
         record = {
-            'exam_number': exam_no,
-            'name': student['NAME'],
-            'carryover_courses': {},
-            'passed_resit_courses': {},
-            'failed_resit_courses': {}
+            "exam_number": exam_no,
+            "name": student["NAME"],
+            "carryover_courses": {},
+            "passed_resit_courses": {},
+            "failed_resit_courses": {},
         }
-    
+
         # Process each resit course
-        for course_code, course_data in student['RESIT_COURSES'].items():
+        for course_code, course_data in student["RESIT_COURSES"].items():
             course_info = {
-                'course_code': course_code,
-                'course_title': course_data.get('course_title', course_code),
-                'credit_unit': course_data.get('credit_unit', 2),
-                'original_score': course_data['original_score'],
-                'resit_score': course_data['resit_score']
+                "course_code": course_code,
+                "course_title": course_data.get("course_title", course_code),
+                "credit_unit": course_data.get("credit_unit", 2),
+                "original_score": course_data["original_score"],
+                "resit_score": course_data["resit_score"],
             }
-        
+
             # Add to carryover courses (all courses that were taken as resit)
-            record['carryover_courses'][course_code] = course_info
-        
+            record["carryover_courses"][course_code] = course_info
+
             # Separate into passed/failed based on resit score
-            if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD:
-                record['passed_resit_courses'][course_code] = course_info
+            if course_data["resit_score"] >= DEFAULT_PASS_THRESHOLD:
+                record["passed_resit_courses"][course_code] = course_info
             else:
-                record['failed_resit_courses'][course_code] = course_info
-    
+                record["failed_resit_courses"][course_code] = course_info
+
         json_records[exam_no] = record
     # Save as JSON file with timestamp and semester
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     json_filename = f"co_student_{semester_key}_{timestamp}.json"
     json_filepath = os.path.join(json_dir, json_filename)
     try:
-        with open(json_filepath, 'w', encoding='utf-8') as f:
+        with open(json_filepath, "w", encoding="utf-8") as f:
             json.dump(json_records, f, indent=2, ensure_ascii=False)
-    
+
         print(f"✅ Saved JSON carryover records: {json_filepath}")
         print(f"📊 Records saved: {len(json_records)} students")
-    
+
         return json_filepath
-    
+
     except Exception as e:
         print(f"❌ Error saving JSON records: {e}")
         traceback.print_exc()
         return None
+
+
 def copy_json_to_centralized_location(json_filepath, set_name, semester_key):
     """
     Copy JSON file to centralized CARRYOVER_RECORDS location
@@ -2700,28 +3107,41 @@ def copy_json_to_centralized_location(json_filepath, set_name, semester_key):
             "ND",
             set_name,
             "CLEAN_RESULTS",
-            "CARRYOVER_RECORDS"
+            "CARRYOVER_RECORDS",
         )
-    
+
         os.makedirs(centralized_dir, exist_ok=True)
-    
+
         # Copy the JSON file
         filename = os.path.basename(json_filepath)
         dest_path = os.path.join(centralized_dir, filename)
-    
+
         shutil.copy2(json_filepath, dest_path)
-    
+
         print(f"\n📋 COPIED TO CENTRALIZED LOCATION")
         print(f"✅ From: {json_filepath}")
         print(f"✅ To: {dest_path}")
-    
+
         return dest_path
-        
+
     except Exception as e:
         print(f"❌ Error copying to centralized location: {e}")
         traceback.print_exc()
         return None
-def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data, course_titles, course_units, course_code_to_title, course_code_to_unit):
+
+
+def generate_carryover_mastersheet(
+    carryover_data,
+    output_dir,
+    semester_key,
+    set_name,
+    timestamp,
+    cgpa_data,
+    course_titles,
+    course_units,
+    course_code_to_title,
+    course_code_to_unit,
+):
     """Generate CARRYOVER_mastersheet."""
     wb = Workbook()
     ws = wb.active
@@ -2731,88 +3151,101 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
     if os.path.exists(DEFAULT_LOGO_PATH):
         try:
             from openpyxl.drawing.image import Image
+
             img = Image(DEFAULT_LOGO_PATH)
             img.width = 80
             img.height = 80
-            ws.add_image(img, 'A1')
+            ws.add_image(img, "A1")
         except Exception as e:
             print(f"⚠️ Could not add logo: {e}")
     current_year = 2025
     next_year = 2026
-    year, sem_num, level, sem_display, set_code, current_semester_name = get_semester_display_info(semester_key)
+    year, sem_num, level, sem_display, set_code, current_semester_name = (
+        get_semester_display_info(semester_key)
+    )
     all_courses = set()
     for student in carryover_data:
-        all_courses.update(student['RESIT_COURSES'].keys())
+        all_courses.update(student["RESIT_COURSES"].keys())
     previous_semesters = get_previous_semesters_for_display(semester_key)
-    headers = ['S/N', 'EXAM NUMBER', 'NAME']
+    headers = ["S/N", "EXAM NUMBER", "NAME"]
     for prev_sem in previous_semesters:
-        headers.append(f'GPA {prev_sem}')
+        headers.append(f"GPA {prev_sem}")
     course_headers = []
     for course in sorted(all_courses):
-        course_headers.extend([f'{course}', f'{course}_RESIT'])
+        course_headers.extend([f"{course}", f"{course}_RESIT"])
     headers.extend(course_headers)
-    headers.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
+    headers.extend([f"GPA {current_semester_name}", "CGPA", "REMARKS"])
     total_columns = len(headers)
     last_column = get_column_letter(total_columns)
-    ws.merge_cells(f'A3:{last_column}3')
-    title_cell = ws['A3']
+    ws.merge_cells(f"A3:{last_column}3")
+    title_cell = ws["A3"]
     title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA-ABUJA"
     title_cell.font = Font(bold=True, size=14)
-    title_cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws.merge_cells(f'A4:{last_column}4')
-    subtitle_cell = ws['A4']
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.merge_cells(f"A4:{last_column}4")
+    subtitle_cell = ws["A4"]
     subtitle_cell.value = f"RESIT - {current_year}/{next_year} SESSION {program_name} {level} {sem_display} EXAMINATIONS RESULT — {datetime.now().strftime('%B %d, %Y')}"
     subtitle_cell.font = Font(bold=True, size=12)
-    subtitle_cell.alignment = Alignment(horizontal='center', vertical='center')
+    subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
     print(f"🔍 Courses found in resit data: {sorted(all_courses)}")
-    print(f"📊 GPA columns for {semester_key}: Previous={previous_semesters}, Current={current_semester_name}")
-    headers = ['S/N', 'EXAM NUMBER', 'NAME']
+    print(
+        f"📊 GPA columns for {semester_key}: Previous={previous_semesters}, Current={current_semester_name}"
+    )
+    headers = ["S/N", "EXAM NUMBER", "NAME"]
     for prev_sem in previous_semesters:
-        headers.append(f'GPA {prev_sem}')
+        headers.append(f"GPA {prev_sem}")
     course_headers = []
     course_title_mapping = {}
     course_unit_mapping = {}
     for course in sorted(all_courses):
         course_title = find_course_title(course, course_titles, course_code_to_title)
         course_title_mapping[course] = course_title
-    
+
         credit_unit = find_credit_unit(course, course_units, course_code_to_unit)
         course_unit_mapping[course] = credit_unit
-    
+
         if len(course_title) > 30:
             course_title = course_title[:27] + "..."
-        course_headers.extend([f'{course}', f'{course}_RESIT'])
+        course_headers.extend([f"{course}", f"{course}_RESIT"])
     headers.extend(course_headers)
-    headers.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
-    title_row = [''] * 3
+    headers.extend([f"GPA {current_semester_name}", "CGPA", "REMARKS"])
+    title_row = [""] * 3
     for prev_sem in previous_semesters:
-        title_row.extend([''])
+        title_row.extend([""])
     for course in sorted(all_courses):
         course_title = course_title_mapping[course]
         if len(course_title) > 30:
             course_title = course_title[:27] + "..."
         title_row.extend([course_title, course_title])
-    title_row.extend(['', '', ''])
+    title_row.extend(["", "", ""])
     ws.append(title_row)
-    credit_row = [''] * 3
+    credit_row = [""] * 3
     for prev_sem in previous_semesters:
-        credit_row.extend([''])
+        credit_row.extend([""])
     for course in sorted(all_courses):
         credit_unit = course_unit_mapping[course]
-        credit_row.extend([f'CU: {credit_unit}', f'CU: {credit_unit}'])
-    credit_row.extend(['', '', ''])
+        credit_row.extend([f"CU: {credit_unit}", f"CU: {credit_unit}"])
+    credit_row.extend(["", "", ""])
     ws.append(credit_row)
-    code_row = ['S/N', 'EXAM NUMBER', 'NAME']
+    code_row = ["S/N", "EXAM NUMBER", "NAME"]
     for prev_sem in previous_semesters:
-        code_row.append(f'GPA {prev_sem}')
+        code_row.append(f"GPA {prev_sem}")
     for course in sorted(all_courses):
-        code_row.append(f'{course}')
-        code_row.append(f'{course}_RESIT')
-    code_row.extend([f'GPA {current_semester_name}', 'CGPA', 'REMARKS'])
+        code_row.append(f"{course}")
+        code_row.append(f"{course}_RESIT")
+    code_row.extend([f"GPA {current_semester_name}", "CGPA", "REMARKS"])
     ws.append(code_row)
     course_colors = [
-        "E6F3FF", "FFF0E6", "E6FFE6", "FFF6E6", "F0E6FF",
-        "E6FFFF", "FFE6F2", "F5F5DC", "E6F7FF", "FFF5E6",
+        "E6F3FF",
+        "FFF0E6",
+        "E6FFE6",
+        "FFF6E6",
+        "F0E6FF",
+        "E6FFFF",
+        "FFE6F2",
+        "F5F5DC",
+        "E6F7FF",
+        "FFF5E6",
     ]
     start_col = 4
     if previous_semesters:
@@ -2822,54 +3255,72 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
         for row in [5, 6, 7]:
             for offset in [0, 1]:
                 cell = ws.cell(row=row, column=start_col + offset)
-                cell.fill = PatternFill(start_color=course_colors[color_index % len(course_colors)],
-                                      end_color=course_colors[color_index % len(course_colors)],
-                                      fill_type="solid")
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal='center', vertical='center')
-                cell.border = Border(
-                    left=Side(style='thin'), right=Side(style='thin'),
-                    top=Side(style='thin'), bottom=Side(style='thin')
+                cell.fill = PatternFill(
+                    start_color=course_colors[color_index % len(course_colors)],
+                    end_color=course_colors[color_index % len(course_colors)],
+                    fill_type="solid",
                 )
-    
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = Border(
+                    left=Side(style="thin"),
+                    right=Side(style="thin"),
+                    top=Side(style="thin"),
+                    bottom=Side(style="thin"),
+                )
+
         for offset in [0, 1]:
             cell = ws.cell(row=5, column=start_col + offset)
-            cell.alignment = Alignment(text_rotation=90, horizontal='center', vertical='center')
+            cell.alignment = Alignment(
+                text_rotation=90, horizontal="center", vertical="center"
+            )
             cell.font = Font(bold=True, size=9)
-    
+
         color_index += 1
         start_col += 2
     for row in [5, 6, 7]:
         for col in range(1, 4):
             cell = ws.cell(row=row, column=col)
-            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-            cell.font = Font(color="FFFFFF", bold=True)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = Border(
-                left=Side(style='thin'), right=Side(style='thin'),
-                top=Side(style='thin'), bottom=Side(style='thin')
+            cell.fill = PatternFill(
+                start_color="366092", end_color="366092", fill_type="solid"
             )
-    
+            cell.font = Font(color="FFFFFF", bold=True)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
+            )
+
         gpa_col = 4
         for prev_sem in previous_semesters:
             cell = ws.cell(row=row, column=gpa_col)
-            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="366092", end_color="366092", fill_type="solid"
+            )
             cell.font = Font(color="FFFFFF", bold=True)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.alignment = Alignment(horizontal="center", vertical="center")
             cell.border = Border(
-                left=Side(style='thin'), right=Side(style='thin'),
-                top=Side(style='thin'), bottom=Side(style='thin')
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
             )
             gpa_col += 1
-    
-        for col in range(len(headers)-2, len(headers)+1):
+
+        for col in range(len(headers) - 2, len(headers) + 1):
             cell = ws.cell(row=row, column=col)
-            cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="366092", end_color="366092", fill_type="solid"
+            )
             cell.font = Font(color="FFFFFF", bold=True)
-            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.alignment = Alignment(horizontal="center", vertical="center")
             cell.border = Border(
-                left=Side(style='thin'), right=Side(style='thin'),
-                top=Side(style='thin'), bottom=Side(style='thin')
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
             )
     row_idx = 8
     failed_counts = {course: 0 for course in all_courses}
@@ -2878,146 +3329,185 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
         start_col += len(previous_semesters)
     # CRITICAL FIX: Proper serial numbers from 1 to n
     serial_number = 1
-   
+
     for student in carryover_data:
-        exam_no = student['EXAM NUMBER']
-    
+        exam_no = student["EXAM NUMBER"]
+
         # Serial Number (PROPERLY SORTED from 1 to n)
         ws.cell(row=row_idx, column=1, value=serial_number)
         serial_number += 1
-       
-        ws.cell(row=row_idx, column=2, value=student['EXAM NUMBER'])
-        ws.cell(row=row_idx, column=3, value=student['NAME'])
-    
+
+        ws.cell(row=row_idx, column=2, value=student["EXAM NUMBER"])
+        ws.cell(row=row_idx, column=3, value=student["NAME"])
+
         gpa_col = 4
         for prev_sem in previous_semesters:
-            gpa_value = student.get(f'GPA_{prev_sem}', '')
+            gpa_value = student.get(f"GPA_{prev_sem}", "")
             ws.cell(row=row_idx, column=gpa_col, value=gpa_value)
             gpa_col += 1
-    
+
         course_col = gpa_col
         color_index = 0
         for course in sorted(all_courses):
             for offset in [0, 1]:
                 cell = ws.cell(row=row_idx, column=course_col + offset)
-                cell.fill = PatternFill(start_color=course_colors[color_index % len(course_colors)],
-                                      end_color=course_colors[color_index % len(course_colors)],
-                                      fill_type="solid")
-        
-            if course in student['RESIT_COURSES']:
-                course_data = student['RESIT_COURSES'][course]
-            
-                orig_cell = ws.cell(row=row_idx, column=course_col, value=course_data['original_score'])
-                if course_data['original_score'] < DEFAULT_PASS_THRESHOLD:
-                    orig_cell.fill = PatternFill(start_color="FFB6C1", end_color="FFB6C1", fill_type="solid")
-            
-                resit_cell = ws.cell(row=row_idx, column=course_col+1, value=course_data['resit_score'])
-                if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD:
-                    resit_cell.fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
+                cell.fill = PatternFill(
+                    start_color=course_colors[color_index % len(course_colors)],
+                    end_color=course_colors[color_index % len(course_colors)],
+                    fill_type="solid",
+                )
+
+            if course in student["RESIT_COURSES"]:
+                course_data = student["RESIT_COURSES"][course]
+
+                orig_cell = ws.cell(
+                    row=row_idx, column=course_col, value=course_data["original_score"]
+                )
+                if course_data["original_score"] < DEFAULT_PASS_THRESHOLD:
+                    orig_cell.fill = PatternFill(
+                        start_color="FFB6C1", end_color="FFB6C1", fill_type="solid"
+                    )
+
+                resit_cell = ws.cell(
+                    row=row_idx, column=course_col + 1, value=course_data["resit_score"]
+                )
+                if course_data["resit_score"] >= DEFAULT_PASS_THRESHOLD:
+                    resit_cell.fill = PatternFill(
+                        start_color="90EE90", end_color="90EE90", fill_type="solid"
+                    )
                 else:
-                    resit_cell.fill = PatternFill(start_color="FFD580", end_color="FFD580", fill_type="solid")
+                    resit_cell.fill = PatternFill(
+                        start_color="FFD580", end_color="FFD580", fill_type="solid"
+                    )
                     failed_counts[course] += 1
             else:
-                ws.cell(row=row_idx, column=course_col, value='')
-                ws.cell(row=row_idx, column=course_col+1, value='')
-        
+                ws.cell(row=row_idx, column=course_col, value="")
+                ws.cell(row=row_idx, column=course_col + 1, value="")
+
             color_index += 1
             course_col += 2
-    
-        ws.cell(row=row_idx, column=course_col, value=student['CURRENT_GPA'])
-        ws.cell(row=row_idx, column=course_col+1, value=student['CURRENT_CGPA'])
-    
-        remarks = generate_remarks(student['RESIT_COURSES'])
-        ws.cell(row=row_idx, column=course_col+2, value=remarks)
-    
+
+        ws.cell(row=row_idx, column=course_col, value=student["CURRENT_GPA"])
+        ws.cell(row=row_idx, column=course_col + 1, value=student["CURRENT_CGPA"])
+
+        remarks = generate_remarks(student["RESIT_COURSES"])
+        ws.cell(row=row_idx, column=course_col + 2, value=remarks)
+
         row_idx += 1
     failed_row_idx = row_idx
-    ws.cell(row=failed_row_idx, column=1, value="FAILED COUNT BY COURSE:").font = Font(bold=True)
+    ws.cell(row=failed_row_idx, column=1, value="FAILED COUNT BY COURSE:").font = Font(
+        bold=True
+    )
     for col in range(1, len(headers) + 1):
         cell = ws.cell(row=failed_row_idx, column=col)
-        cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
+        cell.fill = PatternFill(
+            start_color="FFFF99", end_color="FFFF99", fill_type="solid"
+        )
     course_col = gpa_col
     for course in sorted(all_courses):
-        count_cell = ws.cell(row=failed_row_idx, column=course_col+1, value=failed_counts[course])
+        count_cell = ws.cell(
+            row=failed_row_idx, column=course_col + 1, value=failed_counts[course]
+        )
         count_cell.font = Font(bold=True)
-        count_cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
+        count_cell.fill = PatternFill(
+            start_color="FFFF99", end_color="FFFF99", fill_type="solid"
+        )
         course_col += 2
     summary_start_row = failed_row_idx + 2
     total_students = len(carryover_data)
-    passed_all = sum(1 for student in carryover_data
-                    if all(course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD
-                          for course_data in student['RESIT_COURSES'].values()))
+    passed_all = sum(
+        1
+        for student in carryover_data
+        if all(
+            course_data["resit_score"] >= DEFAULT_PASS_THRESHOLD
+            for course_data in student["RESIT_COURSES"].values()
+        )
+    )
     carryover_count = total_students - passed_all
     total_failed_attempts = sum(failed_counts.values())
     summary_data = [
         ["CARRYOVER SUMMARY"],
-        [f"A total of {total_students} students registered and sat for the Carryover Examination"],
+        [
+            f"A total of {total_students} students registered and sat for the Carryover Examination"
+        ],
         [f"A total of {passed_all} students passed all carryover courses"],
-        [f"A total of {carryover_count} students failed one or more carryover courses and must repeat them"],
+        [
+            f"A total of {carryover_count} students failed one or more carryover courses and must repeat them"
+        ],
         [f"Total failed resit attempts: {total_failed_attempts} across all courses"],
-        [f"Carryover processing completed on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')}"],
+        [
+            f"Carryover processing completed on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')}"
+        ],
         [""],
         [""],
         ["", ""],
         ["________________________", "________________________"],
         ["Mrs. Abini Hauwa", "Mrs. Olukemi Ogunleye"],
-        ["Head of Exams", "Chairman, ND Program C'tee"]
+        ["Head of Exams", "Chairman, ND Program C'tee"],
     ]
     for i, row_data in enumerate(summary_data):
         row_num = summary_start_row + i
         if len(row_data) == 1:
             if row_data[0]:
-                ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=10)
+                ws.merge_cells(
+                    start_row=row_num, start_column=1, end_row=row_num, end_column=10
+                )
                 cell = ws.cell(row=row_num, column=1, value=row_data[0])
                 if i == 0:
-                    cell.font = Font(bold=True, size=12, underline='single')
+                    cell.font = Font(bold=True, size=12, underline="single")
                 else:
                     cell.font = Font(bold=False, size=11)
-                cell.alignment = Alignment(horizontal='left', vertical='center')
+                cell.alignment = Alignment(horizontal="left", vertical="center")
         elif len(row_data) == 2:
             left_cell = ws.cell(row=row_num, column=1, value=row_data[0])
             right_cell = ws.cell(row=row_num, column=4, value=row_data[1])
-        
+
             if i >= len(summary_data) - 3:
-                left_cell.alignment = Alignment(horizontal='left')
-                right_cell.alignment = Alignment(horizontal='left')
+                left_cell.alignment = Alignment(horizontal="left")
+                right_cell.alignment = Alignment(horizontal="left")
                 left_cell.font = Font(bold=True, size=11)
                 right_cell.font = Font(bold=True, size=11)
     thin_border = Border(
-        left=Side(style='thin'), right=Side(style='thin'),
-        top=Side(style='thin'), bottom=Side(style='thin')
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
     )
-    for row in ws.iter_rows(min_row=7, max_row=row_idx-1, min_col=1, max_col=len(headers)):
+    for row in ws.iter_rows(
+        min_row=7, max_row=row_idx - 1, min_col=1, max_col=len(headers)
+    ):
         for cell in row:
             cell.border = thin_border
-    ws.freeze_panes = 'D8'
+    ws.freeze_panes = "D8"
     for row in ws.iter_rows():
         for cell in row:
             if cell.font is None or not cell.font.bold:
-                cell.font = Font(name='Calibri', size=11)
+                cell.font = Font(name="Calibri", size=11)
     for col_idx, column in enumerate(ws.columns, 1):
         max_length = 0
         column_letter = get_column_letter(col_idx)
-    
+
         for cell in column:
             try:
                 if cell.value is not None:
                     cell_value = str(cell.value)
                     cell_length = len(cell_value)
-                
+
                     if cell.row == 5 and cell.alignment.text_rotation == 90:
                         cell_length = max(cell_length, 10)
-                
-                    if isinstance(cell.value, (int, float)) and not isinstance(cell.value, bool):
+
+                    if isinstance(cell.value, (int, float)) and not isinstance(
+                        cell.value, bool
+                    ):
                         cell_length = max(cell_length, 8)
-                
+
                     if cell_length > max_length:
                         max_length = cell_length
             except:
                 pass
-    
+
         adjusted_width = min(max_length + 2, 50)
-    
+
         if col_idx == 1:
             adjusted_width = 8
         elif col_idx == 2:
@@ -3030,44 +3520,54 @@ def generate_carryover_mastersheet(carryover_data, output_dir, semester_key, set
             adjusted_width = 15
         else:
             adjusted_width = min(max(adjusted_width, 12), 25)
-    
+
         ws.column_dimensions[column_letter].width = adjusted_width
     for row_idx in range(8, row_idx):
         if row_idx % 2 == 0:
             for cell in ws[row_idx]:
-                if (cell.fill.start_color.index == '00000000' or
-                    cell.fill.start_color.index == '00FFFFFF'):
-                    cell.fill = PatternFill(start_color="F8F8F8", end_color="F8F8F8", fill_type="solid")
+                if (
+                    cell.fill.start_color.index == "00000000"
+                    or cell.fill.start_color.index == "00FFFFFF"
+                ):
+                    cell.fill = PatternFill(
+                        start_color="F8F8F8", end_color="F8F8F8", fill_type="solid"
+                    )
     gpa_fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
     if previous_semesters:
         for row in range(8, row_idx):
             for col in range(4, 4 + len(previous_semesters)):
                 cell = ws.cell(row=row, column=col)
-                if cell.fill.start_color.index == '00000000':
+                if cell.fill.start_color.index == "00000000":
                     cell.fill = gpa_fill
-    final_gpa_fill = PatternFill(start_color="E0FFFF", end_color="E0FFFF", fill_type="solid")
+    final_gpa_fill = PatternFill(
+        start_color="E0FFFF", end_color="E0FFFF", fill_type="solid"
+    )
     for row in range(8, row_idx):
-        for col in range(len(headers)-2, len(headers)+1):
+        for col in range(len(headers) - 2, len(headers) + 1):
             cell = ws.cell(row=row, column=col)
-            if cell.fill.start_color.index == '00000000':
+            if cell.fill.start_color.index == "00000000":
                 cell.fill = final_gpa_fill
     filename = f"CARRYOVER_mastersheet_{timestamp}.xlsx"
     filepath = os.path.join(output_dir, filename)
     wb.save(filepath)
-    wb.close() # ✅ CRITICAL: Properly close the workbook
+    wb.close()  # ✅ CRITICAL: Properly close the workbook
     print(f"✅ CARRYOVER mastersheet generated: {filepath}")
     return filepath
-def generate_individual_reports(carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data):
+
+
+def generate_individual_reports(
+    carryover_data, output_dir, semester_key, set_name, timestamp, cgpa_data
+):
     """Generate individual student reports."""
     reports_dir = os.path.join(output_dir, "INDIVIDUAL_REPORTS")
     os.makedirs(reports_dir, exist_ok=True)
     for student in carryover_data:
-        exam_no = student['EXAM NUMBER']
+        exam_no = student["EXAM NUMBER"]
         safe_exam_no = sanitize_filename(exam_no)
-    
+
         filename = f"carryover_report_{safe_exam_no}_{timestamp}.csv"
         filepath = os.path.join(reports_dir, filename)
-    
+
         report_data = []
         report_data.append(["ND CARRYOVER RESULT REPORT"])
         report_data.append(["FCT COLLEGE OF NURSING SCIENCES"])
@@ -3075,58 +3575,92 @@ def generate_individual_reports(carryover_data, output_dir, semester_key, set_na
         report_data.append([f"ND Semester: {semester_key}"])
         report_data.append([])
         report_data.append(["ND STUDENT INFORMATION"])
-        report_data.append(["Exam Number:", student['EXAM NUMBER']])
-        report_data.append(["Name:", student['NAME']])
+        report_data.append(["Exam Number:", student["EXAM NUMBER"]])
+        report_data.append(["Name:", student["NAME"]])
         report_data.append([])
-    
+
         report_data.append(["ND PREVIOUS GPAs"])
-        for key in sorted([k for k in student.keys() if k.startswith('GPA_')]):
-            semester = key.replace('GPA_', '')
+        for key in sorted([k for k in student.keys() if k.startswith("GPA_")]):
+            semester = key.replace("GPA_", "")
             report_data.append([f"{semester}:", student[key]])
         report_data.append([])
-    
+
         report_data.append(["ND CURRENT ACADEMIC RECORD"])
-        report_data.append(["Current GPA:", student['CURRENT_GPA']])
-        report_data.append(["Current CGPA:", student['CURRENT_CGPA']])
+        report_data.append(["Current GPA:", student["CURRENT_GPA"]])
+        report_data.append(["Current CGPA:", student["CURRENT_CGPA"]])
         report_data.append([])
-    
+
         report_data.append(["ND RESIT COURSES"])
-        report_data.append(["Course Code", "Course Title", "Credit Unit", "Original Score", "Resit Score", "Status"])
-    
-        for course_code, course_data in student['RESIT_COURSES'].items():
-            status = "PASSED" if course_data['resit_score'] >= DEFAULT_PASS_THRESHOLD else "FAILED"
-            course_title = course_data.get('course_title', course_code)
-            credit_unit = course_data.get('credit_unit', 0)
-            report_data.append([
-                course_code,
-                course_title,
-                credit_unit,
-                course_data['original_score'],
-                course_data['resit_score'],
-                status
-            ])
-    
+        report_data.append(
+            [
+                "Course Code",
+                "Course Title",
+                "Credit Unit",
+                "Original Score",
+                "Resit Score",
+                "Status",
+            ]
+        )
+
+        for course_code, course_data in student["RESIT_COURSES"].items():
+            status = (
+                "PASSED"
+                if course_data["resit_score"] >= DEFAULT_PASS_THRESHOLD
+                else "FAILED"
+            )
+            course_title = course_data.get("course_title", course_code)
+            credit_unit = course_data.get("credit_unit", 0)
+            report_data.append(
+                [
+                    course_code,
+                    course_title,
+                    credit_unit,
+                    course_data["original_score"],
+                    course_data["resit_score"],
+                    status,
+                ]
+            )
+
         try:
             df = pd.DataFrame(report_data)
             df.to_csv(filepath, index=False, header=False)
             print(f"✅ Generated report for: {exam_no}")
         except Exception as e:
             print(f"❌ Error generating report for {exam_no}: {e}")
-    print(f"✅ Generated {len(carryover_data)} individual student reports in {reports_dir}")
-def process_carryover_results(resit_file_path, source_path, source_type, semester_key, set_name, pass_threshold, output_dir):
+    print(
+        f"✅ Generated {len(carryover_data)} individual student reports in {reports_dir}"
+    )
+
+
+def process_carryover_results(
+    resit_file_path,
+    source_path,
+    source_type,
+    semester_key,
+    set_name,
+    pass_threshold,
+    output_dir,
+):
     """
     COMPLETE ENHANCED VERSION: Process ND carryover results with COMPLETE mastersheet update and ALL enhancements
     """
     print(f"\n🔄 PROCESSING ND CARRYOVER RESULT FOR {semester_key}")
     print("=" * 60)
-    semester_course_titles, semester_credit_units, course_code_to_title, course_code_to_unit = load_course_data()
+    (
+        semester_course_titles,
+        semester_credit_units,
+        course_code_to_title,
+        course_code_to_unit,
+    ) = load_course_data()
     debug_course_matching(resit_file_path, course_code_to_title, course_code_to_unit)
-    year, sem_num, level, sem_display, set_code, sem_name = get_semester_display_info(semester_key)
+    year, sem_num, level, sem_display, set_code, sem_name = get_semester_display_info(
+        semester_key
+    )
     possible_sheet_keys = [
         f"{set_code} {sem_display}",
         f"{set_code.replace('NDII', 'ND II').replace('NDI', 'ND I')} {sem_display}",
         semester_key,
-        semester_key.replace('-', ' ').upper(),
+        semester_key.replace("-", " ").upper(),
         f"{set_code} {sem_name}",
         f"{level} {sem_display}",
     ]
@@ -3137,17 +3671,25 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
         if sheet_standard in semester_course_titles:
             course_titles_dict = semester_course_titles[sheet_standard]
             credit_units_dict = semester_credit_units[sheet_standard]
-            print(f"✅ Using ND sheet key: '{sheet_key}' with {len(course_titles_dict)} courses")
+            print(
+                f"✅ Using ND sheet key: '{sheet_key}' with {len(course_titles_dict)} courses"
+            )
             break
         else:
             print(f"❌ ND sheet key not found: '{sheet_key}'")
     if not course_titles_dict:
-        print(f"⚠️ No ND semester-specific course data found, using global course mappings")
+        print(
+            f"⚠️ No ND semester-specific course data found, using global course mappings"
+        )
         course_titles_dict = course_code_to_title
         credit_units_dict = course_code_to_unit
-    print(f"📊 Final ND course mappings: {len(course_titles_dict)} titles, {len(credit_units_dict)} units")
+    print(
+        f"📊 Final ND course mappings: {len(course_titles_dict)} titles, {len(credit_units_dict)} units"
+    )
     timestamp = datetime.now().strftime(TIMESTAMP_FMT)
-    carryover_output_dir = os.path.join(output_dir, f"CARRYOVER_{set_name}_{semester_key}_{timestamp}")
+    carryover_output_dir = os.path.join(
+        output_dir, f"CARRYOVER_{set_name}_{semester_key}_{timestamp}"
+    )
     os.makedirs(carryover_output_dir, exist_ok=True)
     print(f"📁 Output directory: {carryover_output_dir}")
     if not os.path.exists(resit_file_path):
@@ -3158,135 +3700,163 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
     # FIXED: Initialize variables to avoid scope issues
     updated_zip_path = None
     try:
-        temp_mastersheet_path, temp_dir = get_mastersheet_path(source_path, source_type, semester_key)
-    
+        temp_mastersheet_path, temp_dir = get_mastersheet_path(
+            source_path, source_type, semester_key
+        )
+
         if not temp_mastersheet_path:
             print(f"❌ Failed to get ND mastersheet")
             return False
-    
+
         print(f"📖 Reading ND files...")
         resit_df = pd.read_excel(resit_file_path, header=0)
-    
+
         # DEBUG: Print resit file info
         print(f"📊 Resit file rows: {len(resit_df)}")
         print(f"📊 Resit file columns: {resit_df.columns.tolist()}")
         resit_exam_col = find_exam_number_column(resit_df)
         print(f"📊 Resit exam column: '{resit_exam_col}'")
         if resit_exam_col:
-            print(f"📊 Sample resit exam numbers: {resit_df[resit_exam_col].head().tolist()}")
-    
+            print(
+                f"📊 Sample resit exam numbers: {resit_df[resit_exam_col].head().tolist()}"
+            )
+
         xl = pd.ExcelFile(temp_mastersheet_path)
         sheet_name = get_matching_sheet(xl, semester_key)
         if not sheet_name:
             print(f"❌ No matching ND sheet found for {semester_key}")
             return False
-    
+
         print(f"📖 Using ND sheet '{sheet_name}' for current semester {semester_key}")
-    
+
         try:
-            mastersheet_df = pd.read_excel(temp_mastersheet_path, sheet_name=sheet_name, header=5)
+            mastersheet_df = pd.read_excel(
+                temp_mastersheet_path, sheet_name=sheet_name, header=5
+            )
         except:
             try:
-                mastersheet_df = pd.read_excel(temp_mastersheet_path, sheet_name=sheet_name, header=0)
+                mastersheet_df = pd.read_excel(
+                    temp_mastersheet_path, sheet_name=sheet_name, header=0
+                )
                 print(f"⚠️ Using header row 0 for ND mastersheet")
             except Exception as e:
                 print(f"❌ Error reading ND mastersheet: {e}")
                 return False
-    
+
         # DEBUG: Print mastersheet info
         print(f"📊 Mastersheet rows: {len(mastersheet_df)}")
-        mastersheet_exam_col = find_exam_number_column(mastersheet_df) or 'EXAM NUMBER'
+        mastersheet_exam_col = find_exam_number_column(mastersheet_df) or "EXAM NUMBER"
         print(f"📊 Mastersheet exam column: '{mastersheet_exam_col}'")
         if mastersheet_exam_col in mastersheet_df.columns:
-            print(f"📊 Sample mastersheet exam numbers: {mastersheet_df[mastersheet_exam_col].head().tolist()}")
-    
-        print(f"✅ ND files loaded - Resit: {len(resit_df)} rows, Mastersheet: {len(mastersheet_df)} students")
-    
+            print(
+                f"📊 Sample mastersheet exam numbers: {mastersheet_df[mastersheet_exam_col].head().tolist()}"
+            )
+
+        print(
+            f"✅ ND files loaded - Resit: {len(resit_df)} rows, Mastersheet: {len(mastersheet_df)} students"
+        )
+
         resit_exam_col = find_exam_number_column(resit_df)
-        mastersheet_exam_col = find_exam_number_column(mastersheet_df) or 'EXAM NUMBER'
-    
+        mastersheet_exam_col = find_exam_number_column(mastersheet_df) or "EXAM NUMBER"
+
         if not resit_exam_col:
             print(f"❌ Cannot find exam number column in ND resit file")
             return False
-    
-        print(f"📝 ND Exam columns - Resit: '{resit_exam_col}', Mastersheet: '{mastersheet_exam_col}'")
-    
+
+        print(
+            f"📝 ND Exam columns - Resit: '{resit_exam_col}', Mastersheet: '{mastersheet_exam_col}'"
+        )
+
         cgpa_data = load_previous_gpas(temp_mastersheet_path, semester_key)
-    
+
         carryover_data = []
         updated_students = set()
-    
+
         print(f"\n🎯 PROCESSING ND RESIT SCORES...")
-    
+
         for idx, resit_row in resit_df.iterrows():
             exam_no = str(resit_row[resit_exam_col]).strip().upper()
-            if not exam_no or exam_no in ['NAN', 'NONE', '']:
+            if not exam_no or exam_no in ["NAN", "NONE", ""]:
                 continue
-        
-            student_mask = mastersheet_df[mastersheet_exam_col].astype(str).str.strip().str.upper() == exam_no
-        
+
+            student_mask = (
+                mastersheet_df[mastersheet_exam_col].astype(str).str.strip().str.upper()
+                == exam_no
+            )
+
             if not student_mask.any():
                 print(f"⚠️ ND Student {exam_no} not found in mastersheet - skipping")
                 continue
-        
+
             student_data = mastersheet_df[student_mask].iloc[0]
-            student_name = student_data.get('NAME', 'Unknown')
-        
+            student_name = student_data.get("NAME", "Unknown")
+
             current_credits = 0
             for col in mastersheet_df.columns:
-                if 'TCPE' in str(col).upper():
+                if "TCPE" in str(col).upper():
                     current_credits = student_data.get(col, 0)
                     break
-        
+
             student_record = {
-                'EXAM NUMBER': exam_no,
-                'NAME': student_name,
-                'RESIT_COURSES': {},
-                'CURRENT_GPA': student_data.get('GPA', 0),
-                'CURRENT_CREDITS': current_credits
+                "EXAM NUMBER": exam_no,
+                "NAME": student_name,
+                "RESIT_COURSES": {},
+                "CURRENT_GPA": student_data.get("GPA", 0),
+                "CURRENT_CREDITS": current_credits,
             }
-        
+
             # Process resit courses
             for col in resit_df.columns:
-                if col == resit_exam_col or col == 'NAME' or 'Unnamed' in str(col):
+                if col == resit_exam_col or col == "NAME" or "Unnamed" in str(col):
                     continue
-                
+
                 resit_score = resit_row.get(col)
-                if pd.isna(resit_score) or resit_score == '':
+                if pd.isna(resit_score) or resit_score == "":
                     continue
-            
+
                 try:
                     resit_score_val = float(resit_score)
                 except (ValueError, TypeError):
                     continue
-            
+
                 if col in mastersheet_df.columns:
                     original_score = student_data.get(col)
                     if pd.isna(original_score):
                         continue
-                
+
                 try:
-                    original_score_val = float(original_score) if not pd.isna(original_score) else 0.0
+                    original_score_val = (
+                        float(original_score) if not pd.isna(original_score) else 0.0
+                    )
                 except (ValueError, TypeError):
                     original_score_val = 0.0
-                
+
                 if original_score_val < pass_threshold:
-                    course_title = find_course_title(col, course_titles_dict, course_code_to_title)
-                    credit_unit = find_credit_unit(col, credit_units_dict, course_code_to_unit)
-                    
-                    student_record['RESIT_COURSES'][col] = {
-                        'original_score': original_score_val,
-                        'resit_score': resit_score_val,
-                        'updated': resit_score_val >= pass_threshold,
-                        'course_title': course_title,
-                        'credit_unit': credit_unit
+                    course_title = find_course_title(
+                        col, course_titles_dict, course_code_to_title
+                    )
+                    credit_unit = find_credit_unit(
+                        col, credit_units_dict, course_code_to_unit
+                    )
+
+                    student_record["RESIT_COURSES"][col] = {
+                        "original_score": original_score_val,
+                        "resit_score": resit_score_val,
+                        "updated": resit_score_val >= pass_threshold,
+                        "course_title": course_title,
+                        "credit_unit": credit_unit,
                     }
-        
+
             # ENHANCED: Add course column detection and updated GPA/CGPA calculation with resit scores
-            if student_record['RESIT_COURSES']:
+            if student_record["RESIT_COURSES"]:
                 # Identify course columns in mastersheet
                 import re
-                course_columns = [col for col in mastersheet_df.columns if re.match(r'^[A-Z]{3}\d{3}$', str(col).upper())]
+
+                course_columns = [
+                    col
+                    for col in mastersheet_df.columns
+                    if re.match(r"^[A-Z]{3}\d{3}$", str(col).upper())
+                ]
                 # Recalculate updated current GPA with resit overrides
                 total_grade_points = 0.0
                 total_credits = 0
@@ -3295,68 +3865,89 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                         original_score = student_data.get(col, 0)
                         score = original_score
                         # CRITICAL FIX: Apply ALL resit scores (both passed and failed) for accurate GPA calculation
-                        if col in student_record['RESIT_COURSES']:
-                            score = student_record['RESIT_COURSES'][col]['resit_score']
+                        if col in student_record["RESIT_COURSES"]:
+                            score = student_record["RESIT_COURSES"][col]["resit_score"]
                         try:
                             score_val = float(score)
-                            credit_unit = find_credit_unit(col, credit_units_dict, course_code_to_unit)
+                            credit_unit = find_credit_unit(
+                                col, credit_units_dict, course_code_to_unit
+                            )
                             grade_point = get_grade_point(score_val)
                             total_grade_points += grade_point * credit_unit
-                            total_credits += credit_unit # Total attempted credits
+                            total_credits += credit_unit  # Total attempted credits
                         except (ValueError, TypeError):
                             continue
-                updated_gpa = round(total_grade_points / total_credits, 2) if total_credits > 0 else 0.0
-                student_record['CURRENT_GPA'] = updated_gpa
-                student_record['CURRENT_CREDITS'] = total_credits
+                updated_gpa = (
+                    round(total_grade_points / total_credits, 2)
+                    if total_credits > 0
+                    else 0.0
+                )
+                student_record["CURRENT_GPA"] = updated_gpa
+                student_record["CURRENT_CREDITS"] = total_credits
                 # Recalculate CGPA with updated GPA and total credits
                 if exam_no in cgpa_data:
-                    student_record['CURRENT_CGPA'] = calculate_cgpa(
-                        cgpa_data[exam_no],
-                        updated_gpa,
-                        total_credits
+                    student_record["CURRENT_CGPA"] = calculate_cgpa(
+                        cgpa_data[exam_no], updated_gpa, total_credits
                     )
                 else:
-                    student_record['CURRENT_CGPA'] = updated_gpa
-            
+                    student_record["CURRENT_CGPA"] = updated_gpa
+
                 carryover_data.append(student_record)
                 updated_students.add(exam_no)
-                print(f"✅ ND {exam_no}: {len(student_record['RESIT_COURSES'])} resit courses, Updated GPA: {student_record['CURRENT_GPA']}, CGPA: {student_record['CURRENT_CGPA']}")
-    
+                print(
+                    f"✅ ND {exam_no}: {len(student_record['RESIT_COURSES'])} resit courses, Updated GPA: {student_record['CURRENT_GPA']}, CGPA: {student_record['CURRENT_CGPA']}"
+                )
+
         # DEBUG: Print final stats
         print(f"\n📊 FINAL STATS:")
         print(f" Total carryover students processed: {len(carryover_data)}")
         print(f" Students with updates: {len(updated_students)}")
-    
+
         if carryover_data:
             print(f"\n📊 GENERATING OUTPUTS...")
-        
+
             # 1. Generate the Excel carryover mastersheet
             carryover_mastersheet_path = generate_carryover_mastersheet(
-                carryover_data, carryover_output_dir, semester_key, set_name, timestamp,
-                cgpa_data, course_titles_dict, credit_units_dict, course_code_to_title, course_code_to_unit
+                carryover_data,
+                carryover_output_dir,
+                semester_key,
+                set_name,
+                timestamp,
+                cgpa_data,
+                course_titles_dict,
+                credit_units_dict,
+                course_code_to_title,
+                course_code_to_unit,
             )
-        
+
             # 2. Generate individual reports
             generate_individual_reports(
-                carryover_data, carryover_output_dir, semester_key, set_name, timestamp, cgpa_data
+                carryover_data,
+                carryover_output_dir,
+                semester_key,
+                set_name,
+                timestamp,
+                cgpa_data,
             )
-        
+
             # 3. Generate JSON records
             json_filepath = save_carryover_json_records(
                 carryover_data, carryover_output_dir, semester_key
             )
-        
+
             if json_filepath:
                 # 4. Copy to centralized location
                 centralized_json = copy_json_to_centralized_location(
                     json_filepath, set_name, semester_key
                 )
-        
+
             # 5. Create carryover ZIP file
-            zip_path = os.path.join(output_dir, f"CARRYOVER_{set_name}_{semester_key}_{timestamp}.zip")
+            zip_path = os.path.join(
+                output_dir, f"CARRYOVER_{set_name}_{semester_key}_{timestamp}.zip"
+            )
             if create_carryover_zip(carryover_output_dir, zip_path):
                 print(f"✅ Final ND carryover ZIP created: {zip_path}")
-        
+
             # ============================================
             # STEP 6: UPDATE ORIGINAL MASTERSHEET WITH ALL ENHANCEMENTS
             # ============================================
@@ -3364,176 +3955,291 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                 print(f"\n{'='*60}")
                 print(f"🔄 STEP 6: UPDATING ORIGINAL MASTERSHEET WITH ALL ENHANCEMENTS")
                 print(f"{'='*60}")
-            
+
                 try:
                     # Find the original result ZIP
                     clean_dir_parent = output_dir
-                
-                    all_result_zips = [f for f in os.listdir(clean_dir_parent) if f.endswith('.zip') and ('RESULT-' in f or 'UPDATED_' in f)]
-                    all_result_zips = [f for f in all_result_zips if 'CARRYOVER' not in f.upper()]
-                    
+
+                    all_result_zips = [
+                        f
+                        for f in os.listdir(clean_dir_parent)
+                        if f.endswith(".zip") and ("RESULT-" in f or "UPDATED_" in f)
+                    ]
+                    all_result_zips = [
+                        f for f in all_result_zips if "CARRYOVER" not in f.upper()
+                    ]
+
                     if not all_result_zips:
                         print(f"❌ No original result ZIP found")
                     else:
-                        latest_zip_name = max(all_result_zips, key=lambda f: os.path.getmtime(os.path.join(clean_dir_parent, f)))
+                        latest_zip_name = max(
+                            all_result_zips,
+                            key=lambda f: os.path.getmtime(
+                                os.path.join(clean_dir_parent, f)
+                            ),
+                        )
                         latest_result_zip = latest_zip_name
-                        original_zip_path = os.path.join(clean_dir_parent, latest_result_zip)
+                        original_zip_path = os.path.join(
+                            clean_dir_parent, latest_result_zip
+                        )
                         print(f"✅ Found latest ZIP: {original_zip_path}")
-                        
+
                         # Compute new zip name
-                        match = re.search(r'UPDATED_(\d+)_', latest_zip_name)
+                        match = re.search(r"UPDATED_(\d+)_", latest_zip_name)
                         current_count = int(match.group(1)) if match else 0
                         new_count = current_count + 1
-                        
+
                         if current_count == 0:
                             updated_zip_name = f"UPDATED_{new_count}_{latest_zip_name}"
                         else:
-                            updated_zip_name = re.sub(r'UPDATED_\d+', f'UPDATED_{new_count}', latest_zip_name)
-                        
-                        updated_zip_path = os.path.join(clean_dir_parent, updated_zip_name)
-                    
+                            updated_zip_name = re.sub(
+                                r"UPDATED_\d+", f"UPDATED_{new_count}", latest_zip_name
+                            )
+
+                        updated_zip_path = os.path.join(
+                            clean_dir_parent, updated_zip_name
+                        )
+
                         # Extract the ZIP to temporary directory
                         temp_extract_dir = tempfile.mkdtemp()
                         try:
-                            with zipfile.ZipFile(original_zip_path, 'r') as zip_ref:
+                            with zipfile.ZipFile(original_zip_path, "r") as zip_ref:
                                 zip_ref.extractall(temp_extract_dir)
                             print(f"✅ Extracted to temp directory: {temp_extract_dir}")
-                        
+
                             # Find the mastersheet in the extracted files
                             mastersheet_path = None
                             for root, dirs, files in os.walk(temp_extract_dir):
                                 for file in files:
-                                    if 'mastersheet' in file.lower() and file.endswith('.xlsx'):
+                                    if "mastersheet" in file.lower() and file.endswith(
+                                        ".xlsx"
+                                    ):
                                         mastersheet_path = os.path.join(root, file)
-                                        print(f"✅ Found mastersheet: {mastersheet_path}")
+                                        print(
+                                            f"✅ Found mastersheet: {mastersheet_path}"
+                                        )
                                         break
                                 if mastersheet_path:
                                     break
-                        
+
                             if not mastersheet_path:
                                 print(f"❌ No mastersheet found in ZIP")
                             else:
                                 print(f"✅ Found mastersheet: {mastersheet_path}")
-                            
+
                                 # Build updates dictionary from carryover data
                                 updates = {}
                                 for student in carryover_data:
-                                    exam_no = student['EXAM NUMBER']
+                                    exam_no = student["EXAM NUMBER"]
                                     updates[exam_no] = {}
-                                
-                                    for course_code, course_data in student['RESIT_COURSES'].items():
+
+                                    for course_code, course_data in student[
+                                        "RESIT_COURSES"
+                                    ].items():
                                         # CRITICAL FIX: Update ALL resit scores (both passed and failed)
                                         # This ensures failed resit values are also recorded in the mastersheet
-                                        updates[exam_no][course_code] = course_data['resit_score']
-                            
-                                print(f"📊 Prepared updates for {len(updates)} students")
-                            
+                                        updates[exam_no][course_code] = course_data[
+                                            "resit_score"
+                                        ]
+
+                                print(
+                                    f"📊 Prepared updates for {len(updates)} students"
+                                )
+
                                 # Update the mastersheet with full recalculation and ALL enhancements
                                 # CRITICAL FIX: Use the new FINAL function with SINGLE session
-                                update_success = update_mastersheet_with_recalculation_FINAL(
-                                    mastersheet_path=mastersheet_path,
-                                    updates=updates,
-                                    semester_key=semester_key,
-                                    original_zip_path=original_zip_path,
-                                    course_titles_dict=course_titles_dict,
-                                    course_units_dict=credit_units_dict,
-                                    set_name=set_name
+                                update_success = (
+                                    update_mastersheet_with_recalculation_FINAL(
+                                        mastersheet_path=mastersheet_path,
+                                        updates=updates,
+                                        semester_key=semester_key,
+                                        original_zip_path=original_zip_path,
+                                        course_titles_dict=course_titles_dict,
+                                        course_units_dict=credit_units_dict,
+                                        set_name=set_name,
+                                    )
                                 )
-                            
+
                                 if update_success:
                                     # Create backup of original (only if doesn't exist)
-                                    backup_zip = original_zip_path.replace('.zip', '_BACKUP.zip')
+                                    backup_zip = original_zip_path.replace(
+                                        ".zip", "_BACKUP.zip"
+                                    )
                                     if not os.path.exists(backup_zip):
                                         shutil.copy2(original_zip_path, backup_zip)
                                         print(f"💾 Created backup: {backup_zip}")
-                                
-                                    print(f"📦 Creating updated ZIP: {updated_zip_name}")
-                                
+
+                                    print(
+                                        f"📦 Creating updated ZIP: {updated_zip_name}"
+                                    )
+
                                     # Create new ZIP with ALL files from temp_extract_dir (including updated mastersheet)
                                     try:
-                                        with zipfile.ZipFile(updated_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                                            for root, dirs, files in os.walk(temp_extract_dir):
+                                        with zipfile.ZipFile(
+                                            updated_zip_path, "w", zipfile.ZIP_DEFLATED
+                                        ) as zipf:
+                                            for root, dirs, files in os.walk(
+                                                temp_extract_dir
+                                            ):
                                                 for file in files:
                                                     file_path = os.path.join(root, file)
-                                                    arcname = os.path.relpath(file_path, temp_extract_dir)
+                                                    arcname = os.path.relpath(
+                                                        file_path, temp_extract_dir
+                                                    )
                                                     zipf.write(file_path, arcname)
-                                                    print(f"📁 Added to updated ZIP: {arcname}")
-                                    
+                                                    print(
+                                                        f"📁 Added to updated ZIP: {arcname}"
+                                                    )
+
                                         # Verify the updated ZIP was created
-                                        if os.path.exists(updated_zip_path) and os.path.getsize(updated_zip_path) > 0:
-                                            print(f"✅ SUCCESS: Created {updated_zip_name} ({os.path.getsize(updated_zip_path)} bytes)")
-                                        
+                                        if (
+                                            os.path.exists(updated_zip_path)
+                                            and os.path.getsize(updated_zip_path) > 0
+                                        ):
+                                            print(
+                                                f"✅ SUCCESS: Created {updated_zip_name} ({os.path.getsize(updated_zip_path)} bytes)"
+                                            )
+
                                             # Also verify the mastersheet is in the new ZIP
                                             try:
-                                                with zipfile.ZipFile(updated_zip_path, 'r') as test_zip:
+                                                with zipfile.ZipFile(
+                                                    updated_zip_path, "r"
+                                                ) as test_zip:
                                                     zip_files = test_zip.namelist()
-                                                    mastersheet_in_zip = any('mastersheet' in f.lower() for f in zip_files)
+                                                    mastersheet_in_zip = any(
+                                                        "mastersheet" in f.lower()
+                                                        for f in zip_files
+                                                    )
                                                     if mastersheet_in_zip:
-                                                        print(f"✅ Verified: Mastersheet is in the updated ZIP")
+                                                        print(
+                                                            f"✅ Verified: Mastersheet is in the updated ZIP"
+                                                        )
                                                     else:
-                                                        print(f"⚠️ Warning: No mastersheet found in updated ZIP")
+                                                        print(
+                                                            f"⚠️ Warning: No mastersheet found in updated ZIP"
+                                                        )
                                             except Exception as e:
-                                                print(f"⚠️ Could not verify updated ZIP contents: {e}")
+                                                print(
+                                                    f"⚠️ Could not verify updated ZIP contents: {e}"
+                                                )
                                         else:
-                                            print(f"❌ ERROR: Updated ZIP was not created properly")
-                                
+                                            print(
+                                                f"❌ ERROR: Updated ZIP was not created properly"
+                                            )
+
                                     except Exception as zip_error:
-                                        print(f"❌ Error creating updated ZIP: {zip_error}")
+                                        print(
+                                            f"❌ Error creating updated ZIP: {zip_error}"
+                                        )
                                         # Try alternative ZIP creation method
                                         try:
                                             # Fallback: use shutil.make_archive
                                             temp_zip_dir = tempfile.mkdtemp()
-                                            shutil.copytree(temp_extract_dir, os.path.join(temp_zip_dir, "content"))
-                                            shutil.make_archive(updated_zip_path.replace('.zip', ''), 'zip', temp_zip_dir)
+                                            shutil.copytree(
+                                                temp_extract_dir,
+                                                os.path.join(temp_zip_dir, "content"),
+                                            )
+                                            shutil.make_archive(
+                                                updated_zip_path.replace(".zip", ""),
+                                                "zip",
+                                                temp_zip_dir,
+                                            )
                                             shutil.rmtree(temp_zip_dir)
-                                            print(f"✅ Created updated ZIP using fallback method")
+                                            print(
+                                                f"✅ Created updated ZIP using fallback method"
+                                            )
                                         except Exception as fallback_error:
-                                            print(f"❌ Fallback ZIP creation also failed: {fallback_error}")
-                                
-                                    print(f"✅ Original preserved: {os.path.basename(original_zip_path)}")
+                                            print(
+                                                f"❌ Fallback ZIP creation also failed: {fallback_error}"
+                                            )
+
+                                    print(
+                                        f"✅ Original preserved: {os.path.basename(original_zip_path)}"
+                                    )
                                 else:
-                                    print(f"❌ Mastersheet update had some errors, but continuing")
+                                    print(
+                                        f"❌ Mastersheet update had some errors, but continuing"
+                                    )
                                     # Even if update had errors, try to create the ZIP anyway
                                     try:
-                                        with zipfile.ZipFile(updated_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                                            for root, dirs, files in os.walk(temp_extract_dir):
+                                        with zipfile.ZipFile(
+                                            updated_zip_path, "w", zipfile.ZIP_DEFLATED
+                                        ) as zipf:
+                                            for root, dirs, files in os.walk(
+                                                temp_extract_dir
+                                            ):
                                                 for file in files:
                                                     file_path = os.path.join(root, file)
-                                                    arcname = os.path.relpath(file_path, temp_extract_dir)
+                                                    arcname = os.path.relpath(
+                                                        file_path, temp_extract_dir
+                                                    )
                                                     zipf.write(file_path, arcname)
-                                                    print(f"📁 Added to updated ZIP: {arcname}")
-                                    
+                                                    print(
+                                                        f"📁 Added to updated ZIP: {arcname}"
+                                                    )
+
                                         # Verify the updated ZIP was created
-                                        if os.path.exists(updated_zip_path) and os.path.getsize(updated_zip_path) > 0:
-                                            print(f"✅ SUCCESS: Created {updated_zip_name} ({os.path.getsize(updated_zip_path)} bytes)")
-                                        
+                                        if (
+                                            os.path.exists(updated_zip_path)
+                                            and os.path.getsize(updated_zip_path) > 0
+                                        ):
+                                            print(
+                                                f"✅ SUCCESS: Created {updated_zip_name} ({os.path.getsize(updated_zip_path)} bytes)"
+                                            )
+
                                             # Also verify the mastersheet is in the new ZIP
                                             try:
-                                                with zipfile.ZipFile(updated_zip_path, 'r') as test_zip:
+                                                with zipfile.ZipFile(
+                                                    updated_zip_path, "r"
+                                                ) as test_zip:
                                                     zip_files = test_zip.namelist()
-                                                    mastersheet_in_zip = any('mastersheet' in f.lower() for f in zip_files)
+                                                    mastersheet_in_zip = any(
+                                                        "mastersheet" in f.lower()
+                                                        for f in zip_files
+                                                    )
                                                     if mastersheet_in_zip:
-                                                        print(f"✅ Verified: Mastersheet is in the updated ZIP")
+                                                        print(
+                                                            f"✅ Verified: Mastersheet is in the updated ZIP"
+                                                        )
                                                     else:
-                                                        print(f"⚠️ Warning: No mastersheet found in updated ZIP")
+                                                        print(
+                                                            f"⚠️ Warning: No mastersheet found in updated ZIP"
+                                                        )
                                             except Exception as e:
-                                                print(f"⚠️ Could not verify updated ZIP contents: {e}")
+                                                print(
+                                                    f"⚠️ Could not verify updated ZIP contents: {e}"
+                                                )
                                         else:
-                                            print(f"❌ ERROR: Updated ZIP was not created properly")
-                                
+                                            print(
+                                                f"❌ ERROR: Updated ZIP was not created properly"
+                                            )
+
                                     except Exception as zip_error:
-                                        print(f"❌ Error creating updated ZIP: {zip_error}")
+                                        print(
+                                            f"❌ Error creating updated ZIP: {zip_error}"
+                                        )
                                         # Try alternative ZIP creation method
                                         try:
                                             # Fallback: use shutil.make_archive
                                             temp_zip_dir = tempfile.mkdtemp()
-                                            shutil.copytree(temp_extract_dir, os.path.join(temp_zip_dir, "content"))
-                                            shutil.make_archive(updated_zip_path.replace('.zip', ''), 'zip', temp_zip_dir)
+                                            shutil.copytree(
+                                                temp_extract_dir,
+                                                os.path.join(temp_zip_dir, "content"),
+                                            )
+                                            shutil.make_archive(
+                                                updated_zip_path.replace(".zip", ""),
+                                                "zip",
+                                                temp_zip_dir,
+                                            )
                                             shutil.rmtree(temp_zip_dir)
-                                            print(f"✅ Created updated ZIP using fallback method")
+                                            print(
+                                                f"✅ Created updated ZIP using fallback method"
+                                            )
                                         except Exception as fallback_error:
-                                            print(f"❌ Fallback ZIP creation also failed: {fallback_error}")
-                    
+                                            print(
+                                                f"❌ Fallback ZIP creation also failed: {fallback_error}"
+                                            )
+
                         except Exception as e:
                             print(f"❌ Error during ZIP processing: {e}")
                             traceback.print_exc()
@@ -3542,19 +4248,19 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
                             if os.path.exists(temp_extract_dir):
                                 shutil.rmtree(temp_extract_dir)
                                 print(f"🧹 Cleaned up temp extraction directory")
-            
+
                 except Exception as e:
                     print(f"❌ Error updating mastersheet: {e}")
                     traceback.print_exc()
                 print(f"\n{'='*60}")
                 print(f"🎉 CARRYOVER PROCESSING COMPLETE WITH ALL ENHANCEMENTS!")
                 print(f"{'='*60}")
-            
+
                 return True
         else:
             print(f"❌ No ND carryover data found to process")
             return False
-            
+
     except Exception as e:
         print(f"❌ Error processing ND carryover results: {e}")
         traceback.print_exc()
@@ -3563,12 +4269,18 @@ def process_carryover_results(resit_file_path, source_path, source_type, semeste
         if temp_dir and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
             print(f"✅ Cleaned up ND temporary files")
-      
+
         # Report final status
-        if 'updated_zip_path' in locals() and updated_zip_path and os.path.exists(updated_zip_path):
+        if (
+            "updated_zip_path" in locals()
+            and updated_zip_path
+            and os.path.exists(updated_zip_path)
+        ):
             print(f"✅ UPDATED ZIP successfully created: {updated_zip_path}")
         else:
             print(f"⚠️ UPDATED ZIP was not created - check logs above")
+
+
 # ----------------------------
 # Main Function
 # ----------------------------
@@ -3595,7 +4307,9 @@ def main():
         print("💡 Set the SELECTED_SEMESTERS environment variable")
         return
     if not resit_file_path or not os.path.exists(resit_file_path):
-        print(f"❌ ERROR: RESIT_FILE_PATH not provided or doesn't exist: {resit_file_path}")
+        print(
+            f"❌ ERROR: RESIT_FILE_PATH not provided or doesn't exist: {resit_file_path}"
+        )
         print("💡 Set the RESIT_FILE_PATH environment variable to a valid resit file")
         return
     # Validate ND set
@@ -3612,11 +4326,13 @@ def main():
     possible_base_dirs = [
         BASE_DIR,
         os.path.join(BASE_DIR, "EXAMS_INTERNAL"),
-        os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL'),
+        os.path.join(
+            os.path.expanduser("~"), "student_result_cleaner", "EXAMS_INTERNAL"
+        ),
     ]
     for base in possible_base_dirs:
         test_clean_dir = os.path.join(base, "ND", set_name, "CLEAN_RESULTS")
-    
+
         if os.path.exists(test_clean_dir):
             clean_dir = test_clean_dir
             output_dir = output_dir_env if output_dir_env else test_clean_dir
@@ -3635,14 +4351,16 @@ def main():
     if base_result_path and os.path.exists(base_result_path):
         print(f"✅ Using provided base result path: {base_result_path}")
         source_path = base_result_path
-        source_type = 'zip' if base_result_path.endswith('.zip') else 'folder'
+        source_type = "zip" if base_result_path.endswith(".zip") else "folder"
     else:
         print(f"🔍 Looking for mastersheet in: {clean_dir}")
         source_path, source_type = find_latest_mastersheet_source(clean_dir, set_name)
-    
+
         if not source_path:
             print(f"❌ ERROR: No ZIP files or result folders found in {clean_dir}")
-            print(f"💡 Run the ND regular result processor first to generate clean results")
+            print(
+                f"💡 Run the ND regular result processor first to generate clean results"
+            )
             return
     print(f"✅ Using source: {source_path} (type: {source_type})")
     # Process carryover results
@@ -3653,7 +4371,7 @@ def main():
         semester_key=semester_key,
         set_name=set_name,
         pass_threshold=pass_threshold,
-        output_dir=output_dir
+        output_dir=output_dir,
     )
     if success:
         print("\n" + "=" * 60)
@@ -3662,12 +4380,16 @@ def main():
         print("=" * 60)
         print(f"📁 Check the CLEAN_RESULTS directory for updated result files")
         print(f"📦 Location: {output_dir}")
-        print(f"💡 When you download regular results, they will now include all enhancements")
+        print(
+            f"💡 When you download regular results, they will now include all enhancements"
+        )
     else:
         print("\n" + "=" * 60)
         print("❌ ND CARRYOVER PROCESSING FAILED")
         print("=" * 60)
         print("💡 Check the error messages above for details")
+
+
 # ----------------------------
 # Script Execution
 # ----------------------------

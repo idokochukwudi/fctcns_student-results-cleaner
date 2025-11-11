@@ -19,16 +19,18 @@ from openpyxl.utils import get_column_letter
 # ---------------------------
 # Environment Detection & Directory Configuration
 # ---------------------------
-IS_RAILWAY = os.getenv('RAILWAY_ENVIRONMENT') is not None
+IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
 
 if IS_RAILWAY:
     # Railway: BASE_DIR is set to /app/EXAMS_INTERNAL
-    BASE_DIR = os.getenv('BASE_DIR', '/app/EXAMS_INTERNAL')
+    BASE_DIR = os.getenv("BASE_DIR", "/app/EXAMS_INTERNAL")
     print("🚂 Running on Railway")
     print(f"   BASE_DIR: {BASE_DIR}")
 else:
     # Local: use home directory structure
-    BASE_DIR = os.path.join(os.path.expanduser('~'), 'student_result_cleaner', 'EXAMS_INTERNAL')
+    BASE_DIR = os.path.join(
+        os.path.expanduser("~"), "student_result_cleaner", "EXAMS_INTERNAL"
+    )
     print("💻 Running locally")
     print(f"   BASE_DIR: {BASE_DIR}")
 
