@@ -3605,39 +3605,148 @@ def bm_carryover():
 # ============================================================================
 # NEW ROUTE: ND Carryover Management
 # ============================================================================
-@app.route("/nd_carryover")
+# ============================================================================
+# FIXED: ND Carryover Management Route - ADD METHODS
+# ============================================================================
+@app.route("/nd_carryover", methods=["GET", "POST"])
 @login_required
 def nd_carryover():
-    """National Diploma carryover management dashboard"""
-    try:
-        nd_carryover_data = {}
-   
-        for set_name in ND_SETS:
-            clean_dir = os.path.join(BASE_DIR, "ND", set_name, "CLEAN_RESULTS")
-            if not os.path.exists(clean_dir):
-                continue
+    """National Diploma carryover management dashboard - UPDATED to handle POST"""
+    if request.method == "POST":
+        try:
+            # Get form data - UPDATED FIELD NAMES to match your HTML
+            set_name = request.form.get('selected_set')
+            semester_key = request.form.get('selected_semester')
+            resit_file = request.files.get('resit_file')
+            pass_threshold = request.form.get('pass_threshold', '50.0')
+            
+            logger.info(f"ND CARRYOVER: Received - Set: {set_name}, Semester: {semester_key}, File: {resit_file.filename if resit_file else 'None'}")
+            
+            if not all([set_name, semester_key, resit_file]):
+                flash('Please fill all required fields', 'error')
+                return redirect(url_for('nd_carryover'))
+            
+            # Save uploaded file to proper directory structure
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"nd_resit_{set_name}_{semester_key}_{timestamp}.xlsx"
+            
+            upload_dir = os.path.join(BASE_DIR, "ND", set_name, "RAW_RESULTS", "CARRYOVER")
+            os.makedirs(upload_dir, exist_ok=True)
+            resit_file_path = os.path.join(upload_dir, filename)
+            resit_file.save(resit_file_path)
+            
+            logger.info(f"✅ Saved resit file: {resit_file_path}")
+            
+            # Setup environment for the processor script
+            env = os.environ.copy()
+            env['BASE_DIR'] = BASE_DIR
+            env['SELECTED_SET'] = set_name
+            env['SELECTED_SEMESTERS'] = semester_key
+            env['RESIT_FILE_PATH'] = resit_file_path
+            env['PASS_THRESHOLD'] = str(pass_threshold)
+            env['PROCESSING_MODE'] = 'manual'
+            
+            # Run the ND carryover processor script
+            script_path = os.path.join(SCRIPT_DIR, "nd_carryover_processor.py")
+            
+            if not os.path.exists(script_path):
+                logger.error(f"❌ ND carryover processor script not found: {script_path}")
+                flash(f'ND carryover processor script not found at {script_path}', 'error')
+                return redirect(url_for('nd_carryover'))
+            
+            logger.info(f"🔄 Running ND carryover processor: {script_path}")
+            
+            # Run script with timeout
+            result = subprocess.run(
+                [sys.executable, script_path],
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=600,  # 10 minutes timeout
+            )
+            
+            output_lines = result.stdout.splitlines()
+            error_lines = result.stderr.splitlines()
+            
+            # Log output
+            logger.info("=== ND CARRYOVER PROCESSING OUTPUT ===")
+            for line in output_lines:
+                logger.info(line)
+            
+            if error_lines:
+                logger.error("=== ND CARRYOVER PROCESSING ERRORS ===")
+                for line in error_lines:
+                    logger.error(line)
+            
+            # Check success
+            if result.returncode == 0:
+                # Count processed items
+                processed_count = 0
+                for line in output_lines:
+                    if "Updated" in line and "scores for" in line:
+                        match = re.search(r'Updated (\d+) scores for (\d+) students', line)
+                        if match:
+                            processed_count = int(match.group(2))
+                            break
+                
+                success_msg = f'ND carryover processing completed successfully!'
+                if processed_count > 0:
+                    success_msg += f' Updated scores for {processed_count} students.'
+                
+                flash(success_msg, 'success')
+                
+                # Enforce ZIP-only policy
+                clean_dir = os.path.join(BASE_DIR, "ND", set_name, "CLEAN_RESULTS")
+                if os.path.exists(clean_dir):
+                    enforce_zip_only_policy(clean_dir)
+                    logger.info(f"🔒 Enforced ZIP-only policy for ND/{set_name}")
+            else:
+                error_msg = error_lines[-1] if error_lines else "Unknown error"
+                flash(f'ND carryover processing failed: {error_msg}', 'error')
+                
+            return redirect(url_for('nd_carryover'))
+            
+        except subprocess.TimeoutExpired:
+            flash('ND carryover processing timed out after 10 minutes', 'error')
+            return redirect(url_for('nd_carryover'))
+        except Exception as e:
+            logger.error(f"❌ ND carryover processing error: {e}")
+            import traceback
+            traceback.print_exc()
+            flash(f'Error processing ND carryover: {str(e)}', 'error')
+            return redirect(url_for('nd_carryover'))
+    
+    else:
+        # GET request - show the management page (your existing code)
+        try:
+            nd_carryover_data = {}
        
-            records = get_carryover_records("ND", set_name)
-            if records:
-                nd_carryover_data[set_name] = {
-                    'records': records,
-                    'total_students': sum(record['count'] for record in records),
-                    'total_semesters': len(records)
-                }
+            for set_name in ND_SETS:
+                clean_dir = os.path.join(BASE_DIR, "ND", set_name, "CLEAN_RESULTS")
+                if not os.path.exists(clean_dir):
+                    continue
+       
+                records = get_carryover_records("ND", set_name)
+                if records:
+                    nd_carryover_data[set_name] = {
+                        'records': records,
+                        'total_students': sum(record['count'] for record in records),
+                        'total_semesters': len(records)
+                    }
    
-        return render_template(
-            "nd_carryover_management.html",
-            college=COLLEGE,
-            department=DEPARTMENT,
-            environment="Railway Production" if not is_local_environment() else "Local Development",
-            logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
-            nd_carryover_data=nd_carryover_data,
-            nd_sets=ND_SETS
-        )
-    except Exception as e:
-        logger.error(f"ND carryover management error: {e}")
-        flash(f"Error loading ND carryover management: {str(e)}", "error")
-        return redirect(url_for("dashboard"))
+            return render_template(
+                "nd_carryover_management.html",
+                college=COLLEGE,
+                department=DEPARTMENT,
+                environment="Railway Production" if not is_local_environment() else "Local Development",
+                logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
+                nd_carryover_data=nd_carryover_data,
+                nd_sets=ND_SETS
+            )
+        except Exception as e:
+            logger.error(f"ND carryover management error: {e}")
+            flash(f"Error loading ND carryover management: {str(e)}", "error")
+            return redirect(url_for("dashboard"))
 
 # ============================================================================
 # FIX 1: ADDED MISSING ROUTE: bn_carryover_management

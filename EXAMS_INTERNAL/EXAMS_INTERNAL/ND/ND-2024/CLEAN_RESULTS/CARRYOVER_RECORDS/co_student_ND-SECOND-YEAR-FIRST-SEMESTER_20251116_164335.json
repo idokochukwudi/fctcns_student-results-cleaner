@@ -1,0 +1,1646 @@
+{
+  "FCTCONS/ND24/002": {
+    "exam_number": "FCTCONS/ND24/002",
+    "name": "UMAR AMINA MAKUN",
+    "carryover_courses": {
+      "GNS211": {
+        "course_code": "GNS211",
+        "course_title": "Communication In English II",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 80.0
+      },
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 76.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS211": {
+        "course_code": "GNS211",
+        "course_title": "Communication In English II",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 80.0
+      },
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 76.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/004": {
+    "exam_number": "FCTCONS/ND24/004",
+    "name": "ABANG STEPHANIE ADA",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 67.0
+      },
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 45.0,
+        "resit_score": 52.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 67.0
+      },
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 45.0,
+        "resit_score": 52.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/006": {
+    "exam_number": "FCTCONS/ND24/006",
+    "name": "YOHANNA DORATHY TAVINAZA",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 42.0,
+        "resit_score": 61.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 42.0,
+        "resit_score": 61.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/008": {
+    "exam_number": "FCTCONS/ND24/008",
+    "name": "OBICHEWE PAUL DAVID",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 47.0,
+        "resit_score": 70.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 71.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 50.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 47.0,
+        "resit_score": 70.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 71.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 50.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/009": {
+    "exam_number": "FCTCONS/ND24/009",
+    "name": "AGADA EMMANUEL ENECHE",
+    "carryover_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 71.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 71.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/014": {
+    "exam_number": "FCTCONS/ND24/014",
+    "name": "ALU EDWINA EDUGWU",
+    "carryover_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 61.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 61.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/015": {
+    "exam_number": "FCTCONS/ND24/015",
+    "name": "BENSON MARY OLUWAKEMISOLA",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 55.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 55.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/019": {
+    "exam_number": "FCTCONS/ND24/019",
+    "name": "OGAH PRINCESS UWENYI",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 71.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 72.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 46.0,
+        "resit_score": 71.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 72.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/022": {
+    "exam_number": "FCTCONS/ND24/022",
+    "name": "OPARINDE  RUTH MOTUNRAYO",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 36.0,
+        "resit_score": 62.0
+      },
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 67.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 67.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 36.0,
+        "resit_score": 62.0
+      },
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 67.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 67.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/024": {
+    "exam_number": "FCTCONS/ND24/024",
+    "name": "SULEIMAN SAMAILA",
+    "carryover_courses": {
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 48.0,
+        "resit_score": 67.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 48.0,
+        "resit_score": 67.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/026": {
+    "exam_number": "FCTCONS/ND24/026",
+    "name": "OBADIAH MOSES",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 78.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 78.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/027": {
+    "exam_number": "FCTCONS/ND24/027",
+    "name": "BABAJI BENI DENNIS",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 36.0,
+        "resit_score": 73.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 36.0,
+        "resit_score": 73.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/031": {
+    "exam_number": "FCTCONS/ND24/031",
+    "name": "MUHAMMAD NANA AISHA",
+    "carryover_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 71.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 71.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/040": {
+    "exam_number": "FCTCONS/ND24/040",
+    "name": "AGBEGE SUZAN",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 36.0,
+        "resit_score": 78.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 36.0,
+        "resit_score": 78.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/042": {
+    "exam_number": "FCTCONS/ND24/042",
+    "name": "ASEBIOMO OLUWAFERANMI JOY",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 45.0,
+        "resit_score": 59.0
+      },
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 35.0,
+        "resit_score": 65.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 50.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 45.0,
+        "resit_score": 59.0
+      },
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 35.0,
+        "resit_score": 65.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 40.0,
+        "resit_score": 50.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/050": {
+    "exam_number": "FCTCONS/ND24/050",
+    "name": "IBRAHIM ZAINAB HAJIYA",
+    "carryover_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 50.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 50.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/054": {
+    "exam_number": "FCTCONS/ND24/054",
+    "name": "BINCHAK DIANA RINGNAN",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/055": {
+    "exam_number": "FCTCONS/ND24/055",
+    "name": "AYODELE JOHN TANTOLUWA",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 43.0,
+        "resit_score": 54.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 44.0,
+        "resit_score": 75.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 43.0,
+        "resit_score": 54.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 44.0,
+        "resit_score": 75.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/056": {
+    "exam_number": "FCTCONS/ND24/056",
+    "name": "MAINA SHAMMAH MUSA",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 48.0,
+        "resit_score": 52.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 48.0,
+        "resit_score": 52.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/059": {
+    "exam_number": "FCTCONS/ND24/059",
+    "name": "OBORO MABEL OGHENEMARO",
+    "carryover_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 76.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 76.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/060": {
+    "exam_number": "FCTCONS/ND24/060",
+    "name": "OCHEMEJE EMMANUELLA OMOJO",
+    "carryover_courses": {
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 44.0,
+        "resit_score": 59.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 63.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 44.0,
+        "resit_score": 59.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 45.0,
+        "resit_score": 63.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/061": {
+    "exam_number": "FCTCONS/ND24/061",
+    "name": "EMETA NNEOMA PHILOMENA",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 66.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 66.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/062": {
+    "exam_number": "FCTCONS/ND24/062",
+    "name": "ABUNIMYE FELICIA AMANUYE",
+    "carryover_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 60.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 60.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/067": {
+    "exam_number": "FCTCONS/ND24/067",
+    "name": "ADEGOKE MARVELLOUS ARAMIDE",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/072": {
+    "exam_number": "FCTCONS/ND24/072",
+    "name": "DAUDA HOPE AWYETU",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 49.0,
+        "resit_score": 79.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 58.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 58.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 49.0,
+        "resit_score": 79.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 58.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 36.0,
+        "resit_score": 58.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/073": {
+    "exam_number": "FCTCONS/ND24/073",
+    "name": "ONYEHI PRAISE MAXWELL",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 40.0,
+        "resit_score": 68.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 39.0,
+        "resit_score": 52.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 40.0,
+        "resit_score": 68.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 39.0,
+        "resit_score": 52.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/075": {
+    "exam_number": "FCTCONS/ND24/075",
+    "name": "DENEN RUTH DOOSE",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 50.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 62.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 50.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 62.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/077": {
+    "exam_number": "FCTCONS/ND24/077",
+    "name": "OODOH COMFORT ONYENEFU",
+    "carryover_courses": {
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 53.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 53.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/086": {
+    "exam_number": "FCTCONS/ND24/086",
+    "name": "BARNABAS RITA SIMNOM",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 37.0,
+        "resit_score": 59.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 37.0,
+        "resit_score": 59.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/088": {
+    "exam_number": "FCTCONS/ND24/088",
+    "name": "DUSU FAITH HARUNA",
+    "carryover_courses": {
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/089": {
+    "exam_number": "FCTCONS/ND24/089",
+    "name": "IJEOMA RUTH DABERECHUKWU",
+    "carryover_courses": {
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 48.0,
+        "resit_score": 55.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 65.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 72.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 48.0,
+        "resit_score": 55.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 65.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 72.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/091": {
+    "exam_number": "FCTCONS/ND24/091",
+    "name": "DANLADI MERCY",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 42.0,
+        "resit_score": 51.0
+      },
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 75.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 42.0,
+        "resit_score": 51.0
+      },
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 44.0,
+        "resit_score": 75.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/092": {
+    "exam_number": "FCTCONS/ND24/092",
+    "name": "OKUCHE KOSISOCHUKWU SCHOLARSTICA",
+    "carryover_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 64.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 64.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 46.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/097": {
+    "exam_number": "FCTCONS/ND24/097",
+    "name": "UCHE ULOMA",
+    "carryover_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 64.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 64.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/102": {
+    "exam_number": "FCTCONS/ND24/102",
+    "name": "MICHEAL CATHERINE",
+    "carryover_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 45.0,
+        "resit_score": 69.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 65.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 45.0,
+        "resit_score": 69.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 37.0,
+        "resit_score": 65.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/103": {
+    "exam_number": "FCTCONS/ND24/103",
+    "name": "WAKILI SHEJIYABA CONFIDENCE",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 48.0,
+        "resit_score": 52.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 69.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 48.0,
+        "resit_score": 52.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 38.0,
+        "resit_score": 69.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/109": {
+    "exam_number": "FCTCONS/ND24/109",
+    "name": "GEOFFREY DIVINE DESTINY",
+    "carryover_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 53.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 78.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 30.0,
+        "resit_score": 53.0
+      },
+      "NUS215": {
+        "course_code": "NUS215",
+        "course_title": "Biostatistics",
+        "credit_unit": 2.0,
+        "original_score": 48.0,
+        "resit_score": 78.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/110": {
+    "exam_number": "FCTCONS/ND24/110",
+    "name": "ABOKO DAVID JUNIOR",
+    "carryover_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 67.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS211": {
+        "course_code": "NUS211",
+        "course_title": "Human Anatomy III",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 67.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 42.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/114": {
+    "exam_number": "FCTCONS/ND24/114",
+    "name": "YUSUF BASHIRAT ADEOLA",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 39.0,
+        "resit_score": 62.0
+      },
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 42.0,
+        "resit_score": 52.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 56.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 39.0,
+        "resit_score": 62.0
+      },
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 42.0,
+        "resit_score": 52.0
+      },
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 56.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/116": {
+    "exam_number": "FCTCONS/ND24/116",
+    "name": "YAKUBU ANGELA",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 60.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 60.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/119": {
+    "exam_number": "FCTCONS/ND24/119",
+    "name": "OGUEJI TREASURE UKAMAKA",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 50.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 51.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 50.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 51.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/120": {
+    "exam_number": "FCTCONS/ND24/120",
+    "name": "EMMANUEL ZIPPORAH",
+    "carryover_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 54.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 54.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/122": {
+    "exam_number": "FCTCONS/ND24/122",
+    "name": "ONYEKWELU CHIAMAKA EUGENIA",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 53.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 33.0,
+        "resit_score": 50.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 53.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 33.0,
+        "resit_score": 50.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/123": {
+    "exam_number": "FCTCONS/ND24/123",
+    "name": "HASSAN SOPHIA AISOSA",
+    "carryover_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 62.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 40.0,
+        "resit_score": 62.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/124": {
+    "exam_number": "FCTCONS/ND24/124",
+    "name": "IGWE GOODNESS CHINEYENWA",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 75.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 75.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/128": {
+    "exam_number": "FCTCONS/ND24/128",
+    "name": "CHIME KENECHI PAULINE",
+    "carryover_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 79.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 79.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/132": {
+    "exam_number": "FCTCONS/ND24/132",
+    "name": "CHUDE ALEXANDER CHIDUBEM",
+    "carryover_courses": {
+      "GNS211": {
+        "course_code": "GNS211",
+        "course_title": "Communication In English II",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 79.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS211": {
+        "course_code": "GNS211",
+        "course_title": "Communication In English II",
+        "credit_unit": 2.0,
+        "original_score": 49.0,
+        "resit_score": 79.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/133": {
+    "exam_number": "FCTCONS/ND24/133",
+    "name": "ELEGHASIM DELIGHT CHIDINMA",
+    "carryover_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR212": {
+        "course_code": "NUR212",
+        "course_title": "Primary Health Care(PHC) II",
+        "credit_unit": 3.0,
+        "original_score": 45.0,
+        "resit_score": 62.0
+      },
+      "NUS213": {
+        "course_code": "NUS213",
+        "course_title": "Pharmacology II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/134": {
+    "exam_number": "FCTCONS/ND24/134",
+    "name": "NUHU FAVOUR AUDU",
+    "carryover_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS214": {
+        "course_code": "NUS214",
+        "course_title": "Dietetics",
+        "credit_unit": 2.0,
+        "original_score": 44.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/135": {
+    "exam_number": "FCTCONS/ND24/135",
+    "name": "ABDUL-RAHMAN NABILA ONIZE",
+    "carryover_courses": {
+      "GNS211": {
+        "course_code": "GNS211",
+        "course_title": "Communication In English II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 79.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 50.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS211": {
+        "course_code": "GNS211",
+        "course_title": "Communication In English II",
+        "credit_unit": 2.0,
+        "original_score": 47.0,
+        "resit_score": 79.0
+      },
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 50.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/136": {
+    "exam_number": "FCTCONS/ND24/136",
+    "name": "JACOB OJIMA PENIEL",
+    "carryover_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 70.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR213": {
+        "course_code": "NUR213",
+        "course_title": "Medical- Surgical Nursing I",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 70.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND24/137": {
+    "exam_number": "FCTCONS/ND24/137",
+    "name": "ELIZABETH DANIEL",
+    "carryover_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 56.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 38.0,
+        "resit_score": 65.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUR211": {
+        "course_code": "NUR211",
+        "course_title": "Foundations Of Nursing III",
+        "credit_unit": 3.0,
+        "original_score": 46.0,
+        "resit_score": 56.0
+      },
+      "NUS212": {
+        "course_code": "NUS212",
+        "course_title": "Human Physiology III",
+        "credit_unit": 1.0,
+        "original_score": 38.0,
+        "resit_score": 65.0
+      }
+    },
+    "failed_resit_courses": {}
+  }
+}

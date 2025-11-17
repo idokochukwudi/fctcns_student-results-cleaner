@@ -1,9 +1,12 @@
-#!/usr/bin/env python3
 """
 exam_processor_bm.py
 
 Complete script for Basic Midwifery (BM) exam processing.
-Based on exam_result_processor.py with BM-specific structure.
+FIXED VERSION with:
+1. Correct color application for Passed, Resit, Probation, Withdrawn remarks
+2. Fixed logic for student status determination
+3. Auto-fit column widths
+4. Proper remarks column formatting
 """
 
 from openpyxl.cell import MergedCell
@@ -1065,6 +1068,7 @@ def identify_carryover_students(
             "S/N",
             "EXAMS NUMBER",
             "NAME",
+            "FAILED COURSES",
             "REMARKS",
             "CU Passed",
             "CU Failed",
@@ -2719,6 +2723,7 @@ def process_single_file(
 ):
     """
     Process a single raw file and produce mastersheet Excel and PDFs.
+    FIXED: Correct color application for remarks and auto-fit column widths
     """
     fname = os.path.basename(path)
 
@@ -2878,14 +2883,12 @@ def process_single_file(
         total = (ca_norm * 0.2) + (((obj_norm + exam_norm) / 2) * 0.8)
         mastersheet[code] = total.round(0).clip(upper=100).values
 
-    # NEW: APPLY FLEXIBLE UPGRADE RULE - Ask user for threshold per semester
-    # Only ask in interactive mode
+    # Apply upgrade rule if specified
     if should_use_interactive_mode():
         upgrade_min_threshold, upgraded_scores_count = get_upgrade_threshold_from_user(
             semester_key, set_name
         )
     else:
-        # In non-interactive mode, use the provided threshold or None
         upgraded_scores_count = 0
         if upgrade_min_threshold is not None:
             logger.info(
@@ -2901,16 +2904,7 @@ def process_single_file(
         if c not in mastersheet.columns:
             mastersheet[c] = 0
 
-    def compute_remarks(row):
-        """Compute remarks with expanded failed courses list."""
-        fails = [c for c in ordered_codes if float(row.get(c, 0) or 0) < pass_threshold]
-        if not fails:
-            return "Passed"
-        # Expanded remarks to accommodate maximum failed courses
-        failed_courses_str = ", ".join(sorted(fails))
-        return f"Failed: {failed_courses_str}"
-
-    # Calculate TCPE, TCUP, TCUF correctly
+    # Calculate TCPE, TCUP, TCUF correctly FIRST
     def calc_tcpe_tcup_tcuf(row):
         tcpe = 0.0
         tcup = 0
@@ -2937,27 +2931,56 @@ def process_single_file(
     mastersheet["TCPE"] = results[0].round(1)
     mastersheet["CU Passed"] = results[1]
     mastersheet["CU Failed"] = results[2]
-
-    mastersheet["REMARKS"] = mastersheet.apply(compute_remarks, axis=1)
-
-    total_cu = sum(filtered_credit_units.values()) if filtered_credit_units else 0
-
-    # Calculate GPA - ALWAYS calculate the actual GPA
+    
+    # Calculate GPA BEFORE remarks
     def calculate_gpa(row):
         tcpe = row["TCPE"]
         return round((tcpe / total_cu), 2) if total_cu > 0 else 0.0
 
     mastersheet["GPA"] = mastersheet.apply(calculate_gpa, axis=1)
+
+    # NOW calculate FAILED COURSES and REMARKS after GPA is available
+    def get_failed_courses(row):
+        """Get list of failed courses for a student."""
+        fails = [c for c in ordered_codes if float(row.get(c, 0) or 0) < pass_threshold]
+        return ", ".join(sorted(fails)) if fails else ""
+
+    def compute_remarks(row):
+        """Compute remarks based on student status - MUST be called AFTER GPA calculation."""
+        fails = [c for c in ordered_codes if float(row.get(c, 0) or 0) < pass_threshold]
+        if not fails:
+            return "Passed"
+        
+        # Get already calculated values
+        cu_failed = row.get("CU Failed", 0)
+        gpa = row.get("GPA", 0)
+        
+        failed_percentage = (cu_failed / total_cu) * 100 if total_cu > 0 else 0
+        
+        # Four possible statuses based on GPA and failed percentage
+        if gpa >= 2.0 and failed_percentage <= 45:
+            return "Resit"
+        elif gpa < 2.0 and failed_percentage <= 45:
+            return "Probation"
+        elif failed_percentage > 45:
+            return "Withdrawn"
+        else:
+            return "Resit"
+
+    # Add FAILED COURSES and REMARKS columns
+    mastersheet["FAILED COURSES"] = mastersheet.apply(get_failed_courses, axis=1)
+    mastersheet["REMARKS"] = mastersheet.apply(compute_remarks, axis=1)
+
     mastersheet["AVERAGE"] = (
         mastersheet[[c for c in ordered_codes]].mean(axis=1).round(0)
     )
 
-    # FILTER OUT PREVIOUSLY WITHDRAWN STUDENTS
+    # Filter out previously withdrawn students
     mastersheet, removed_students = filter_out_withdrawn_students(
         mastersheet, semester_key
     )
 
-    # Identify withdrawn students in this semester (after filtering)
+    # Identify withdrawn students in this semester
     withdrawn_students = []
     for idx, row in mastersheet.iterrows():
         student_status = determine_student_status(row, total_cu, pass_threshold)
@@ -2967,11 +2990,11 @@ def process_single_file(
             mark_student_withdrawn(exam_no, semester_key)
             logger.info(f"🚫 Student {exam_no} marked as withdrawn in {semester_key}")
 
-    # Update student tracker with current semester's students (after filtering)
+    # Update student tracker
     exam_numbers = mastersheet["EXAMS NUMBER"].astype(str).str.strip().tolist()
     update_student_tracker(semester_key, exam_numbers, withdrawn_students)
 
-    # NEW: IDENTIFY CARRYOVER STUDENTS FOR BM
+    # Identify carryover students
     carryover_students = identify_carryover_students(
         mastersheet, semester_key, set_name, pass_threshold
     )
@@ -2982,12 +3005,12 @@ def process_single_file(
         )
         logger.info("✅ Saved {} BM carryover records".format(len(carryover_students)))
 
+    # Sort by remarks
     def sort_key(remark):
         if remark == "Passed":
             return (0, "")
         else:
-            failed_courses = remark.replace("Failed: ", "").split(", ")
-            return (1, len(failed_courses), ",".join(sorted(failed_courses)))
+            return (1, remark)
 
     mastersheet = mastersheet.sort_values(
         by="REMARKS", key=lambda x: x.map(sort_key)
@@ -3003,18 +3026,18 @@ def process_single_file(
             mastersheet = mastersheet[["S/N"] + cols]
 
     course_cols = ordered_codes
+    # UPDATED: New column order with FAILED COURSES before REMARKS
     out_cols = (
         ["S/N", "EXAMS NUMBER", "NAME"]
         + course_cols
-        + ["REMARKS", "CU Passed", "CU Failed", "TCPE", "GPA", "AVERAGE"]
+        + ["FAILED COURSES", "REMARKS", "CU Passed", "CU Failed", "TCPE", "GPA", "AVERAGE"]
     )
     for c in out_cols:
         if c not in mastersheet.columns:
             mastersheet[c] = pd.NA
     mastersheet = mastersheet[out_cols]
 
-    # FIXED: Create proper output directory structure with dynamic naming
-    # output_subdir is already created at the beginning of the function
+    # Save to Excel
     out_xlsx = os.path.join(output_subdir, f"mastersheet_{ts}.xlsx")
 
     if not os.path.exists(out_xlsx):
@@ -3169,7 +3192,7 @@ def process_single_file(
             except Exception:
                 continue
 
-    # Apply specific column alignments
+    # FIXED: Apply specific column alignments
     left_align_columns = ["CU Passed", "CU Failed", "TCPE", "GPA", "AVERAGE"]
 
     for col_idx, col_name in enumerate(headers, start=1):
@@ -3185,6 +3208,81 @@ def process_single_file(
             for row_idx in range(start_row + 3, ws.max_row + 1):  # Start from data rows
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # FIXED: Colorize REMARKS column based on status
+    remarks_col_index = None
+    for col_idx, col_name in enumerate(headers, 1):
+        if col_name == "REMARKS":
+            remarks_col_index = col_idx
+            break
+
+    if remarks_col_index:
+        # Define colors for different remarks
+        passed_fill = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")  # Green
+        resit_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")   # Yellow
+        probation_fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")  # Orange
+        withdrawn_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+
+        for row_idx in range(start_row + 3, ws.max_row + 1):
+            cell = ws.cell(row=row_idx, column=remarks_col_index)
+            remark_value = str(cell.value).strip() if cell.value else ""
+            
+            if remark_value == "Passed":
+                cell.fill = passed_fill
+                cell.font = Font(bold=True, color="006400")  # Dark green text
+            elif remark_value == "Resit":
+                cell.fill = resit_fill
+                cell.font = Font(bold=True, color="8B8000")  # Dark yellow text
+            elif remark_value == "Probation":
+                cell.fill = probation_fill
+                cell.font = Font(bold=True, color="8B4500")  # Dark orange text
+            elif remark_value == "Withdrawn":
+                cell.fill = withdrawn_fill
+                cell.font = Font(bold=True, color="8B0000")  # Dark red text
+
+    # FIXED: Auto-fit column widths for ALL columns
+    for column in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(column[0].column)
+        
+        # Skip the first few header rows when calculating max length
+        for cell in column:
+            if cell.row >= start_row + 2:  # Start from header row
+                try:
+                    if cell.value:
+                        cell_length = len(str(cell.value))
+                        if cell_length > max_length:
+                            max_length = cell_length
+                except:
+                    pass
+        
+        # Add some padding and set a reasonable maximum width
+        adjusted_width = min(max_length + 2, 50)  # Cap at 50 characters wide
+        if adjusted_width < 8:  # Minimum width
+            adjusted_width = 8
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Special handling for NAME column - make it wider
+    name_col_index = None
+    for col_idx, col_name in enumerate(headers, 1):
+        if col_name == "NAME":
+            name_col_index = col_idx
+            break
+    
+    if name_col_index:
+        name_col_letter = get_column_letter(name_col_index)
+        ws.column_dimensions[name_col_letter].width = 30  # Fixed width for names
+
+    # Special handling for FAILED COURSES column - make it wider
+    failed_courses_col_index = None
+    for col_idx, col_name in enumerate(headers, 1):
+        if col_name == "FAILED COURSES":
+            failed_courses_col_index = col_idx
+            break
+    
+    if failed_courses_col_index:
+        failed_courses_col_letter = get_column_letter(failed_courses_col_index)
+        ws.column_dimensions[failed_courses_col_letter].width = 40  # Wider for course lists
 
     # Fails per course row
     fails_per_course = (

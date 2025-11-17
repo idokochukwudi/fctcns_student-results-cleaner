@@ -1,0 +1,1488 @@
+[
+  {
+    "exam_number": "7433",
+    "name": "ABDULHAMID HAJARA",
+    "failed_courses": [
+      {
+        "course_code": "MID213",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 28.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 23.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 23.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7436",
+    "name": "ABDULLAHI ZULAIHAT",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 26.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 45.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 41.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 42.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 37.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 37.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7443",
+    "name": "ABUBAKAR  NABILA",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 30.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 24.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7451",
+    "name": "ADO AMATULLAH",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 49.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 45.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 38.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 40.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7457",
+    "name": "AJEH MARTHA SYLVERA",
+    "failed_courses": [
+      {
+        "course_code": "MID215",
+        "original_score": 14.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 14.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7467",
+    "name": "AMADI JULIET OBIANUJUNWA",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 28.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 45.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7472",
+    "name": "ANTHONY OBADIAH",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 26.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 27.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 27.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 29.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 29.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7474",
+    "name": "ATUMAH NAYSA CHIOMA",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 19.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 19.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 18.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7493",
+    "name": "DAVID JAMES",
+    "failed_courses": [
+      {
+        "course_code": "MID213",
+        "original_score": 43.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 25.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 25.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 40.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 40.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7495",
+    "name": "DOKIH BLESSING IVREN",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 38.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID212",
+        "original_score": 26.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 42.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 34.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 29.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 29.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7497",
+    "name": "EBERECHUKWU DIVINE STEPHEN",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID212",
+        "original_score": 34.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID213",
+        "original_score": 29.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 29.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 42.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 34.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7499",
+    "name": "EHIABHI QUEEN",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 47.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID212",
+        "original_score": 34.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 40.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7500",
+    "name": "ELOCHUKWU PROMISE ONYINYECHI",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 32.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID213",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 32.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 39.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 30.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID217",
+        "original_score": 39.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 39.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7504",
+    "name": "EMEKA  FAVOUR CHISOM",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 38.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID212",
+        "original_score": 20.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 20.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 37.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 37.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7507",
+    "name": "ESIKE  CHINENYE STEPHANIE",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 26.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7512",
+    "name": "GEORGE  JOSEPH GEORGE",
+    "failed_courses": [
+      {
+        "course_code": "MID213",
+        "original_score": 28.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 34.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 16.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 16.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7521",
+    "name": "IDRIS PRECIOUS AMIRATU",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 28.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 32.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 33.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7533",
+    "name": "JAMES  ELIJAH",
+    "failed_courses": [
+      {
+        "course_code": "MID216",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 28.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7535",
+    "name": "JAMES  MERCY NDOUK",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 42.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7540",
+    "name": "KALU IKECHUKWU IDIKA",
+    "failed_courses": [
+      {
+        "course_code": "MID215",
+        "original_score": 18.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 49.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 45.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7543",
+    "name": "LAWAL GLORY IFEOLUWA",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 27.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 27.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 26.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 45.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7545",
+    "name": "LUKA JENNIFER",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 42.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID213",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7551",
+    "name": "MENSAH PRAISE CHIOMA",
+    "failed_courses": [
+      {
+        "course_code": "MID213",
+        "original_score": 30.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7560",
+    "name": "MOSES ESTHER SATI",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 38.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 43.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7564",
+    "name": "MUHAMMAD ARSALA BAKO",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 19.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 19.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 16.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 16.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 34.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 34.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7579",
+    "name": "ODEAHAN ITOHAN ABIGAIL",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 38.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID212",
+        "original_score": 12.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 12.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 43.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 24.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 15.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 15.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7605",
+    "name": "SAMSON ERNEST ALLU",
+    "failed_courses": [
+      {
+        "course_code": "MID215",
+        "original_score": 37.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 37.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 30.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7612",
+    "name": "SHUAIBU MUSTAPHA IBRAHIM",
+    "failed_courses": [
+      {
+        "course_code": "MID212",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 29.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 29.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 24.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7620",
+    "name": "UDEH SHULAMMITE AMARANNA",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 33.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID212",
+        "original_score": 41.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 41.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 44.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 11.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 11.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7626",
+    "name": "UNUABOR PHILIP OSEIWE",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 18.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 30.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 36.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 38.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 38.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7635",
+    "name": "YAKUBU HALIMA SADIYA",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 48.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 26.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 26.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7639",
+    "name": "ZAEED  HABIBA IZE",
+    "failed_courses": [
+      {
+        "course_code": "MID211",
+        "original_score": 42.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID214",
+        "original_score": 33.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID215",
+        "original_score": 29.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 29.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID216",
+        "original_score": 47.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST211",
+        "original_score": 46.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 46.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "GST212",
+        "original_score": 13.0,
+        "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+        "set": "SET2025",
+        "resit_attempts": 0,
+        "best_score": 13.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-SECOND-YEAR-FIRST-SEMESTER",
+    "set": "SET2025",
+    "identified_date": "2025-11-17 22:07:40",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  }
+]

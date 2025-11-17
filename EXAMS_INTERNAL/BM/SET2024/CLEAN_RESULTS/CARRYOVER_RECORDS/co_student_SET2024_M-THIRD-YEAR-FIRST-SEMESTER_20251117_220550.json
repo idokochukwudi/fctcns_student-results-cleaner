@@ -1,0 +1,322 @@
+[
+  {
+    "exam_number": "7504",
+    "name": "EMEKA  FAVOUR CHISOM",
+    "failed_courses": [
+      {
+        "course_code": "MID311",
+        "original_score": 40.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID313",
+        "original_score": 33.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 33.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID315",
+        "original_score": 40.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 40.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID318",
+        "original_score": 36.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7533",
+    "name": "JAMES  ELIJAH",
+    "failed_courses": [
+      {
+        "course_code": "MID312",
+        "original_score": 24.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 24.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID314",
+        "original_score": 42.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID316",
+        "original_score": 16.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 16.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID317",
+        "original_score": 36.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID318",
+        "original_score": 32.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7535",
+    "name": "JAMES  MERCY NDOUK",
+    "failed_courses": [
+      {
+        "course_code": "MID314",
+        "original_score": 49.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 49.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID315",
+        "original_score": 32.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 32.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID317",
+        "original_score": 22.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 22.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID318",
+        "original_score": 36.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 36.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7562",
+    "name": "MOYOSORE JUMOKE DOLAPO-GRACE",
+    "failed_courses": [
+      {
+        "course_code": "MID312",
+        "original_score": 21.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 21.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID313",
+        "original_score": 48.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 48.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID317",
+        "original_score": 22.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 22.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7605",
+    "name": "SAMSON ERNEST ALLU",
+    "failed_courses": [
+      {
+        "course_code": "MID312",
+        "original_score": 18.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 18.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID314",
+        "original_score": 43.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 43.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID316",
+        "original_score": 28.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 28.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7626",
+    "name": "UNUABOR PHILIP OSEIWE",
+    "failed_courses": [
+      {
+        "course_code": "MID312",
+        "original_score": 42.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 42.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID313",
+        "original_score": 30.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  },
+  {
+    "exam_number": "7635",
+    "name": "YAKUBU HALIMA SADIYA",
+    "failed_courses": [
+      {
+        "course_code": "MID311",
+        "original_score": 45.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID313",
+        "original_score": 30.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 30.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID315",
+        "original_score": 45.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 45.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID316",
+        "original_score": 19.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 19.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID317",
+        "original_score": 47.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 47.0,
+        "status": "Failed"
+      },
+      {
+        "course_code": "MID318",
+        "original_score": 44.0,
+        "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+        "set": "SET2024",
+        "resit_attempts": 0,
+        "best_score": 44.0,
+        "status": "Failed"
+      }
+    ],
+    "semester": "M-THIRD-YEAR-FIRST-SEMESTER",
+    "set": "SET2024",
+    "identified_date": "2025-11-17 22:05:50",
+    "total_resit_attempts": 0,
+    "status": "Active"
+  }
+]
