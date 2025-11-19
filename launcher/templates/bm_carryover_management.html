@@ -780,7 +780,7 @@
                     <i class="fas fa-info-circle"></i> Process carryover and resit examination results for Basic Midwifery students. This tool integrates resit results with existing student records and recalculates academic status.
                 </div>
 
-                <form method="POST" enctype="multipart/form-data" action="{{ url_for('process_bm_resit') }}" id="bm_carryover_form">
+                <form method="POST" enctype="multipart/form-data" action="{{ url_for('bm_carryover') }}" id="bm_carryover_form">
                     <input type="hidden" name="processing_type" value="carryover">
                     
                     <div class="carryover-section">

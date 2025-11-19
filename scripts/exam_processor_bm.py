@@ -3,10 +3,11 @@ exam_processor_bm.py
 
 Complete script for Basic Midwifery (BM) exam processing.
 FIXED VERSION with:
-1. Correct color application for Passed, Resit, Probation, Withdrawn remarks
-2. Fixed logic for student status determination
-3. Auto-fit column widths
-4. Proper remarks column formatting
+1. Corrected NBTE standard logic for Probation/Withdrawn determination
+2. Fixed color application for Passed, Resit, Probation, Withdrawn remarks
+3. Fixed logic for student status determination
+4. Auto-fit column widths
+5. Proper remarks column formatting
 """
 
 from openpyxl.cell import MergedCell
@@ -532,9 +533,8 @@ CARRYOVER_STUDENTS = {}  # New global carryover tracker for BM
 # NEW: CGPA SUMMARY SHEET FUNCTION
 # ----------------------------
 
-
-def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
-    """Create a CGPA summary sheet that aggregates GPA across all BM semesters."""
+def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp, set_name):
+    """Create a CGPA summary sheet that aggregates GPA across all BM semesters with professional title and short headings."""
     try:
         logger.info("📊 Creating BM CGPA Summary Sheet...")
 
@@ -543,6 +543,16 @@ def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
 
         # Collect GPA data from all BM semesters
         cgpa_data = {}
+
+        # Map semester names to short codes
+        semester_short_codes = {
+            "M-FIRST-YEAR-FIRST-SEMESTER": "Y1S1",
+            "M-FIRST-YEAR-SECOND-SEMESTER": "Y1S2", 
+            "M-SECOND-YEAR-FIRST-SEMESTER": "Y2S1",
+            "M-SECOND-YEAR-SECOND-SEMESTER": "Y2S2",
+            "M-THIRD-YEAR-FIRST-SEMESTER": "Y3S1",
+            "M-THIRD-YEAR-SECOND-SEMESTER": "Y3S2"
+        }
 
         for sheet_name in wb.sheetnames:
             if sheet_name in SEMESTER_ORDER:
@@ -565,6 +575,9 @@ def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
                 if exam_col and gpa_col:
                     for idx, row in df.iterrows():
                         exam_no = str(row[exam_col]).strip()
+                        # Remove .0 from exam numbers
+                        if exam_no.endswith('.0'):
+                            exam_no = exam_no[:-2]
                         if exam_no and exam_no != "nan":
                             if exam_no not in cgpa_data:
                                 cgpa_data[exam_no] = {
@@ -574,31 +587,70 @@ def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
                                         else ""
                                     ),
                                     "gpas": {},
+                                    "remarks": {},  # Store remarks for status determination
                                 }
                             cgpa_data[exam_no]["gpas"][sheet_name] = row[gpa_col]
+                            # Store remarks if available
+                            if "REMARKS" in df.columns:
+                                cgpa_data[exam_no]["remarks"][sheet_name] = row.get("REMARKS", "")
 
         # Create CGPA summary dataframe
         summary_data = []
         for exam_no, data in cgpa_data.items():
-            row = {"EXAMS NUMBER": exam_no, "NAME": data["name"]}
+            # Ensure exam number doesn't have .0
+            clean_exam_no = exam_no[:-2] if exam_no.endswith('.0') else exam_no
+            row = {"EXAMS NUMBER": clean_exam_no, "NAME": data["name"]}
 
             # Add GPA for each semester
             total_gpa = 0
             semester_count = 0
+            semesters_completed = 0
 
             for semester in SEMESTER_ORDER:
                 if semester in data["gpas"]:
-                    row[semester] = data["gpas"][semester]
+                    # Use short code for semester column
+                    short_code = semester_short_codes.get(semester, semester)
+                    row[short_code] = data["gpas"][semester]
                     if pd.notna(data["gpas"][semester]):
                         total_gpa += data["gpas"][semester]
                         semester_count += 1
+                        semesters_completed += 1
                 else:
-                    row[semester] = None
+                    short_code = semester_short_codes.get(semester, semester)
+                    row[short_code] = None
 
             # Calculate CGPA
             row["CGPA"] = (
                 round(total_gpa / semester_count, 2) if semester_count > 0 else 0.0
             )
+
+            # Determine STATUS and GRADUATED columns
+            status = "Active"
+            graduated = "In Progress"
+
+            # Check if student is withdrawn in any semester
+            is_withdrawn = False
+            for semester, remarks in data.get("remarks", {}).items():
+                if remarks == "Withdrawn":
+                    is_withdrawn = True
+                    break
+
+            if is_withdrawn:
+                status = "Withdrawn"
+                graduated = "Withdrawn"  # Better wording for withdrawn students
+            elif semesters_completed == len(SEMESTER_ORDER):
+                # Completed all semesters - consider graduated
+                status = "Active"
+                graduated = "Graduated"
+            else:
+                # Still completing semesters
+                status = "Active"
+                graduated = "In Progress"
+
+            # Add the two new columns
+            row["STATUS"] = status
+            row["GRADUATED"] = graduated
+
             summary_data.append(row)
 
         # Create summary dataframe
@@ -610,26 +662,129 @@ def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
 
         ws = wb.create_sheet("CGPA_SUMMARY")
 
-        # Write header
-        headers = ["EXAMS NUMBER", "NAME"] + SEMESTER_ORDER + ["CGPA"]
+        # Determine the number of columns needed to span the student data
+        short_semesters = [semester_short_codes.get(sem, sem) for sem in SEMESTER_ORDER]
+        headers = ["EXAMS NUMBER", "NAME"] + short_semesters + ["CGPA", "STATUS", "GRADUATED"]
+        num_columns = len(headers)
+
+        # Create professional title - EXPANDED TO MATCH STUDENT HEADING WIDTH
+        title_row1 = 1
+        ws.merge_cells(f'A{title_row1}:{get_column_letter(num_columns)}{title_row1}')
+        title_cell1 = ws[f'A{title_row1}']
+        title_cell1.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA"
+        title_cell1.font = Font(bold=True, size=16, color="FFFFFF")
+        title_cell1.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell1.fill = PatternFill(
+            start_color="1E90FF", end_color="1E90FF", fill_type="solid"
+        )
+
+        title_row2 = 2
+        ws.merge_cells(f'A{title_row2}:{get_column_letter(num_columns)}{title_row2}')
+        title_cell2 = ws[f'A{title_row2}']
+        title_cell2.value = "DEPARTMENT OF MIDWIFERY"
+        title_cell2.font = Font(bold=True, size=14, color="FFFFFF")
+        title_cell2.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell2.fill = PatternFill(
+            start_color="1E90FF", end_color="1E90FF", fill_type="solid"
+        )
+
+        # Add set record title - EXPANDED TO MATCH STUDENT HEADING WIDTH
+        set_row = title_row2 + 1
+        ws.merge_cells(f'A{set_row}:{get_column_letter(num_columns)}{set_row}')
+        set_cell = ws[f'A{set_row}']
+        set_cell.value = f"{set_name.upper()} - CGPA SUMMARY"
+        set_cell.font = Font(bold=True, size=12, color="000000")
+        set_cell.alignment = Alignment(horizontal="center", vertical="center")
+        set_cell.fill = PatternFill(
+            start_color="D3D3D3", end_color="D3D3D3", fill_type="solid"
+        )
+
+        # Write header (start from row 4)
+        header_row = set_row + 1
         for col_idx, header in enumerate(headers, 1):
-            ws.cell(row=1, column=col_idx, value=header)
-
-        # Write data
-        for row_idx, row_data in enumerate(summary_data, 2):
-            for col_idx, header in enumerate(headers, 1):
-                ws.cell(row=row_idx, column=col_idx, value=row_data.get(header, ""))
-
-        # Style the header
-        for cell in ws[1]:
+            cell = ws.cell(row=header_row, column=col_idx, value=header)
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill(
                 start_color="4A90E2", end_color="4A90E2", fill_type="solid"
             )
-            cell.alignment = Alignment(horizontal="center")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
+            )
+
+        # Write data - ensure exam numbers don't have .0
+        for row_idx, row_data in enumerate(summary_data, header_row + 1):
+            for col_idx, header in enumerate(headers, 1):
+                value = row_data.get(header, "")
+                # Remove .0 from exam numbers if they appear
+                if header == "EXAMS NUMBER" and isinstance(value, str) and value.endswith('.0'):
+                    value = value[:-2]
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = Border(
+                    left=Side(style="thin"),
+                    right=Side(style="thin"),
+                    top=Side(style="thin"),
+                    bottom=Side(style="thin"),
+                )
+
+                # Apply color coding for STATUS column
+                if header == "STATUS":
+                    if value == "Withdrawn":
+                        cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+                        cell.font = Font(bold=True, color="FFFFFF")
+                    else:  # Active
+                        cell.fill = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")  # Green
+                        cell.font = Font(bold=True, color="006400")
+
+                # Apply color coding for GRADUATED column
+                elif header == "GRADUATED":
+                    if value == "Graduated":
+                        cell.fill = PatternFill(start_color="00FF00", end_color="00FF00", fill_type="solid")  # Green
+                        cell.font = Font(bold=True, color="006400")
+                    elif value == "Withdrawn":
+                        cell.fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")  # Red
+                        cell.font = Font(bold=True, color="FFFFFF")
+                    else:  # In Progress
+                        cell.fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")  # Yellow
+                        cell.font = Font(bold=True, color="000000")
+
+        # AUTO-FIT COLUMN WIDTHS for all columns
+        for col_idx, header in enumerate(headers, 1):
+            max_length = len(str(header))
+            column_letter = get_column_letter(col_idx)
+            
+            # Check all rows in this column
+            for row_idx in range(header_row + 1, ws.max_row + 1):
+                cell_value = ws.cell(row=row_idx, column=col_idx).value
+                if cell_value is not None:
+                    # Remove .0 from exam numbers for width calculation
+                    cell_value_str = str(cell_value)
+                    if col_idx == 1 and cell_value_str.endswith('.0'):  # EXAMS NUMBER column
+                        cell_value_str = cell_value_str[:-2]
+                    cell_length = len(cell_value_str)
+                    if cell_length > max_length:
+                        max_length = cell_length
+            
+            # Set width with some padding, but reasonable limits
+            adjusted_width = min(max_length + 2, 30)  # Cap at 30 characters
+            if adjusted_width < 8:  # Minimum width
+                adjusted_width = 8
+            ws.column_dimensions[column_letter].width = adjusted_width
+
+        # Specific column width adjustments for better readability
+        ws.column_dimensions['A'].width = 15  # EXAMS NUMBER
+        ws.column_dimensions['B'].width = 25  # NAME
+        # Semester columns (Y1S1, Y1S2, etc.) will auto-fit
+        ws.column_dimensions[get_column_letter(len(headers) - 2)].width = 10  # CGPA column
+        ws.column_dimensions[get_column_letter(len(headers) - 1)].width = 12  # STATUS column
+        ws.column_dimensions[get_column_letter(len(headers))].width = 12     # GRADUATED column
 
         wb.save(mastersheet_path)
-        logger.info("✅ BM CGPA Summary sheet created successfully")
+        logger.info("✅ BM CGPA Summary sheet created successfully with professional title and two status columns")
 
         return summary_df
 
@@ -637,18 +792,26 @@ def create_bm_cgpa_summary_sheet(mastersheet_path, timestamp):
         logger.error(f"❌ Error creating BM CGPA summary sheet: {e}")
         return None
 
-
 # ----------------------------
 # NEW: ANALYSIS SHEET FUNCTION
 # ----------------------------
 
-
-def create_bm_analysis_sheet(mastersheet_path, timestamp):
-    """Create an analysis sheet with comprehensive statistics for BM."""
+def create_bm_analysis_sheet(mastersheet_path, timestamp, set_name):
+    """Create an analysis sheet with comprehensive statistics for BM with professional title and short headings."""
     try:
         logger.info("📈 Creating BM Analysis Sheet...")
 
         wb = load_workbook(mastersheet_path)
+
+        # Map semester names to short codes
+        semester_short_codes = {
+            "M-FIRST-YEAR-FIRST-SEMESTER": "Y1S1",
+            "M-FIRST-YEAR-SECOND-SEMESTER": "Y1S2", 
+            "M-SECOND-YEAR-FIRST-SEMESTER": "Y2S1",
+            "M-SECOND-YEAR-SECOND-SEMESTER": "Y2S2",
+            "M-THIRD-YEAR-FIRST-SEMESTER": "Y3S1",
+            "M-THIRD-YEAR-SECOND-SEMESTER": "Y3S2"
+        }
 
         # Collect data from all semesters
         analysis_data = {
@@ -671,12 +834,13 @@ def create_bm_analysis_sheet(mastersheet_path, timestamp):
                     len(df[df["REMARKS"] == "Passed"]) if "REMARKS" in df.columns else 0
                 )
 
-                # Calculate carryover students
+                # Calculate carryover students (Resit + Probation)
                 carryover_count = 0
                 if "REMARKS" in df.columns:
-                    carryover_count = len(
-                        df[df["REMARKS"].str.contains("Failed", na=False)]
-                    )
+                    carryover_count = len(df[df["REMARKS"].isin(["Resit", "Probation"])])
+
+                # Calculate withdrawn students
+                withdrawn_count = len(df[df["REMARKS"] == "Withdrawn"]) if "REMARKS" in df.columns else 0
 
                 # Calculate average GPA
                 avg_gpa = (
@@ -690,11 +854,13 @@ def create_bm_analysis_sheet(mastersheet_path, timestamp):
                     (passed_all / total_students * 100) if total_students > 0 else 0
                 )
 
-                analysis_data["semester"].append(sheet_name)
+                # Use short code for semester name
+                short_semester = semester_short_codes.get(sheet_name, sheet_name)
+                analysis_data["semester"].append(short_semester)
                 analysis_data["total_students"].append(total_students)
                 analysis_data["passed_all"].append(passed_all)
                 analysis_data["carryover_students"].append(carryover_count)
-                analysis_data["withdrawn_students"].append(0)
+                analysis_data["withdrawn_students"].append(withdrawn_count)
                 analysis_data["average_gpa"].append(round(avg_gpa, 2))
                 analysis_data["pass_rate"].append(round(pass_rate, 2))
 
@@ -721,59 +887,118 @@ def create_bm_analysis_sheet(mastersheet_path, timestamp):
 
         ws = wb.create_sheet("ANALYSIS")
 
-        # Write header
+        # Determine the number of columns
         headers = [
             "SEMESTER",
             "TOTAL STUDENTS",
             "PASSED ALL",
-            "CARRYOVER STUDENTS",
-            "WITHDRAWN STUDENTS",
-            "AVERAGE GPA",
-            "PASS RATE (%)",
+            "CARRYOVER",
+            "WITHDRAWN",
+            "AVG GPA",
+            "PASS RATE %",
         ]
+        num_columns = len(headers)
+
+        # Create professional title - EXPANDED TO MATCH STUDENT HEADING WIDTH
+        title_row1 = 1
+        ws.merge_cells(f'A{title_row1}:{get_column_letter(num_columns)}{title_row1}')
+        title_cell1 = ws[f'A{title_row1}']
+        title_cell1.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA"
+        title_cell1.font = Font(bold=True, size=16, color="FFFFFF")
+        title_cell1.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell1.fill = PatternFill(
+            start_color="1E90FF", end_color="1E90FF", fill_type="solid"
+        )
+
+        title_row2 = 2
+        ws.merge_cells(f'A{title_row2}:{get_column_letter(num_columns)}{title_row2}')
+        title_cell2 = ws[f'A{title_row2}']
+        title_cell2.value = "DEPARTMENT OF MIDWIFERY"
+        title_cell2.font = Font(bold=True, size=14, color="FFFFFF")
+        title_cell2.alignment = Alignment(horizontal="center", vertical="center")
+        title_cell2.fill = PatternFill(
+            start_color="1E90FF", end_color="1E90FF", fill_type="solid"
+        )
+
+        # Add set record title - EXPANDED TO MATCH STUDENT HEADING WIDTH
+        set_row = title_row2 + 1
+        ws.merge_cells(f'A{set_row}:{get_column_letter(num_columns)}{set_row}')
+        set_cell = ws[f'A{set_row}']
+        set_cell.value = f"{set_name.upper()} - ACADEMIC PERFORMANCE ANALYSIS"
+        set_cell.font = Font(bold=True, size=12, color="000000")
+        set_cell.alignment = Alignment(horizontal="center", vertical="center")
+        set_cell.fill = PatternFill(
+            start_color="D3D3D3", end_color="D3D3D3", fill_type="solid"
+        )
+
+        # Write header (start from row 4)
+        header_row = set_row + 1
         for col_idx, header in enumerate(headers, 1):
-            ws.cell(row=1, column=col_idx, value=header)
-
-        # Write data
-        for row_idx, row_data in analysis_df.iterrows():
-            ws.cell(row=row_idx + 2, column=1, value=row_data["semester"])
-            ws.cell(row=row_idx + 2, column=2, value=row_data["total_students"])
-            ws.cell(row=row_idx + 2, column=3, value=row_data["passed_all"])
-            ws.cell(row=row_idx + 2, column=4, value=row_data["carryover_students"])
-            ws.cell(row=row_idx + 2, column=5, value=row_data["withdrawn_students"])
-            ws.cell(row=row_idx + 2, column=6, value=row_data["average_gpa"])
-            ws.cell(row=row_idx + 2, column=7, value=row_data["pass_rate"])
-
-        # Style the header
-        for cell in ws[1]:
+            cell = ws.cell(row=header_row, column=col_idx, value=header)
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill(
                 start_color="27ae60", end_color="27ae60", fill_type="solid"
             )
-            cell.alignment = Alignment(horizontal="center")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(
+                left=Side(style="thin"),
+                right=Side(style="thin"),
+                top=Side(style="thin"),
+                bottom=Side(style="thin"),
+            )
 
-        # Auto-adjust column widths
-        for column in ws.columns:
-            max_length = 0
-            column_letter = get_column_letter(column[0].column)
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = max_length + 2
+        # Write data
+        for row_idx, row_data in analysis_df.iterrows():
+            ws.cell(row=row_idx + header_row + 1, column=1, value=row_data["semester"])
+            ws.cell(row=row_idx + header_row + 1, column=2, value=row_data["total_students"])
+            ws.cell(row=row_idx + header_row + 1, column=3, value=row_data["passed_all"])
+            ws.cell(row=row_idx + header_row + 1, column=4, value=row_data["carryover_students"])
+            ws.cell(row=row_idx + header_row + 1, column=5, value=row_data["withdrawn_students"])
+            ws.cell(row=row_idx + header_row + 1, column=6, value=row_data["average_gpa"])
+            ws.cell(row=row_idx + header_row + 1, column=7, value=row_data["pass_rate"])
+
+            # Apply borders to data rows
+            for col in range(1, num_columns + 1):
+                cell = ws.cell(row=row_idx + header_row + 1, column=col)
+                cell.border = Border(
+                    left=Side(style="thin"),
+                    right=Side(style="thin"),
+                    top=Side(style="thin"),
+                    bottom=Side(style="thin"),
+                )
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # IMPROVED AUTO-FIT COLUMN WIDTHS for all columns
+        for col_idx, header in enumerate(headers, 1):
+            max_length = len(str(header))
+            column_letter = get_column_letter(col_idx)
+            
+            # Check all rows in this column including data rows
+            for row_idx in range(header_row, ws.max_row + 1):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                if cell.value is not None:
+                    cell_length = len(str(cell.value))
+                    if cell_length > max_length:
+                        max_length = cell_length
+            
+            # Set width with some padding
+            adjusted_width = max_length + 3
+            # Set reasonable limits
+            if adjusted_width > 25:
+                adjusted_width = 25
+            if adjusted_width < 10:
+                adjusted_width = 10
+                
             ws.column_dimensions[column_letter].width = adjusted_width
 
         wb.save(mastersheet_path)
-        logger.info("✅ BM Analysis sheet created successfully")
+        logger.info("✅ BM Analysis sheet created successfully with professional title")
 
         return analysis_df
 
     except Exception as e:
         logger.error(f"❌ Error creating BM analysis sheet: {e}")
         return None
-
 
 # ----------------------------
 # Upgrade Rule Functions
@@ -1831,8 +2056,8 @@ def get_cumulative_gpa(current_gpa, previous_gpa, current_credits, previous_cred
 
 def determine_student_status(row, total_cu, pass_threshold):
     """
-    Determine student status based on performance metrics.
-    Returns: 'Pass', 'Carry Over', 'Probation', or 'Withdrawn'
+    Determine student status based on performance metrics following NBTE standard.
+    FIXED: Correct NBTE logic for Probation/Withdrawn determination
     """
     gpa = row.get("GPA", 0)
     cu_passed = row.get("CU Passed", 0)
@@ -1841,15 +2066,24 @@ def determine_student_status(row, total_cu, pass_threshold):
     # Calculate percentage of failed credit units
     failed_percentage = (cu_failed / total_cu) * 100 if total_cu > 0 else 0
 
-    # Decision matrix based on the summary criteria
+    # FIXED: CORRECT NBTE STANDARD LOGIC
+    # 1. No failed courses = Pass
     if cu_failed == 0:
         return "Pass"
+    
+    # 2. GPA >= 2.0 AND failed_percentage <= 45% = Carry Over (Resit)
     elif gpa >= 2.0 and failed_percentage <= 45:
         return "Carry Over"
+    
+    # 3. GPA < 2.0 AND failed_percentage <= 45% = Probation  
     elif gpa < 2.0 and failed_percentage <= 45:
         return "Probation"
+    
+    # 4. failed_percentage > 45% = Withdrawn (regardless of GPA)
     elif failed_percentage > 45:
         return "Withdrawn"
+    
+    # Fallback
     else:
         return "Carry Over"
 
@@ -2384,7 +2618,7 @@ def generate_individual_student_pdf(
         tcup = total_units_passed
         tcuf = total_units_failed
 
-        # Determine student status based on performance
+        # Determine student status based on performance using FIXED NBTE logic
         student_status = determine_student_status(r, total_cu, pass_threshold)
 
         # Check if student was previously withdrawn
@@ -2688,8 +2922,8 @@ def process_semester_files(
                 clean_dir, f"{set_name}_RESULT-{ts}", f"mastersheet_{ts}.xlsx"
             )
             if os.path.exists(mastersheet_path):
-                create_bm_cgpa_summary_sheet(mastersheet_path, ts)
-                create_bm_analysis_sheet(mastersheet_path, ts)
+                create_bm_cgpa_summary_sheet(mastersheet_path, ts, set_name)
+                create_bm_analysis_sheet(mastersheet_path, ts, set_name)
                 logger.info("✅ Created CGPA and Analysis sheets for BM")
         except Exception as e:
             logger.warning(f"⚠️ Could not create summary sheets: {e}")
@@ -2703,6 +2937,46 @@ def process_semester_files(
         }
     else:
         return {"success": False, "files_processed": 0, "error": "No files processed"}
+
+
+def compute_remarks(row, total_cu, pass_threshold):
+    """
+    Compute remarks based on student status - FIXED NBTE STANDARD LOGIC.
+    This function MUST be called AFTER GPA calculation.
+    """
+    # Get all course codes from the row (excluding non-course columns)
+    course_columns = [col for col in row.index if col not in [
+        "S/N", "EXAMS NUMBER", "NAME", "FAILED COURSES", "REMARKS", 
+        "CU Passed", "CU Failed", "TCPE", "GPA", "AVERAGE"
+    ]]
+    
+    # Count failed courses
+    fails = [c for c in course_columns if float(row.get(c, 0) or 0) < pass_threshold]
+    if not fails:
+        return "Passed"
+    
+    # Get already calculated values
+    cu_failed = row.get("CU Failed", 0)
+    gpa = row.get("GPA", 0)
+    
+    failed_percentage = (cu_failed / total_cu) * 100 if total_cu > 0 else 0
+    
+    # FIXED: CORRECT NBTE STANDARD LOGIC
+    # 1. GPA >= 2.0 AND failed_percentage <= 45% = Resit
+    if gpa >= 2.0 and failed_percentage <= 45:
+        return "Resit"
+    
+    # 2. GPA < 2.0 AND failed_percentage <= 45% = Probation  
+    elif gpa < 2.0 and failed_percentage <= 45:
+        return "Probation"
+    
+    # 3. failed_percentage > 45% = Withdrawn (regardless of GPA)
+    elif failed_percentage > 45:
+        return "Withdrawn"
+    
+    # Fallback
+    else:
+        return "Resit"
 
 
 def process_single_file(
@@ -2723,7 +2997,7 @@ def process_single_file(
 ):
     """
     Process a single raw file and produce mastersheet Excel and PDFs.
-    FIXED: Correct color application for remarks and auto-fit column widths
+    FIXED: Correct NBTE standard logic for Probation/Withdrawn determination
     """
     fname = os.path.basename(path)
 
@@ -2945,31 +3219,14 @@ def process_single_file(
         fails = [c for c in ordered_codes if float(row.get(c, 0) or 0) < pass_threshold]
         return ", ".join(sorted(fails)) if fails else ""
 
-    def compute_remarks(row):
-        """Compute remarks based on student status - MUST be called AFTER GPA calculation."""
-        fails = [c for c in ordered_codes if float(row.get(c, 0) or 0) < pass_threshold]
-        if not fails:
-            return "Passed"
-        
-        # Get already calculated values
-        cu_failed = row.get("CU Failed", 0)
-        gpa = row.get("GPA", 0)
-        
-        failed_percentage = (cu_failed / total_cu) * 100 if total_cu > 0 else 0
-        
-        # Four possible statuses based on GPA and failed percentage
-        if gpa >= 2.0 and failed_percentage <= 45:
-            return "Resit"
-        elif gpa < 2.0 and failed_percentage <= 45:
-            return "Probation"
-        elif failed_percentage > 45:
-            return "Withdrawn"
-        else:
-            return "Resit"
-
-    # Add FAILED COURSES and REMARKS columns
+    # Add FAILED COURSES column
     mastersheet["FAILED COURSES"] = mastersheet.apply(get_failed_courses, axis=1)
-    mastersheet["REMARKS"] = mastersheet.apply(compute_remarks, axis=1)
+    
+    # FIXED: Use the corrected compute_remarks function with proper NBTE logic
+    mastersheet["REMARKS"] = mastersheet.apply(
+        lambda row: compute_remarks(row, total_cu, pass_threshold), 
+        axis=1
+    )
 
     mastersheet["AVERAGE"] = (
         mastersheet[[c for c in ordered_codes]].mean(axis=1).round(0)
@@ -3009,8 +3266,12 @@ def process_single_file(
     def sort_key(remark):
         if remark == "Passed":
             return (0, "")
-        else:
-            return (1, remark)
+        elif remark == "Resit":
+            return (1, "")
+        elif remark == "Probation":
+            return (2, "")
+        else:  # Withdrawn
+            return (3, "")
 
     mastersheet = mastersheet.sort_values(
         by="REMARKS", key=lambda x: x.map(sort_key)
@@ -3309,29 +3570,9 @@ def process_single_file(
     # COMPREHENSIVE SUMMARY BLOCK
     total_students = len(mastersheet)
     passed_all = len(mastersheet[mastersheet["REMARKS"] == "Passed"])
-
-    # Calculate students with GPA >= 2.0 but failed some courses
-    gpa_above_2_failed = len(
-        mastersheet[
-            (mastersheet["GPA"] >= 2.0)
-            & (mastersheet["REMARKS"] != "Passed")
-            & (mastersheet["CU Passed"] >= 0.45 * total_cu)
-        ]
-    )
-
-    # Calculate students with GPA < 2.0 but passed at least 45% of credits
-    gpa_below_2_failed = len(
-        mastersheet[
-            (mastersheet["GPA"] < 2.0)
-            & (mastersheet["REMARKS"] != "Passed")
-            & (mastersheet["CU Passed"] >= 0.45 * total_cu)
-        ]
-    )
-
-    # Calculate students who failed more than 45% of credit units
-    failed_over_45_percent = len(
-        mastersheet[(mastersheet["CU Failed"] > 0.45 * total_cu)]
-    )
+    resit_count = len(mastersheet[mastersheet["REMARKS"] == "Resit"])
+    probation_count = len(mastersheet[mastersheet["REMARKS"] == "Probation"])
+    withdrawn_count = len(mastersheet[mastersheet["REMARKS"] == "Withdrawn"])
 
     # Add withdrawn student tracking to summary
     ws.append([])
@@ -3346,17 +3587,17 @@ def process_single_file(
     )
     ws.append(
         [
-            f"A total of {gpa_above_2_failed} students with Grade Point Average (GPA) of 2.00 and above failed various courses, but passed at least 45% of the total registered credit units, and are to carry these courses over to the next session."
+            f"A total of {resit_count} students with Grade Point Average (GPA) of 2.00 and above failed various courses, but passed at least 45% of the total registered credit units, and are to carry these courses over to the next session."
         ]
     )
     ws.append(
         [
-            f"A total of {gpa_below_2_failed} students with Grade Point Average (GPA) below 2.00 failed various courses, but passed at least 45% of the total registered credit units, and are placed on Probation, to carry these courses over to the next session."
+            f"A total of {probation_count} students with Grade Point Average (GPA) below 2.00 failed various courses, but passed at least 45% of the total registered credit units, and are placed on Probation, to carry these courses over to the next session."
         ]
     )
     ws.append(
         [
-            f"A total of {failed_over_45_percent} students failed in more than 45% of their registered credit units in various courses and have been advised to withdraw"
+            f"A total of {withdrawn_count} students failed in more than 45% of their registered credit units in various courses and have been advised to withdraw"
         ]
     )
 

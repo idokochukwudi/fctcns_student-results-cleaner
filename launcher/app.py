@@ -1246,7 +1246,8 @@ SCRIPT_MAP = {
     "exam_processor_nd": "exam_result_processor.py",
     "exam_processor_bn": "exam_processor_bn.py",
     "exam_processor_bm": "exam_processor_bm.py",
-    "nd_carryover_processor": "nd_carryover_processor.py" # CHANGED: ND-specific
+    "nd_carryover_processor": "nd_carryover_processor.py",
+    "bm_carryover_processor": "bm_carryover_processor.py"
 }
 
 # ============================================================================
@@ -1815,20 +1816,22 @@ def get_files_by_category():
                 if set_name not in files_by_category[category]:
                     files_by_category[category][set_name] = []
            
-                # 🔒 STRICT: Only include ZIP files
+                # 🔒 STRICT: Only include ZIP files (including CARRYOVER ZIPs)
                 try:
                     for file in os.listdir(clean_dir):
+                        # Include ALL ZIP files (regular results AND carryover)
                         if not file.lower().endswith(".zip"):
                             continue
-                   
+                    
                         if file.startswith("~$") or file.startswith("."):
                             continue
-                   
+                    
                         file_path = os.path.join(clean_dir, file)
-                   
+                    
                         try:
+                            # Extract semester (works for both regular and carryover ZIPs)
                             semester = extract_semester_from_filename(file)
-                       
+                        
                             file_info = FileInfo(
                                 name=file,
                                 relative_path=os.path.relpath(file_path, BASE_DIR),
@@ -1840,9 +1843,9 @@ def get_files_by_category():
                                 set_name=set_name
                             )
                             files_by_category[category][set_name].append(file_info)
-                            logger.debug(f"✅ Found ZIP: {file}")
+                            logger.debug(f"✅ Found {program} ZIP: {file}")
                         except Exception as e:
-                            logger.error(f"Error processing file {file}: {e}")
+                            logger.error(f"Error processing {program} file {file}: {e}")
                             continue
                
                     # Sort by modified time (newest first)
@@ -3420,9 +3423,6 @@ def carryover():
     return redirect(url_for("nd_carryover"))
 
 # ============================================================================
-# FIXED: BN Carryover Management Route - ADDED bn_sets
-# ============================================================================
-# ============================================================================
 # FIXED: BN Carryover Management Route - CORRECTED PROCESSOR EXECUTION
 # ============================================================================
 @app.route("/bn_carryover", methods=["GET", "POST"])
@@ -3566,45 +3566,233 @@ def bn_carryover():
             return redirect(url_for("dashboard"))
 
 # ============================================================================
-# FIXED: BM Carryover Management Route - ADDED bm_sets
+# NEW ROUTE: BM Carryover Management with POST handling
 # ============================================================================
-@app.route("/bm_carryover")
+@app.route("/bm_carryover", methods=["GET", "POST"])
 @login_required
 def bm_carryover():
-    """Basic Midwifery carryover management dashboard"""
-    try:
-        bm_carryover_data = {}
-   
-        for set_name in BM_SETS:
-            clean_dir = os.path.join(BASE_DIR, "BM", set_name, "CLEAN_RESULTS")
-            if not os.path.exists(clean_dir):
-                continue
+    """Basic Midwifery carryover management dashboard - COMPLETE VERSION"""
+    if request.method == "POST":
+        try:
+            # Get form data - MATCH THE HTML FORM FIELD NAMES
+            set_name = request.form.get('resit_set')  # ✅ MATCHES HTML: name="resit_set"
+            semester_key = request.form.get('resit_semester')  # ✅ MATCHES HTML: name="resit_semester"
+            resit_file = request.files.get('resit_file')  # ✅ MATCHES HTML: name="resit_file"
+            
+            logger.info(f"BM CARRYOVER: Received - Set: {set_name}, Semester: {semester_key}, File: {resit_file.filename if resit_file else 'None'}")
+            
+            if not all([set_name, semester_key, resit_file]):
+                flash('Please fill all required fields', 'error')
+                return redirect(url_for('bm_carryover'))
+            
+            # Save uploaded file to RAW_RESULTS/CARRYOVER directory
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"bm_resit_{set_name}_{semester_key}_{timestamp}.xlsx"
+            
+            upload_dir = os.path.join(BASE_DIR, "BM", set_name, "RAW_RESULTS", "CARRYOVER")
+            os.makedirs(upload_dir, exist_ok=True)
+            resit_file_path = os.path.join(upload_dir, filename)
+            resit_file.save(resit_file_path)
+            
+            logger.info(f"✅ Saved resit file: {resit_file_path}")
+            
+            # Verify file was saved
+            if not os.path.exists(resit_file_path):
+                flash('Failed to save uploaded file', 'error')
+                return redirect(url_for('bm_carryover'))
+            
+            # Setup environment for the processor script
+            env = os.environ.copy()
+            env['BASE_DIR'] = BASE_DIR
+            env['SELECTED_SET'] = set_name
+            env['SELECTED_SEMESTERS'] = semester_key
+            env['RESIT_FILE_PATH'] = resit_file_path
+            env['PASS_THRESHOLD'] = '50.0'
+            env['PROCESSING_MODE'] = 'manual'
+            
+            # Run the BM carryover processor script
+            script_path = os.path.join(SCRIPT_DIR, "bm_carryover_processor.py")
+            
+            if not os.path.exists(script_path):
+                logger.error(f"❌ BM carryover processor script not found: {script_path}")
+                flash(f'BM carryover processor script not found at {script_path}', 'error')
+                return redirect(url_for('bm_carryover'))
+            
+            logger.info(f"🔄 Running BM carryover processor: {script_path}")
+            
+            # Run script with timeout
+            result = subprocess.run(
+                [sys.executable, script_path],
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=600,
+            )
+            
+            output_lines = result.stdout.splitlines()
+            error_lines = result.stderr.splitlines()
+            
+            # Log ALL output for debugging
+            logger.info("=" * 60)
+            logger.info("BM CARRYOVER PROCESSING OUTPUT:")
+            logger.info("=" * 60)
+            for line in output_lines:
+                logger.info(line)
+            
+            if error_lines:
+                logger.error("=" * 60)
+                logger.error("BM CARRYOVER PROCESSING ERRORS:")
+                logger.error("=" * 60)
+                for line in error_lines:
+                    logger.error(line)
+            
+            # Check success
+            if result.returncode == 0:
+                # Count processed items
+                processed_count = 0
+                for line in output_lines:
+                    if "Updated" in line and "scores for" in line:
+                        match = re.search(r'Updated (\d+) scores for (\d+) students', line)
+                        if match:
+                            processed_count = int(match.group(2))
+                            break
+                
+                success_msg = f'BM carryover processing completed successfully!'
+                if processed_count > 0:
+                    success_msg += f' Updated scores for {processed_count} students.'
+                
+                flash(success_msg, 'success')
+                
+                # ✅ CRITICAL: Enforce ZIP-only policy
+                clean_dir = os.path.join(BASE_DIR, "BM", set_name, "CLEAN_RESULTS")
+                logger.info(f"🔍 Checking clean directory: {clean_dir}")
+                logger.info(f"   Directory exists: {os.path.exists(clean_dir)}")
+                
+                if os.path.exists(clean_dir):
+                    # List contents BEFORE zipping
+                    logger.info(f"📂 Contents BEFORE zipping:")
+                    for item in os.listdir(clean_dir):
+                        item_path = os.path.join(clean_dir, item)
+                        if os.path.isdir(item_path):
+                            logger.info(f"   📁 DIR: {item}")
+                        else:
+                            logger.info(f"   📄 FILE: {item} ({os.path.getsize(item_path)} bytes)")
+                    
+                    # Find and zip carryover directories
+                    carryover_dirs = [d for d in os.listdir(clean_dir) 
+                                     if os.path.isdir(os.path.join(clean_dir, d)) 
+                                     and d.startswith('CARRYOVER_')]
+                    
+                    logger.info(f"🔍 Found {len(carryover_dirs)} carryover directories: {carryover_dirs}")
+                    
+                    for carryover_dir_name in carryover_dirs:
+                        carryover_path = os.path.join(clean_dir, carryover_dir_name)
+                        
+                        # Count files in directory
+                        file_count = 0
+                        for root, dirs, files in os.walk(carryover_path):
+                            file_count += len([f for f in files if f.lower().endswith(('.xlsx', '.csv', '.pdf', '.json'))])
+                        
+                        logger.info(f"📦 Zipping {carryover_dir_name} ({file_count} files)")
+                        
+                        if file_count == 0:
+                            logger.warning(f"⚠️ Skipping empty directory: {carryover_dir_name}")
+                            shutil.rmtree(carryover_path)
+                            continue
+                        
+                        # Create ZIP from carryover directory
+                        timestamp_zip = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        zip_filename = f"{carryover_dir_name}_{timestamp_zip}.zip"
+                        zip_path = os.path.join(clean_dir, zip_filename)
+                        
+                        try:
+                            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                                for root, dirs, files in os.walk(carryover_path):
+                                    for file in files:
+                                        if file.lower().endswith(('.xlsx', '.csv', '.pdf', '.json')):
+                                            file_path = os.path.join(root, file)
+                                            arcname = os.path.relpath(file_path, carryover_path)
+                                            zipf.write(file_path, arcname)
+                                            logger.info(f"   ✅ Added to ZIP: {arcname}")
+                            
+                            # Verify ZIP
+                            if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
+                                zip_size = os.path.getsize(zip_path)
+                                logger.info(f"✅ Created carryover ZIP: {zip_filename} ({zip_size:,} bytes)")
+                                
+                                # Remove the directory
+                                shutil.rmtree(carryover_path)
+                                logger.info(f"🗑️ Cleaned up: {carryover_dir_name}")
+                            else:
+                                logger.warning(f"⚠️ ZIP file too small or missing: {zip_path}")
+                                
+                        except Exception as e:
+                            logger.error(f"❌ Error creating ZIP for {carryover_dir_name}: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    
+                    # List contents AFTER zipping
+                    logger.info(f"📂 Contents AFTER zipping:")
+                    for item in os.listdir(clean_dir):
+                        item_path = os.path.join(clean_dir, item)
+                        if os.path.isdir(item_path):
+                            logger.info(f"   📁 DIR: {item}")
+                        else:
+                            logger.info(f"   📄 FILE: {item} ({os.path.getsize(item_path)} bytes)")
+                    
+                    # Final enforcement
+                    enforce_zip_only_policy(clean_dir)
+                    logger.info(f"🔒 ZIP-only policy enforced for BM/{set_name}")
+                else:
+                    logger.error(f"❌ Clean directory does not exist: {clean_dir}")
+            else:
+                error_msg = error_lines[-1] if error_lines else "Unknown error"
+                flash(f'BM carryover processing failed: {error_msg}', 'error')
+                
+            return redirect(url_for('bm_carryover'))
+            
+        except subprocess.TimeoutExpired:
+            flash('BM carryover processing timed out after 10 minutes', 'error')
+            return redirect(url_for('bm_carryover'))
+        except Exception as e:
+            logger.error(f"❌ BM carryover processing error: {e}")
+            import traceback
+            traceback.print_exc()
+            flash(f'Error processing BM carryover: {str(e)}', 'error')
+            return redirect(url_for('bm_carryover'))
+    
+    else:
+        # GET request - show the management page
+        try:
+            bm_carryover_data = {}
        
-            records = get_carryover_records("BM", set_name)
-            if records:
-                bm_carryover_data[set_name] = {
-                    'records': records,
-                    'total_students': sum(record['count'] for record in records),
-                    'total_semesters': len(records)
-                }
-   
-        return render_template(
-            "bm_carryover_management.html",
-            college=COLLEGE,
-            department=DEPARTMENT,
-            environment="Railway Production" if not is_local_environment() else "Local Development",
-            logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
-            bm_carryover_data=bm_carryover_data,
-            bm_sets=BM_SETS # ✅ FIX: Added this line
-        )
-    except Exception as e:
-        logger.error(f"BM carryover management error: {e}")
-        flash(f"Error loading BM carryover management: {str(e)}", "error")
-        return redirect(url_for("dashboard"))
+            for set_name in BM_SETS:
+                clean_dir = os.path.join(BASE_DIR, "BM", set_name, "CLEAN_RESULTS")
+                if not os.path.exists(clean_dir):
+                    continue
+           
+                records = get_carryover_records("BM", set_name)
+                if records:
+                    bm_carryover_data[set_name] = {
+                        'records': records,
+                        'total_students': sum(record['count'] for record in records),
+                        'total_semesters': len(records)
+                    }
+       
+            return render_template(
+                "bm_carryover_management.html",
+                college=COLLEGE,
+                department=DEPARTMENT,
+                environment="Railway Production" if not is_local_environment() else "Local Development",
+                logo_url=url_for("static", filename="logo.png") if os.path.exists(os.path.join(STATIC_DIR, "logo.png")) else None,
+                bm_carryover_data=bm_carryover_data,
+                bm_sets=BM_SETS
+            )
+        except Exception as e:
+            logger.error(f"BM carryover management error: {e}")
+            flash(f"Error loading BM carryover management: {str(e)}", "error")
+            return redirect(url_for("dashboard"))
 
-# ============================================================================
-# NEW ROUTE: ND Carryover Management
-# ============================================================================
 # ============================================================================
 # FIXED: ND Carryover Management Route - ADD METHODS
 # ============================================================================
