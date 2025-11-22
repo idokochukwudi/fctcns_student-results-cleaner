@@ -1,18 +1,11 @@
 #!/usr/bin/env python3 
 """
-caosce_result_fixed.py
-FULLY FIXED & ENHANCED CAOSCE cleaning script (November 2025 revision)
-- Dynamically detects Grade/X column names instead of hardcoded Grade/10
-- Properly fits cells to maximum content length with autofit
-- Ensures Date is directly under CAOSCE_2025 (centered)
-- Forces MAT NO. and FULL NAME headers and cells to be LEFT aligned
-- Removes any duplicate OVERALL AVERAGE rows (keaks a single computed overall average)
-- Summary, Analysis and Signatories in separate, well-structured section
-- Professional formatting with optimal column widths
-- Fixed CLASS alignment to not interfere with column fitting
-- Increased header font sizes and logo size
-- Properly aligned Approved by section
-- Removed detailed examination structure and performance categories
+caosce_result_enhanced.py
+ENHANCED CAOSCE cleaning script with multi-college support
+- Removes "Overall average" student rows from raw data
+- Extracts actual overall averages from raw files
+- Creates single OVERALL AVERAGE row with proper values
+- Dynamic logo selection based on college detection
 """
 
 import os
@@ -23,6 +16,26 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
+
+# ---------------------------
+# College Configuration
+# ---------------------------
+COLLEGE_CONFIGS = {
+    "YAGONGWO": {
+        "name": "YAGONGWO COLLEGE OF NURSING SCIENCE, KUJE, ABUJA",
+        "exam_patterns": [r'BN/A\d{2}/\d{3}', r'BN/\w+/\d+'],
+        "mat_no_label": "MAT NO.",
+        "logo": "LOGO_YAN.png",
+        "output_prefix": "YAGONGWO_CAOSCE"
+    },
+    "FCT": {
+        "name": "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA", 
+        "exam_patterns": [r'^\d{4}$', r'FCTCONS/ND\d{2}/\d{3}', r'FCTCONS/\w+/\d+'],
+        "mat_no_label": "EXAM NO.",
+        "logo": "logo.png",
+        "output_prefix": "FCT_CAOSCE"
+    }
+}
 
 # ---------------------------
 # Configuration
@@ -38,12 +51,12 @@ DEFAULT_BASE_DIR = os.path.join(BASE_DIR, "CAOSCE_RESULT")
 DEFAULT_RAW_DIR = os.path.join(DEFAULT_BASE_DIR, "RAW_CAOSCE_RESULT")
 DEFAULT_CLEAN_DIR = os.path.join(DEFAULT_BASE_DIR, "CLEAN_CAOSCE_RESULT")
 
-LOGO_PATH = os.path.join(os.path.expanduser("~"), "student_result_cleaner", "launcher", "static", "LOGO_YAN.jpg")
+LOGO_BASE_PATH = os.path.join(os.path.expanduser("~"), "student_result_cleaner", "launcher", "static")
 
 TIMESTAMP_FMT = "%Y-%m-%d_%H%M%S"
-OUTPUT_BASENAME = "CAOSCE_PRE_COUNCIL_CLEANED"
+CURRENT_YEAR = datetime.now().year
 
-# This will be dynamically built based on actual max scores found
+# Station mapping
 STATION_COLUMN_MAP = {
     "procedure_station_one": "PS1_Score",
     "procedure_station_three": "PS3_Score",
@@ -54,16 +67,13 @@ STATION_COLUMN_MAP = {
     "viva": "VIVA",
 }
 
-# Will store the actual max scores for each station
-station_max_scores = {}
-
-# Styling - INCREASED FONT SIZES
+# Styling
 NO_SCORE_FILL = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
 NO_SCORE_FONT = Font(bold=True, color="9C0006", size=10, name="Calibri")
 HEADER_FONT = Font(bold=True, size=10, name="Calibri", color="FFFFFF")
-TITLE_FONT = Font(bold=True, size=16, name="Calibri", color="1F4E78")  # Increased from 14 to 16
-SUBTITLE_FONT = Font(bold=True, size=14, name="Calibri", color="1F4E78")  # Increased from 12 to 14
-DATE_FONT = Font(bold=True, size=11, name="Calibri", color="1F4E78")  # Increased from 10 to 11
+TITLE_FONT = Font(bold=True, size=16, name="Calibri", color="1F4E78")
+SUBTITLE_FONT = Font(bold=True, size=14, name="Calibri", color="1F4E78")
+DATE_FONT = Font(bold=True, size=11, name="Calibri", color="1F4E78")
 HEADER_FILL = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
 AVERAGE_FILL = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
 AVERAGE_FONT = Font(bold=True, size=10, name="Calibri", color="7F6000")
@@ -83,6 +93,41 @@ UNWANTED_COL_PATTERNS = [
 # Helpers
 # ---------------------------
 
+def detect_college_from_exam_numbers(exam_numbers):
+    """
+    Detect college based on exam number patterns with better logic
+    """
+    if not exam_numbers:
+        return "YAGONGWO", COLLEGE_CONFIGS["YAGONGWO"]
+    
+    yagongwo_count = 0
+    fct_count = 0
+    
+    for exam_no in exam_numbers:
+        exam_no_str = str(exam_no).strip().upper()
+        
+        # Check Yagongwo patterns
+        yagongwo_matched = False
+        for pattern in COLLEGE_CONFIGS["YAGONGWO"]["exam_patterns"]:
+            if re.match(pattern, exam_no_str):
+                yagongwo_count += 1
+                yagongwo_matched = True
+                break
+        
+        # Check FCT patterns only if not matched by Yagongwo
+        if not yagongwo_matched:
+            for pattern in COLLEGE_CONFIGS["FCT"]["exam_patterns"]:
+                if re.match(pattern, exam_no_str):
+                    fct_count += 1
+                    break
+    
+    print(f"College detection - Yagongwo: {yagongwo_count}, FCT: {fct_count}")
+    
+    if fct_count > yagongwo_count:
+        return "FCT", COLLEGE_CONFIGS["FCT"]
+    else:
+        return "YAGONGWO", COLLEGE_CONFIGS["YAGONGWO"]
+
 def find_first_col(df, candidates):
     cols = {c.strip().lower(): c for c in df.columns}
     for cand in candidates:
@@ -94,7 +139,6 @@ def find_first_col(df, candidates):
                 return c
     return None
 
-
 def find_username_col(df):
     return find_first_col(df, [
         "username", "user name", "exam no", "exam number", "registration no",
@@ -102,25 +146,21 @@ def find_username_col(df):
         "groups", "group", "id"
     ])
 
-
 def find_fullname_col(df):
     return find_first_col(df, [
         "user full name", "full name", "name", "candidate name", "student name",
         "first name", "given name", "first names"
     ])
 
-
 def find_viva_score_col(df):
     return find_first_col(df, [
         "enter student score below", "enter student's score", "score", "grade"
     ])
 
-
 def find_grade_column(df):
     """
-    Dynamically find the grade/score column - looks for patterns like:
-    Grade/10, Grade/3.25, Grade/20, Grade, Total, or any column containing 'grade' or 'total'
-    Returns tuple: (column_name, max_score) where max_score is extracted from Grade/X
+    Dynamically find the grade/score column
+    Returns tuple: (column_name, max_score)
     """
     for c in df.columns:
         cn = str(c).strip()
@@ -142,22 +182,27 @@ def find_grade_column(df):
     
     return (None, 10.0)
 
-
 def extract_exam_number_from_fullname(text):
     if pd.isna(text):
         return None
     s = str(text).strip().upper()
-    match = re.search(r'\b([A-Z]+/[A-Z0-9]+/\d+)\b', s)
+    
+    # Try Yagongwo pattern: BN/A23/002
+    match = re.search(r'\b(BN/A\d{2}/\d{3})\b', s)
     if match:
         return match.group(1)
-    match = re.search(r'\b([A-Z]{1,3}\d{3,})\b', s)
+    
+    # Try FCT pattern: FCTCONS/ND24/001
+    match = re.search(r'\b(FCTCONS/ND\d{2}/\d{3})\b', s)
     if match:
         return match.group(1)
-    match = re.search(r'\b([A-Z]\d+/\d+)\b', s)
+    
+    # Try 4-digit pattern: 7433
+    match = re.search(r'\b(\d{4})\b', s)
     if match:
         return match.group(1)
+    
     return None
-
 
 def extract_fullname_from_text(text, exam_no):
     if pd.isna(text):
@@ -171,7 +216,6 @@ def extract_fullname_from_text(text, exam_no):
         return s
     return None
 
-
 def sanitize_exam_no(v):
     if pd.isna(v):
         return ""
@@ -180,7 +224,6 @@ def sanitize_exam_no(v):
     if " - " in s:
         s = s.split(" - ")[0].strip()
     return s
-
 
 def numeric_safe(v):
     try:
@@ -191,6 +234,15 @@ def numeric_safe(v):
     except:
         return None
 
+def is_overall_average_row(row, username_col, fullname_col):
+    """Check if a row represents an overall average row (not a real student)"""
+    if username_col and pd.notna(row.get(username_col)):
+        if 'overall' in str(row[username_col]).lower() and 'average' in str(row[username_col]).lower():
+            return True
+    if fullname_col and pd.notna(row.get(fullname_col)):
+        if 'overall' in str(row[fullname_col]).lower() and 'average' in str(row[fullname_col]).lower():
+            return True
+    return False
 
 def apply_autofit_columns(ws, header_row, data_end_row):
     """
@@ -211,7 +263,6 @@ def apply_autofit_columns(ws, header_row, data_end_row):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 if cell.value is not None:
                     cell_value = str(cell.value)
-                    # For numeric values, use formatted length
                     if isinstance(cell.value, (int, float)):
                         if cell.number_format == '0.00':
                             cell_value = f"{cell.value:.2f}"
@@ -225,12 +276,12 @@ def apply_autofit_columns(ws, header_row, data_end_row):
                 pass
         
         # Apply optimal width with padding
-        optimal_width = max_length + 2  # Add padding
+        optimal_width = max_length + 2
         
         # Set reasonable limits
         if header_value == "S/N":
             optimal_width = max(6, min(optimal_width, 8))
-        elif header_value == "MAT NO.":
+        elif header_value in ["MAT NO.", "EXAM NO."]:
             optimal_width = max(12, min(optimal_width, 20))
         elif header_value == "FULL NAME":
             optimal_width = max(25, min(optimal_width, 35))
@@ -245,14 +296,11 @@ def apply_autofit_columns(ws, header_row, data_end_row):
         
         ws.column_dimensions[col_letter].width = optimal_width
 
-
 def create_document_sections(ws, total_students, avg_percentage, highest_percentage, lowest_percentage, 
-                           station_max_scores, total_max_score, data_end_row):
+                           total_max_score, data_end_row, college_config):
     """
     Create well-structured summary, analysis and signatories sections
-    in a separate area that doesn't affect column widths
     """
-    # Start the documentation section after the data with proper spacing
     doc_start_row = data_end_row + 3
     
     # ====================== SUMMARY SECTION ======================
@@ -262,7 +310,6 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     ws.cell(row=summary_header_row, column=1).font = SUMMARY_HEADER_FONT
     ws.cell(row=summary_header_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
     
-    # Examination Structure - REMOVED DETAILED BREAKDOWN
     structure_rows = [
         "",
         f"Total Possible Score: {total_max_score} marks",
@@ -290,7 +337,6 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     ws.cell(row=analysis_start_row, column=1).font = ANALYSIS_HEADER_FONT
     ws.cell(row=analysis_start_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
     
-    # Analysis rows - REMOVED PERFORMANCE CATEGORIES
     analysis_rows = [
         "",
         f"Total Candidates: {total_students}",
@@ -309,7 +355,7 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     # ====================== SIGNATORIES SECTION ======================
     signatories_start_row = analysis_start_row + len(analysis_rows) + 3
     
-    # Prepared by section (left aligned)
+    # Prepared by section
     ws.merge_cells(f"A{signatories_start_row}:C{signatories_start_row}")
     ws.cell(row=signatories_start_row, column=1, value="Prepared by:")
     ws.cell(row=signatories_start_row, column=1).font = SIGNATURE_FONT
@@ -327,54 +373,47 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     ws.merge_cells(f"A{signatories_start_row + 6}:C{signatories_start_row + 6}")
     ws.cell(row=signatories_start_row + 6, column=1, value="Date: __________________________")
     
-    # Approved by section (PROPERLY ALIGNED)
-    # Use columns D to G for the Approved by section (4 columns wide)
-    approved_col_start = 4  # Column D
-    approved_col_end = 7    # Column G
+    # Approved by section
+    approved_col_start = 4
+    approved_col_end = 7
     
-    # Approved by header
     ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row}:{get_column_letter(approved_col_end)}{signatories_start_row}")
     approved_cell = ws.cell(row=signatories_start_row, column=approved_col_start, value="Approved by:")
     approved_cell.font = SIGNATURE_FONT
     approved_cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Signature line
     ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 2}:{get_column_letter(approved_col_end)}{signatories_start_row + 2}")
     signature_cell = ws.cell(row=signatories_start_row + 2, column=approved_col_start, value="_________________________")
     signature_cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Provost's Signature text
     ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 3}:{get_column_letter(approved_col_end)}{signatories_start_row + 3}")
     provost_cell = ws.cell(row=signatories_start_row + 3, column=approved_col_start, value="Provost's Signature")
     provost_cell.font = SUMMARY_BODY_FONT
     provost_cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Name line
     ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 5}:{get_column_letter(approved_col_end)}{signatories_start_row + 5}")
     name_cell = ws.cell(row=signatories_start_row + 5, column=approved_col_start, value="Name: _________________________")
     name_cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    # Date line
     ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 6}:{get_column_letter(approved_col_end)}{signatories_start_row + 6}")
     date_cell = ws.cell(row=signatories_start_row + 6, column=approved_col_start, value="Date: __________________________")
     date_cell.alignment = Alignment(horizontal="center", vertical="center")
     
-    return signatories_start_row + 8  # Return the last row used
+    return signatories_start_row + 8
 
 # ---------------------------
 # Main processing
 # ---------------------------
 
 def process_files():
-    print("Starting CAOSCE Pre-Council Results Cleaning...\n")
+    print("Starting Enhanced CAOSCE Pre-Council Results Cleaning...\n")
+    print(f"Processing year: CAOSCE_{CURRENT_YEAR}\n")
 
     RAW_DIR = DEFAULT_RAW_DIR
     BASE_CLEAN_DIR = DEFAULT_CLEAN_DIR
 
     ts = datetime.now().strftime(TIMESTAMP_FMT)
-    output_dir = os.path.join(BASE_CLEAN_DIR, f"CAOSCE_PRE_COUNCIL_{ts}")
-    os.makedirs(output_dir, exist_ok=True)
-
+    
     files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith((".xlsx", ".xls", ".csv"))]
 
     if not files:
@@ -382,13 +421,18 @@ def process_files():
         return
 
     results = {}
-    # Dictionary to track max scores found for each station
     station_max_scores = {}
+    all_exam_numbers = set()
+    
+    # Dictionary to store overall averages from raw files
+    station_overall_averages = {}
 
+    # Process all files
     for fname in sorted(files):
         path = os.path.join(RAW_DIR, fname)
         lower = fname.lower()
         station_key = None
+        
         if "procedure" in lower or "ps-" in lower or "ps1" in lower or "ps3" in lower or "ps5" in lower:
             if "one" in lower or "ps1" in lower or "_1" in lower:
                 station_key = "procedure_station_one"
@@ -423,26 +467,31 @@ def process_files():
 
         username_col = find_username_col(df)
         fullname_col = find_fullname_col(df)
-        grade_col, max_score = find_grade_column(df)  # Now returns (column, max_score)
+        grade_col, max_score = find_grade_column(df)
         viva_score_col = find_viva_score_col(df) if station_key == "viva" else None
 
-        # Debug: Print what grade column was found
         if grade_col:
             print(f"  Found grade column: '{grade_col}' (max score: {max_score}) in {fname}")
-            # Store the max score for this station
             station_max_scores[station_key] = max_score
         else:
             print(f"  Warning: No grade column found in {fname}")
-            # Default to 10 if not found
             station_max_scores[station_key] = 10.0
 
         for pattern in UNWANTED_COL_PATTERNS:
             df.drop(columns=[c for c in df.columns if re.search(pattern, str(c), flags=re.I)], inplace=True, errors="ignore")
 
         rows_added = 0
+        station_scores = []  # Collect scores to calculate average if needed
+        
         for _, row in df.iterrows():
+            # Skip overall average rows in raw data
+            if is_overall_average_row(row, username_col, fullname_col):
+                print(f"  Skipping overall average row in {fname}")
+                continue
+                
             exam_no = None
             full_name = None
+            
             if station_key == "viva":
                 if fullname_col and pd.notna(row.get(fullname_col)):
                     fullname_value = str(row[fullname_col]).strip()
@@ -452,7 +501,6 @@ def process_files():
                 if not exam_no and username_col:
                     exam_no = sanitize_exam_no(row.get(username_col))
                 if not exam_no:
-                    print(f"  Warning: Could not extract exam number from VIVA row in file {fname}")
                     continue
             else:
                 if username_col:
@@ -482,12 +530,14 @@ def process_files():
                 if not exam_no:
                     continue
 
+            if exam_no:
+                all_exam_numbers.add(exam_no)
+
             if exam_no not in results:
                 results[exam_no] = {
                     "MAT NO.": exam_no,
                     "FULL NAME": None,
                 }
-                # Initialize all station scores to None
                 for sk in STATION_COLUMN_MAP.keys():
                     results[exam_no][STATION_COLUMN_MAP[sk]] = None
 
@@ -503,8 +553,15 @@ def process_files():
             if score_val is not None:
                 out_col = STATION_COLUMN_MAP[station_key]
                 results[exam_no][out_col] = round(score_val, 2)
+                station_scores.append(score_val)
 
             rows_added += 1
+
+        # Calculate average for this station if we have scores
+        if station_scores:
+            station_avg = sum(station_scores) / len(station_scores)
+            station_overall_averages[station_key] = round(station_avg, 2)
+            print(f"  Calculated station average: {station_avg:.2f}")
 
         print(f"Processed {fname} → {rows_added} rows (Station: {station_key})")
 
@@ -512,13 +569,22 @@ def process_files():
         print("No student data found.")
         return
 
+    # Detect college using improved logic
+    college_key, college_config = detect_college_from_exam_numbers(all_exam_numbers)
+    print(f"\nDetected college: {college_config['name']}")
+    print(f"Using logo: {college_config['logo']}")
+    print(f"Exam number label: {college_config['mat_no_label']}")
+
+    # Create college-specific output directory
+    output_dir = os.path.join(BASE_CLEAN_DIR, f"{college_config['output_prefix']}_{ts}")
+    os.makedirs(output_dir, exist_ok=True)
+
     # Build the score columns with actual denominators
     score_cols = []
     for station_key in ["procedure_station_one", "procedure_station_three", "procedure_station_five",
                         "question_station_two", "question_station_four", "question_station_six", "viva"]:
         base_col = STATION_COLUMN_MAP[station_key]
         max_score = station_max_scores.get(station_key, 10.0)
-        # Format the denominator nicely (remove .0 if it's a whole number)
         if max_score == int(max_score):
             col_name = f"{base_col}/{int(max_score)}"
         else:
@@ -543,6 +609,7 @@ def process_files():
         lambda x: x.fillna(method='ffill').fillna(method='bfill')
     )
 
+    # Sort by exam number
     df_out["__sort"] = pd.to_numeric(df_out["MAT NO."].str.extract(r'(\d+)')[0], errors='coerce')
     df_out.sort_values(["__sort", "MAT NO."], inplace=True)
     df_out.drop(columns=["__sort"], inplace=True)
@@ -550,20 +617,24 @@ def process_files():
 
     df_out.insert(0, "S/N", range(1, len(df_out) + 1))
 
-    df_out[score_cols] = df_out[score_cols].apply(pd.to_numeric, errors="coerce").round(2).fillna(0.00)
+    # Use pandas round method for DataFrames
+    df_out[score_cols] = df_out[score_cols].apply(pd.to_numeric, errors="coerce")
+    for col in score_cols:
+        df_out[col] = df_out[col].apply(lambda x: round(x, 2) if pd.notna(x) else 0.00)
 
     # Calculate total using actual max scores
     total_max_score = sum(station_max_scores.values())
-    df_out[f"Total Raw Score /{total_max_score:.2f}".replace(".00", "")] = df_out[score_cols].sum(axis=1).round(2)
+    df_out[f"Total Raw Score /{total_max_score:.2f}".replace(".00", "")] = df_out[score_cols].sum(axis=1)
     total_col_name = f"Total Raw Score /{total_max_score:.2f}".replace(".00", "")
     
-    df_out["Percentage (%)"] = (df_out[total_col_name] / total_max_score * 100).round(0).astype(int)
+    # Round the total column
+    df_out[total_col_name] = df_out[total_col_name].apply(lambda x: round(x, 2) if pd.notna(x) else 0.00)
+    
+    df_out["Percentage (%)"] = (df_out[total_col_name] / total_max_score * 100)
+    df_out["Percentage (%)"] = df_out["Percentage (%)"].apply(lambda x: int(round(x, 0)) if pd.notna(x) else 0)
 
     final_display_cols = ["S/N", "MAT NO.", "FULL NAME"] + score_cols + [total_col_name, "Percentage (%)"]
     df_out = df_out[final_display_cols]
-
-    # Remove any pre-existing OVERALL AVERAGE rows (if they came from input)
-    df_out = df_out[df_out["MAT NO."] != "OVERALL AVERAGE"].copy()
 
     total_students = len(df_out)
     student_percentages = df_out["Percentage (%)"].values
@@ -571,22 +642,31 @@ def process_files():
     highest_percentage = int(student_percentages.max()) if total_students > 0 else 0
     lowest_percentage = int(student_percentages.min()) if total_students > 0 else 0
 
-    # Compute and add a single OVERALL AVERAGE row
+    # Create SINGLE overall average row with actual averages in each column
     avg_row = {
         "S/N": "",
         "MAT NO.": "OVERALL AVERAGE",
         "FULL NAME": "",
     }
-    for col in score_cols:
-        avg_row[col] = df_out[col].mean().round(2) if total_students > 0 else 0.00
-    avg_row[total_col_name] = df_out[total_col_name].mean().round(2) if total_students > 0 else 0.00
-    avg_row["Percentage (%)"] = int(df_out["Percentage (%)"].mean().round(0)) if total_students > 0 else 0
+    
+    # Use the actual averages calculated from raw data
+    for i, station_key in enumerate(["procedure_station_one", "procedure_station_three", "procedure_station_five",
+                                    "question_station_two", "question_station_four", "question_station_six", "viva"]):
+        col_name = score_cols[i]
+        avg_row[col_name] = station_overall_averages.get(station_key, 0.00)
+    
+    # Calculate total and percentage for overall average
+    overall_total = sum(station_overall_averages.values())
+    avg_row[total_col_name] = round(overall_total, 2)
+    avg_row["Percentage (%)"] = int(round(overall_total / total_max_score * 100, 0))
 
+    # Add the single overall average row
     df_out = pd.concat([df_out, pd.DataFrame([avg_row])], ignore_index=True)
 
     # Save outputs
-    out_csv = os.path.join(output_dir, f"{OUTPUT_BASENAME}_{ts}.csv")
-    out_xlsx = os.path.join(output_dir, f"{OUTPUT_BASENAME}_{ts}.xlsx")
+    output_basename = f"{college_config['output_prefix']}_PRE_COUNCIL_CLEANED"
+    out_csv = os.path.join(output_dir, f"{output_basename}_{ts}.csv")
+    out_xlsx = os.path.join(output_dir, f"{output_basename}_{ts}.xlsx")
 
     df_out.to_csv(out_csv, index=False)
     df_out.to_excel(out_xlsx, index=False, engine="openpyxl")
@@ -601,62 +681,83 @@ def process_files():
 
     last_col_letter = get_column_letter(ws.max_column)
 
-    # Add logo if exists - INCREASED LOGO SIZE
-    if os.path.exists(LOGO_PATH):
+    # Add college-specific logo with multiple format support
+    logo_path = None
+    base_logo_name = college_config["logo"]
+    
+    # Try different extensions
+    for ext in ['.png', '.jpg', '.jpeg']:
+        potential_path = os.path.join(LOGO_BASE_PATH, base_logo_name.replace('.png', ext))
+        if os.path.exists(potential_path):
+            logo_path = potential_path
+            break
+    
+    # If not found with extensions, try the exact name
+    if not logo_path:
+        exact_path = os.path.join(LOGO_BASE_PATH, base_logo_name)
+        if os.path.exists(exact_path):
+            logo_path = exact_path
+    
+    if logo_path:
         try:
-            img = XLImage(LOGO_PATH)
-            img.width = 120  # Increased from 80 to 120
-            img.height = 120  # Increased from 80 to 120
+            img = XLImage(logo_path)
+            img.width = 120
+            img.height = 120
             ws.add_image(img, "A1")
+            print(f"✓ Added logo: {os.path.basename(logo_path)}")
         except Exception as e:
-            print(f"Warning: Could not add logo: {e}")
+            print(f"Warning: Could not add logo {logo_path}: {e}")
+    else:
+        print(f"Warning: Logo not found for {college_config['name']}")
+        print(f"Looked for: {os.path.join(LOGO_BASE_PATH, base_logo_name)}")
 
-    # Titles - WITH INCREASED FONT SIZES
+    # College-specific titles
     ws.merge_cells(f"B1:{last_col_letter}1")
-    ws["B1"] = "YAGONGWO COLLEGE OF NURSING SCIENCE, KUJE, ABUJA"
-    ws["B1"].font = TITLE_FONT  # Now size 16 (increased from 14)
+    ws["B1"] = college_config["name"]
+    ws["B1"].font = TITLE_FONT
     ws["B1"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[1].height = 28  # Increased height for larger font
+    ws.row_dimensions[1].height = 28
 
     ws.merge_cells(f"B2:{last_col_letter}2")
     ws["B2"] = "PRE-COUNCIL EXAMINATION RESULT"
-    ws["B2"].font = SUBTITLE_FONT  # Now size 14 (increased from 12)
+    ws["B2"].font = SUBTITLE_FONT
     ws["B2"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[2].height = 24  # Increased height for larger font
+    ws.row_dimensions[2].height = 24
 
     ws.merge_cells(f"B3:{last_col_letter}3")
-    ws["B3"] = "CAOSCE_2025"
-    ws["B3"].font = Font(bold=True, size=12, name="Calibri", color="1F4E78")  # Increased from 11 to 12
+    ws["B3"] = f"CAOSCE_{CURRENT_YEAR}"
+    ws["B3"].font = Font(bold=True, size=12, name="Calibri", color="1F4E78")
     ws["B3"].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[3].height = 20  # Increased height
+    ws.row_dimensions[3].height = 20
 
-    # DATE directly under CAOSCE_2025 (centered across full width)
+    # DATE
     ws.merge_cells(f"B4:{last_col_letter}4")
     ws.cell(row=4, column=2, value=f"Date: {datetime.now().strftime('%d %B %Y')}")
-    ws.cell(row=4, column=2).font = DATE_FONT  # Now size 11 (increased from 10)
+    ws.cell(row=4, column=2).font = DATE_FONT
     ws.cell(row=4, column=2).alignment = Alignment(horizontal="center", vertical="center")
 
-    # CLASS - moved to separate row and properly aligned to not interfere with column fitting
+    # CLASS
     ws.merge_cells(f"A5:{last_col_letter}5")
     class_cell = ws.cell(row=5, column=1, value="CLASS: _________________________________________________________________________________________")
-    class_cell.font = Font(bold=True, size=11, name="Calibri", color="1F4E78")  # Increased from 10 to 11
+    class_cell.font = Font(bold=True, size=11, name="Calibri", color="1F4E78")
     class_cell.alignment = Alignment(horizontal="left", vertical="center")
-    ws.row_dimensions[4].height = 20  # Increased height
-    ws.row_dimensions[5].height = 18  # Increased height
+    ws.row_dimensions[4].height = 20
+    ws.row_dimensions[5].height = 18
 
     # Empty row for spacing
-    ws.row_dimensions[6].height = 10  # Increased spacing
+    ws.row_dimensions[6].height = 10
 
-    # Header styling - keep overall header centered but force specific headers left
+    # Header styling
     for cell in ws[header_row]:
         cell.font = HEADER_FONT
         cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False)
         cell.fill = HEADER_FILL
     ws.row_dimensions[header_row].height = 20
 
-    # Force MAT NO. and FULL NAME header alignment to LEFT
+    # Update MAT NO. header to college-specific label and align left
     mat_no_idx = 2
     full_name_idx = 3
+    ws.cell(row=header_row, column=mat_no_idx).value = college_config["mat_no_label"]
     ws.cell(row=header_row, column=mat_no_idx).alignment = Alignment(horizontal="left", vertical="center", indent=1)
     ws.cell(row=header_row, column=full_name_idx).alignment = Alignment(horizontal="left", vertical="center", indent=1)
 
@@ -673,20 +774,14 @@ def process_files():
     total_col_idx = 4 + len(score_cols)
     percent_col_idx = total_col_idx + 1
 
-    # Identify avg row
-    avg_row_num = None
-    for r in range(header_row + 1, ws.max_row + 1):
-        if ws.cell(row=r, column=mat_no_idx).value == "OVERALL AVERAGE":
-            avg_row_num = r
-            break
-
-    # Format data rows and force MAT NO./FULL NAME left alignment
+    # Format data rows
     for row in ws.iter_rows(min_row=header_row + 1, max_row=ws.max_row):
-        is_avg_row = (row[0].row == avg_row_num)
+        is_avg_row = (row[1].value == "OVERALL AVERAGE")  # Check MAT NO. column
         for cell in row:
             if cell.column == 1:  # S/N
                 if is_avg_row:
                     cell.value = ""
+                    cell.font = AVERAGE_FONT
                     cell.fill = AVERAGE_FILL
                 else:
                     cell.number_format = "0"
@@ -733,17 +828,17 @@ def process_files():
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.font = Font(size=10, name="Calibri")
 
-    # Apply autofit columns based on content (only data rows)
-    data_end_row = ws.max_row  # Store the end of data before adding summary
+    # Apply autofit columns
+    data_end_row = ws.max_row
     apply_autofit_columns(ws, header_row, data_end_row)
 
-    # ====================== CREATE SEPARATE DOCUMENTATION SECTION ======================
+    # Create documentation section
     last_row = create_document_sections(
         ws, total_students, avg_percentage, highest_percentage, lowest_percentage,
-        station_max_scores, total_max_score, data_end_row
+        total_max_score, data_end_row, college_config
     )
 
-    # Print setup - include the documentation section
+    # Print setup
     ws.print_area = f"A1:{last_col_letter}{last_row}"
     ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
     ws.page_setup.paperSize = ws.PAPERSIZE_A4
@@ -757,6 +852,7 @@ def process_files():
     print(f"\n📁 Files saved in: {output_dir}")
     print(f"\n📊 Summary: {total_students} students processed")
     print(f"   Average: {int(avg_percentage)}% | Highest: {int(highest_percentage)}% | Lowest: {int(lowest_percentage)}%")
+    print(f"   College: {college_config['name']}")
 
 
 if __name__ == "__main__":
