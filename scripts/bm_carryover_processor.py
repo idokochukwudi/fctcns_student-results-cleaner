@@ -87,16 +87,15 @@ print(f"🔧 BASE_DIR set to: {BASE_DIR}")
 # ============================================================
 def create_updated_zip_from_directory(temp_extract_dir, updated_zip_path):
     """
-    Create a ZIP file from a directory with proper error handling.
-
-    Args:
-        temp_extract_dir: Directory containing files to zip
-        updated_zip_path: Path for the output ZIP file
-
-    Returns:
-        bool: True if successful, False otherwise
+    FIXED VERSION: Create a ZIP file from a directory with proper error handling.
+    Ensures only ONE updated ZIP is created.
     """
     try:
+        # Remove existing ZIP if it exists to avoid duplicates
+        if os.path.exists(updated_zip_path):
+            os.remove(updated_zip_path)
+            print(f"🧹 Removed existing ZIP: {updated_zip_path}")
+
         with zipfile.ZipFile(updated_zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(temp_extract_dir):
                 for file in files:
@@ -108,7 +107,7 @@ def create_updated_zip_from_directory(temp_extract_dir, updated_zip_path):
         # Verify ZIP was created
         if os.path.exists(updated_zip_path) and os.path.getsize(updated_zip_path) > 0:
             print(
-                f"✅ SUCCESS: Created ZIP ({os.path.getsize(updated_zip_path):,} bytes)"
+                f"✅ SUCCESS: Created SINGLE updated ZIP ({os.path.getsize(updated_zip_path):,} bytes)"
             )
 
             # Verify mastersheet is in ZIP
@@ -135,23 +134,7 @@ def create_updated_zip_from_directory(temp_extract_dir, updated_zip_path):
     except Exception as zip_error:
         print(f"❌ Error creating ZIP: {zip_error}")
         traceback.print_exc()
-
-        # Try fallback method using shutil.make_archive
-        try:
-            print("🔄 Attempting fallback ZIP creation method...")
-            temp_zip_dir = tempfile.mkdtemp()
-            shutil.copytree(temp_extract_dir, os.path.join(temp_zip_dir, "content"))
-            shutil.make_archive(
-                updated_zip_path.replace(".zip", ""), "zip", temp_zip_dir
-            )
-            shutil.rmtree(temp_zip_dir)
-            print(f"✅ Created ZIP using fallback method")
-            return True
-
-        except Exception as fallback_error:
-            print(f"❌ Fallback ZIP creation also failed: {fallback_error}")
-            return False
-
+        return False
 
 # ============================================================
 # CRITICAL FIX 3: Optimized Course Variant Generation
@@ -1562,6 +1545,7 @@ def calculate_student_remarks(cu_passed, cu_failed, total_credits, gpa, student_
     """
     CRITICAL FIX: Calculate student remarks based on CURRENT performance.
     Override withdrawn status for students who passed all courses in resit.
+    INCLUDES PROBATION status as per NBTE standards.
     
     Args:
         cu_passed: Credits passed
@@ -1592,11 +1576,11 @@ def calculate_student_remarks(cu_passed, cu_failed, total_credits, gpa, student_
     
     # Has failures but passed ≥45%, assign RESIT or PROBATION based on GPA
     else:
+        # CRITICAL FIX: Include PROBATION status for students with GPA < 2.0
         remarks = "RESIT" if gpa >= 2.0 else "PROBATION"
         if student_had_carryover_update:
             print(f"  📝 CARRYOVER STUDENT {remarks}: GPA: {gpa}, {cu_failed} CU failed")
         return remarks
-
 
 # ============================================================
 # Mastersheet Update Functions (CRITICAL FIXES - BM-Compatible)
@@ -3112,7 +3096,7 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
 ):
     """
     COMPLETELY REWRITTEN VERSION - Enhanced matching and robust score updates
-    WITH ALL CRITICAL FIXES APPLIED
+    WITH ALL CRITICAL FIXES APPLIED INCLUDING CONSISTENT COLORING
     """
     print(f"\n{'='*80}")
     print(f"🔄 COMPLETELY REWRITTEN: UPDATING BM MASTERSHEET")
@@ -3324,14 +3308,6 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
 
         print(f"✅ Normalized {len(normalized_updates)} student updates")
 
-        # Print sample
-        if normalized_updates:
-            sample_key = list(normalized_updates.keys())[0]
-            sample_data = normalized_updates[sample_key]
-            print(f"📋 Sample: {sample_data['original_key']} ({sample_key})")
-            course_count = len(sample_data["courses"])
-            print(f" Courses to update: {course_count}")
-
         # ================================================================
         # PHASE 7: BUILD STUDENT ROW INDEX
         # ================================================================
@@ -3355,26 +3331,26 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
         print(f"✅ Indexed {len(student_rows)} students in mastersheet")
 
         # ================================================================
-        # PHASE 8: APPLY SCORE UPDATES WITH COMPREHENSIVE MATCHING
+        # PHASE 8: APPLY SCORE UPDATES WITH CONSISTENT COLORING
         # ================================================================
         print(f"\n{'='*80}")
-        print(f"📝 PHASE 8: APPLYING SCORE UPDATES")
+        print(f"📝 PHASE 8: APPLYING SCORE UPDATES WITH CONSISTENT COLORING")
         print(f"{'='*80}")
 
         students_updated = 0
         courses_updated = 0
         update_log = []
 
-        # ADD PROGRESS INDICATOR
+        # Progress indicator
         total_updates = len(normalized_updates)
         print(f"🎯 Processing {total_updates} students with progress indicators...")
 
         for idx, (exam_normalized, update_data) in enumerate(
             normalized_updates.items(), 1
         ):
-            # PROGRESS INDICATOR
+            # Progress indicator
             progress = (idx / total_updates) * 100
-            if progress % 10 == 0:  # Show progress every 10%
+            if progress % 10 == 0:
                 print(f"📊 Progress: {progress:.0f}% ({idx}/{total_updates})")
 
             original_exam_key = update_data["original_key"]
@@ -3409,19 +3385,22 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
                 # Update the score
                 ws.cell(row=row_idx, column=course_col).value = float(new_score)
 
-                # Apply styling based on pass/fail
+                # ═══════════════════════════════════════════════════════
+                # CRITICAL FIX: Apply consistent coloring based on pass/fail
+                # ═══════════════════════════════════════════════════════
                 cell = ws.cell(row=row_idx, column=course_col)
                 if new_score >= DEFAULT_PASS_THRESHOLD:
-                    # Purple for passed (BM specific)
+                    # GREEN for passed courses (consistent coloring)
                     cell.fill = PatternFill(
-                        start_color="E8DAEF", end_color="E8DAEF", fill_type="solid"
+                        start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"
                     )
+                    cell.font = Font(bold=True, color="006100")  # Dark green text
                 else:
-                    # Orange for failed
+                    # ORANGE for failed courses (consistent coloring)
                     cell.fill = PatternFill(
                         start_color="FFD580", end_color="FFD580", fill_type="solid"
                     )
-                cell.font = Font(bold=True)
+                    cell.font = Font(bold=True, color="8B4500")  # Dark orange text
 
                 status = "PASSED" if new_score >= DEFAULT_PASS_THRESHOLD else "FAILED"
                 msg = f"UPDATED: {original_exam} - {original_code}: {old_score} → {new_score} ({status})"
@@ -3458,7 +3437,7 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
             print(f"⚠️ Could not save log: {e}")
 
         # ================================================================
-        # PHASE 9: RECALCULATE ALL STUDENT RECORDS - CORRECTED GPA VERSION
+        # PHASE 9: RECALCULATE ALL STUDENT RECORDS
         # ================================================================
         print(f"\n🧮 PHASE 9: Recalculating student records with CORRECT GPA...")
 
@@ -3475,11 +3454,10 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
             ]
         )
 
-        print(f"🎯 Recalculating {total_students} student records with CORRECT GPA method...")
+        print(f"🎯 Recalculating {total_students} student records...")
 
-        # CRITICAL FIX: Track students who got updates from carryover processing
+        # Track students who got updates from carryover processing
         updated_students_set = set(normalized_updates.keys())
-        print(f"📊 Students with carryover updates: {len(updated_students_set)}")
 
         for row_idx in range(header_row + 1, ws.max_row + 1):
             try:
@@ -3489,18 +3467,15 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
                 if "SUMMARY" in str(exam_no).upper():
                     break
 
-                # PROGRESS INDICATOR
-                if recalc_count % 10 == 0:  # Show progress every 10 students
+                # Progress indicator
+                if recalc_count % 10 == 0:
                     progress = (recalc_count / total_students) * 100
-                    print(
-                        f"📊 Recalculation progress: {progress:.0f}% ({recalc_count}/{total_students})"
-                    )
+                    print(f"📊 Recalculation progress: {progress:.0f}% ({recalc_count}/{total_students})")
 
-                # Normalize exam number for checking if student was updated
                 exam_normalized = re.sub(r"[^A-Z0-9]", "", str(exam_no).strip().upper())
                 student_had_carryover_update = exam_normalized in updated_students_set
 
-                # FIXED: Collect all course scores for GPA calculation
+                # Collect all course scores for GPA calculation
                 scores = {}
                 for course_normalized, course_col in course_column_map.items():
                     score_value = ws.cell(row_idx, course_col).value
@@ -3510,12 +3485,12 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
                         except (ValueError, TypeError):
                             scores[course_normalized] = 0.0
 
-                # FIXED: Calculate GPA using CORRECT method
+                # Calculate GPA using CORRECT method
                 gpa, total_grade_points, total_credits, cu_passed, cu_failed = calculate_gpa_correctly(
-                    scores, course_units_dict, course_units_dict  # Using the same dict for both parameters
+                    scores, course_units_dict, course_units_dict
                 )
 
-                # Calculate average (for reference only)
+                # Calculate average
                 valid_scores = [score for score in scores.values() if score is not None]
                 average = round(sum(valid_scores) / len(valid_scores), 2) if valid_scores else 0.0
 
@@ -3526,9 +3501,7 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
                         original_course = course_code_to_header.get(course_normalized, course_normalized)
                         failed_courses.append(original_course)
 
-                # ═══════════════════════════════════════════════════════
-                # CRITICAL FIX: Use enhanced remarks calculation that properly overrides withdrawn status
-                # ═══════════════════════════════════════════════════════
+                # Calculate remarks with enhanced logic
                 remarks = calculate_student_remarks(
                     cu_passed, 
                     cu_failed, 
@@ -3537,7 +3510,7 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
                     student_had_carryover_update
                 )
 
-                # FIXED: Calculate CGPA for the current sheet if CGPA column exists
+                # Calculate CGPA
                 if exam_no in cgpa_data:
                     cgpa = calculate_cgpa(cgpa_data[exam_no], gpa, total_credits)
                 else:
@@ -3563,88 +3536,43 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
                 if "CGPA" in summary_columns:
                     ws.cell(row_idx, summary_columns["CGPA"]).value = cgpa
 
-                # DEBUG: Print sample calculations
-                if recalc_count < 3:  # Show first 3 students for verification
-                    print(f"🔍 SAMPLE GPA CALCULATION for {exam_no}:")
-                    print(f"   Total Grade Points: {total_grade_points}")
-                    print(f"   Total Credits: {total_credits}")
-                    print(f"   GPA: {gpa} (Correctly calculated)")
-                    print(f"   Average: {average} (For reference only)")
-                    print(f"   CU Passed: {cu_passed}, CU Failed: {cu_failed}")
-
                 recalc_count += 1
 
             except Exception as e:
                 print(f"⚠️ Error recalculating row {row_idx}: {e}")
                 continue
 
-        print(f"✅ Recalculated {recalc_count} student records with CORRECT GPA method")
-        print(
-            f"✅ Special handling applied for {len(updated_students_set)} carryover students"
-        )
+        print(f"✅ Recalculated {recalc_count} student records")
 
         # ================================================================
-        # PHASE 10-13: UPDATE OTHER SHEETS (calling existing functions)
+        # PHASE 10-13: UPDATE OTHER SHEETS
         # ================================================================
         print(f"\n📊 PHASE 10-13: Updating summary, CGPA, and analysis sheets...")
 
         try:
-            # Phase 10: Update summary section
-            print(f"\n📊 PHASE 10: Updating summary section...")
-            if "update_summary_section_fixed" in globals():
-                update_summary_section_fixed(ws, headers, header_row, course_columns)
-                print(f"✅ Summary section updated")
-            else:
-                print(f"⚠️ update_summary_section_fixed not found in module")
+            update_summary_section_fixed(ws, headers, header_row, course_columns)
+            print(f"✅ Summary section updated")
         except Exception as e:
             print(f"⚠️ Error updating summary: {e}")
-            import traceback
-
-            traceback.print_exc()
 
         try:
-            # Phase 11: Update CGPA_SUMMARY
-            print(f"\n📈 PHASE 11: Updating CGPA_SUMMARY sheet...")
-            if "update_cgpa_summary_sheet_fixed" in globals():
-                update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name)
-                print(f"✅ CGPA_SUMMARY updated")
-            else:
-                print(f"⚠️ update_cgpa_summary_sheet_fixed not found in module")
+            update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name)
+            print(f"✅ CGPA_SUMMARY updated")
         except Exception as e:
             print(f"⚠️ Error updating CGPA_SUMMARY: {e}")
-            import traceback
-
-            traceback.print_exc()
 
         try:
-            # Phase 12: Update ANALYSIS
-            print(f"\n📊 PHASE 12: Updating ANALYSIS sheet...")
-            if "update_analysis_sheet_fixed" in globals():
-                update_analysis_sheet_fixed(wb, semester_key, set_name)
-                print(f"✅ ANALYSIS updated")
-            else:
-                print(f"⚠️ update_analysis_sheet_fixed not found in module")
+            update_analysis_sheet_fixed(wb, semester_key, set_name)
+            print(f"✅ ANALYSIS updated")
         except Exception as e:
             print(f"⚠️ Error updating ANALYSIS: {e}")
-            import traceback
-
-            traceback.print_exc()
 
         try:
-            # Phase 13: Apply formatting and sorting
-            print(f"\n🎨 PHASE 13: Applying formatting and sorting...")
-            if "apply_complete_professional_formatting" in globals():
-                apply_complete_professional_formatting(
-                    wb, semester_key, header_row, set_name
-                )
-            if "apply_student_sorting_with_serial_numbers" in globals():
-                apply_student_sorting_with_serial_numbers(ws, header_row, headers)
+            apply_complete_professional_formatting(wb, semester_key, header_row, set_name)
+            apply_student_sorting_with_serial_numbers(ws, header_row, headers)
             print(f"✅ Formatting and sorting applied")
         except Exception as e:
             print(f"⚠️ Error applying formatting: {e}")
-            import traceback
-
-            traceback.print_exc()
 
         # ================================================================
         # FINAL: SAVE WORKBOOK
@@ -3662,7 +3590,7 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
             # Verify file integrity
             test_wb = load_workbook(mastersheet_path)
             test_wb.close()
-            print(f"✅ File integrity verified - can be opened")
+            print(f"✅ File integrity verified")
 
             print(f"\n{'='*80}")
             print(f"🎉 MASTERSHEET UPDATE COMPLETE!")
@@ -3670,7 +3598,6 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
             print(f"📊 Summary:")
             print(f" Students updated: {students_updated}/{len(normalized_updates)}")
             print(f" Courses updated: {courses_updated}")
-            print(f" Update log: {log_path}")
             print(f"{'='*80}")
 
             return True
@@ -3678,7 +3605,6 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
         except Exception as save_error:
             print(f"❌ Save error: {save_error}")
             import traceback
-
             traceback.print_exc()
 
             # Restore from backup
@@ -3692,7 +3618,6 @@ def update_mastersheet_with_recalculation_COMPLETE_FIX(
     except Exception as e:
         print(f"❌ Critical error: {e}")
         import traceback
-
         traceback.print_exc()
         return False
 
@@ -4242,19 +4167,19 @@ def process_carryover_results(
 ):
     """
     FIXED VERSION: Process BM carryover results with robust mastersheet reading
-    ALL CRITICAL FIXES APPLIED
+    ALL CRITICAL FIXES APPLIED - Consistent output, proper coloring, and correct ZIP management
     """
     print(f"\n🔄 FIXED BM VERSION: PROCESSING CARRYOVER FOR {semester_key}")
     print("=" * 60)
 
-    # CRITICAL FIX 5: Initialize variables early
+    # Initialize variables
     temp_mastersheet_path = None
     temp_dir = None
     updated_zip_path = None
     update_success = False
 
     try:
-        # CRITICAL FIX: Validate this is a BM semester
+        # Validate this is a BM semester
         if not is_bm_semester(semester_key):
             print(f"❌ ERROR: Semester '{semester_key}' is not a valid BM semester!")
             return False
@@ -4328,7 +4253,6 @@ def process_carryover_results(
 
         print(f"📖 Reading BM files...")
         resit_df = pd.read_excel(resit_file_path, header=0)
-        # DEBUG: Print resit file info
         print(f"📊 BM Resit file rows: {len(resit_df)}")
         print(f"📊 BM Resit file columns: {resit_df.columns.tolist()}")
         resit_exam_col = find_exam_number_column(resit_df)
@@ -4345,7 +4269,7 @@ def process_carryover_results(
             return False
 
         print(f"📖 Using BM sheet '{sheet_name}' for current semester {semester_key}")
-        # FIXED: Use the enhanced mastersheet reading function
+        # Use the enhanced mastersheet reading function
         mastersheet_df, mastersheet_exam_col = read_mastersheet_with_flexible_headers(
             temp_mastersheet_path, sheet_name
         )
@@ -4387,7 +4311,7 @@ def process_carryover_results(
 
         print(f"\n🎯 PROCESSING BM RESIT SCORES...")
 
-        # CRITICAL FIX 6: Add progress indicators
+        # CRITICAL FIX: Add progress indicators
         total_students = len(resit_df)
         print(f"🎯 Processing {total_students} students with progress indicators...")
 
@@ -4402,7 +4326,7 @@ def process_carryover_results(
                 if not exam_no or exam_no in ["NAN", "NONE", ""]:
                     continue
 
-                # FIXED: Use enhanced student matching
+                # Use enhanced student matching
                 student_data = find_student_in_mastersheet_fixed(
                     exam_no, mastersheet_df, mastersheet_exam_col
                 )
@@ -4577,12 +4501,6 @@ def process_carryover_results(
                 centralized_json = copy_json_to_centralized_location(
                     json_filepath, set_name, semester_key
                 )
-            # 5. Create carryover ZIP file
-            zip_path = os.path.join(
-                output_dir, f"BM_CARRYOVER_{set_name}_{semester_key}_{timestamp}.zip"
-            )
-            if create_carryover_zip(carryover_output_dir, zip_path):
-                print(f"✅ Final BM carryover ZIP created: {zip_path}")
 
             # ============================================
             # STEP 6: UPDATE ORIGINAL MASTERSHEET WITH ALL ENHANCEMENTS
@@ -4613,15 +4531,8 @@ def process_carryover_results(
                     )
                     original_zip_path = os.path.join(clean_dir_parent, latest_zip_name)
                     print(f"✅ Using latest result ZIP (persistent): {original_zip_path}")
-                    if not all_result_zips:
-                        print(f"❌ No original BM result ZIP found")
-                        return False
-                    latest_zip_name = max(
-                        all_result_zips,
-                        key=lambda f: os.path.getmtime(
-                            os.path.join(clean_dir_parent, f)
-                        ),
-                    )
+                    
+                    # Create updated ZIP name
                     match = re.search(r"UPDATED_(\d+)_", latest_zip_name)
                     current_count = int(match.group(1)) if match else 0
                     new_count = current_count + 1
@@ -4632,7 +4543,7 @@ def process_carryover_results(
                             r"UPDATED_\d+", f"UPDATED_{new_count}", latest_zip_name
                         )
                     updated_zip_path = os.path.join(clean_dir_parent, updated_zip_name)
-                    original_zip_path = os.path.join(clean_dir_parent, latest_zip_name)
+                    
                     print(f"✅ Found latest BM ZIP: {original_zip_path}")
                     # Extract the ZIP to temporary directory
                     temp_extract_dir = tempfile.mkdtemp()
@@ -4695,7 +4606,7 @@ def process_carryover_results(
                                     print(f"💾 Created BM backup: {backup_zip}")
                                 print(f"📦 Creating updated BM ZIP: {updated_zip_name}")
 
-                                # CRITICAL FIX 2: Use new robust ZIP creation function
+                                # CRITICAL FIX: Use new robust ZIP creation function
                                 zip_success = create_updated_zip_from_directory(
                                     temp_extract_dir, updated_zip_path
                                 )
@@ -4732,29 +4643,27 @@ def process_carryover_results(
                     traceback.print_exc()
                 
                 # ============================================================
-                # CRITICAL FIX: ZIP Creation at End of Processing
+                # CRITICAL FIX: Create FINAL CARRYOVER ZIP (only this one)
                 # ============================================================
 
-                # Create ZIP file from carryover results
+                # Create SINGLE carryover ZIP file from carryover results
                 if 'carryover_output_dir' in locals() and carryover_output_dir and os.path.exists(carryover_output_dir):
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    zip_filename = f"CARRYOVER_{set_name}_{semester_key}_{timestamp}.zip"
-                    zip_path = os.path.join(output_dir, zip_filename)
+                    carryover_zip_filename = f"BM_CARRYOVER_{set_name}_{semester_key}_{timestamp}.zip"
+                    carryover_zip_path = os.path.join(output_dir, carryover_zip_filename)
                     
-                    print(f"📦 Creating ZIP file: {zip_filename}")
+                    print(f"📦 Creating FINAL CARRYOVER ZIP file: {carryover_zip_filename}")
                     
-                    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    with zipfile.ZipFile(carryover_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                         for root, dirs, files in os.walk(carryover_output_dir):
                             for file in files:
-                                if file.lower().endswith(('.xlsx', '.csv', '.pdf', '.json')):
-                                    file_path = os.path.join(root, file)
-                                    arcname = os.path.relpath(file_path, carryover_output_dir)
-                                    zipf.write(file_path, arcname)
-                                    print(f"  ✅ Added to ZIP: {arcname}")
+                                file_path = os.path.join(root, file)
+                                arcname = os.path.relpath(file_path, carryover_output_dir)
+                                zipf.write(file_path, arcname)
+                                print(f"  ✅ Added to CARRYOVER ZIP: {arcname}")
                     
                     # Verify ZIP was created
-                    if os.path.exists(zip_path) and os.path.getsize(zip_path) > 100:
-                        print(f"✅ Successfully created ZIP: {zip_path} ({os.path.getsize(zip_path):,} bytes)")
+                    if os.path.exists(carryover_zip_path) and os.path.getsize(carryover_zip_path) > 100:
+                        print(f"✅ Successfully created CARRYOVER ZIP: {carryover_zip_path} ({os.path.getsize(carryover_zip_path):,} bytes)")
                         
                         # Clean up the carryover directory after zipping
                         try:
@@ -4763,11 +4672,17 @@ def process_carryover_results(
                         except Exception as e:
                             print(f"⚠️ Could not remove temporary directory: {e}")
                     else:
-                        print(f"❌ Failed to create valid ZIP file")
+                        print(f"❌ Failed to create valid CARRYOVER ZIP file")
                 
                 print(f"\n{'='*60}")
                 print(f"🎉 BM CARRYOVER PROCESSING COMPLETE WITH ALL ENHANCEMENTS!")
                 print(f"{'='*60}")
+                print(f"📊 Summary:")
+                print(f" Original ZIP: {os.path.basename(original_zip_path)}")
+                print(f" Carryover ZIP: {carryover_zip_filename}")
+                print(f" Updated ZIP: {updated_zip_name}")
+                print(f"{'='*60}")
+
                 return True
         else:
             print(f"❌ No BM carryover data found to process")
@@ -4777,7 +4692,7 @@ def process_carryover_results(
         traceback.print_exc()
         return False
     finally:
-        # CRITICAL FIX 5: Safe cleanup - variables are always defined
+        # Safe cleanup
         if temp_dir and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
             print(f"✅ Cleaned up BM temporary files")
@@ -4786,7 +4701,6 @@ def process_carryover_results(
             print(f"✅ BM UPDATED ZIP successfully created: {updated_zip_path}")
         else:
             print(f"⚠️ BM UPDATED ZIP was not created - check logs above")
-
 
 # ============================================================
 # Main Function

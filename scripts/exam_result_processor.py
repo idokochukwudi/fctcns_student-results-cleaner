@@ -653,9 +653,7 @@ def check_existing_carryover_files(raw_dir, set_name, semester_key):
 def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     """
     Create a CGPA summary sheet that aggregates GPA across all semesters.
-    FIXED: Added withdrawn status column and sorting by Cumulative CGPA
-    UPDATED: Added professional formatting with school name and title
-    UPDATED: Added probation status tracking
+    UPDATED: Professional column headings (Y1S1, Y1S2, Y2S1, Y2S2) and color-coded withdrawn status
     """
     try:
         print("📊 Creating CGPA Summary Sheet...")
@@ -665,6 +663,14 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
 
         # Collect CGPA data from all semesters
         cgpa_data = {}
+
+        # Map full semester names to abbreviated professional headings
+        semester_abbreviation_map = {
+            "ND-FIRST-YEAR-FIRST-SEMESTER": "Y1S1",
+            "ND-FIRST-YEAR-SECOND-SEMESTER": "Y1S2", 
+            "ND-SECOND-YEAR-FIRST-SEMESTER": "Y2S1",
+            "ND-SECOND-YEAR-SECOND-SEMESTER": "Y2S2"
+        }
 
         for sheet_name in wb.sheetnames:
             if sheet_name in SEMESTER_ORDER:
@@ -727,18 +733,21 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 ),
             }
 
-            # Add GPA for each semester and calculate cumulative
+            # Add GPA for each semester using abbreviated headings and calculate cumulative
             total_gpa = 0
             semester_count = 0
 
             for semester in SEMESTER_ORDER:
                 if semester in data["gpas"]:
-                    row[semester] = data["gpas"][semester]
+                    # Use abbreviated column name
+                    abbrev_semester = semester_abbreviation_map.get(semester, semester)
+                    row[abbrev_semester] = data["gpas"][semester]
                     if pd.notna(data["gpas"][semester]):
                         total_gpa += data["gpas"][semester]
                         semester_count += 1
                 else:
-                    row[semester] = None
+                    abbrev_semester = semester_abbreviation_map.get(semester, semester)
+                    row[abbrev_semester] = None
 
             # Calculate Cumulative CGPA
             row["CUMULATIVE CGPA"] = (
@@ -787,10 +796,10 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         date_cell.font = Font(italic=True, size=10)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        # Write header with correct terminology and probation history
+        # Write header with abbreviated semester names
         headers = (
-            ["EXAM NUMBER", "NAME", "PROBATION HISTORY"]
-            + SEMESTER_ORDER
+            ["EXAM NUMBER", "NAME", "PROBATION HISTORY"] 
+            + [semester_abbreviation_map.get(sem, sem) for sem in SEMESTER_ORDER]
             + ["CUMULATIVE CGPA", "WITHDRAWN"]
         )
         for col_idx, header in enumerate(headers, 1):
@@ -816,7 +825,9 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 bottom=Side(style="thin"),
             )
 
-        # Style data rows
+        # Style data rows with color coding for WITHDRAWN column
+        withdrawn_col_idx = headers.index("WITHDRAWN") + 1
+        
         for row in range(6, len(summary_df) + 6):
             # Alternate row coloring for better readability
             if row % 2 == 0:
@@ -835,6 +846,20 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                     top=Side(style="thin"),
                     bottom=Side(style="thin"),
                 )
+
+                # Color code WITHDRAWN column
+                if col == withdrawn_col_idx:
+                    withdrawn_value = str(cell.value).strip().upper()
+                    if withdrawn_value == "YES":
+                        cell.fill = PatternFill(
+                            start_color="FFC7CE", end_color="FFC7CE", fill_type="solid"
+                        )  # Light red for withdrawn
+                        cell.font = Font(bold=True, color="9C0006")  # Dark red text
+                    elif withdrawn_value == "NO":
+                        cell.fill = PatternFill(
+                            start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"
+                        )  # Light green for not withdrawn
+                        cell.font = Font(bold=True, color="006100")  # Dark green text
 
                 # Center align numeric and code columns
                 if (
@@ -900,7 +925,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
 
         wb.save(mastersheet_path)
         print(
-            "✅ CGPA Summary sheet created successfully with professional formatting and probation tracking"
+            "✅ CGPA Summary sheet created successfully with professional column headings and color-coded withdrawn status"
         )
 
         return summary_df
@@ -908,7 +933,6 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     except Exception as e:
         print(f"❌ Error creating CGPA summary sheet: {e}")
         return None
-
 
 def create_analysis_sheet(mastersheet_path, timestamp):
     """

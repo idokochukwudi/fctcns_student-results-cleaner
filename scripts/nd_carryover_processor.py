@@ -1496,7 +1496,7 @@ def ensure_required_sheets_exist(wb):
 
 
 def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
-    """Update CGPA_SUMMARY sheet - COMPLETELY FIXED VERSION"""
+    """Update CGPA_SUMMARY sheet - COMPLETELY FIXED VERSION with professional headers and color coding"""
     from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
     from openpyxl.utils import get_column_letter
     from datetime import datetime
@@ -1577,18 +1577,18 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
     cgpa_ws.row_dimensions[5].height = 5
 
     # ===================================================================
-    # STEP 2: CREATE COLUMN HEADERS
+    # STEP 2: CREATE COLUMN HEADERS WITH PROFESSIONAL NAMES
     # ===================================================================
 
-    # Row 6: Column Headers
+    # Row 6: Column Headers - CHANGED TO PROFESSIONAL ABBREVIATIONS
     headers = [
         "S/N",
         "EXAM NUMBER",
         "NAME",
-        "Semester 1",
-        "Semester 2",
-        "Semester 3",
-        "Semester 4",
+        "Y1S1",  # Changed from "Semester 1"
+        "Y1S2",  # Changed from "Semester 2" 
+        "Y2S1",  # Changed from "Semester 3"
+        "Y2S2",  # Changed from "Semester 4"
         "CGPA",
         "WITHDRAWN",
     ]
@@ -1795,6 +1795,14 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
         start_color="FFE6E6", end_color="FFE6E6", fill_type="solid"
     )
 
+    # Color coding for withdrawn column - ADDED COLOR CODING
+    withdrawn_yes_fill = PatternFill(
+        start_color="FFCCCB", end_color="FFCCCB", fill_type="solid"  # Light red for "Yes"
+    )
+    withdrawn_no_fill = PatternFill(
+        start_color="90EE90", end_color="90EE90", fill_type="solid"  # Light green for "No"
+    )
+
     # CRITICAL FIX: Proper serial numbers from 1 to n
     serial_number = 1
 
@@ -1826,16 +1834,15 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
         cell.fill = row_fill
         cell.alignment = Alignment(horizontal="left", vertical="center")
 
-        # Semester GPAs
-        for col_idx, sem_key in enumerate(
-            [
-                "ND-FIRST-YEAR-FIRST-SEMESTER",
-                "ND-FIRST-YEAR-SECOND-SEMESTER",
-                "ND-SECOND-YEAR-FIRST-SEMESTER",
-                "ND-SECOND-YEAR-SECOND-SEMESTER",
-            ],
-            4,
-        ):
+        # Semester GPAs - UPDATED MAPPING TO NEW HEADERS
+        semester_mapping = {
+            "ND-FIRST-YEAR-FIRST-SEMESTER": 4,  # Y1S1
+            "ND-FIRST-YEAR-SECOND-SEMESTER": 5,  # Y1S2
+            "ND-SECOND-YEAR-FIRST-SEMESTER": 6,  # Y2S1
+            "ND-SECOND-YEAR-SECOND-SEMESTER": 7,  # Y2S2
+        }
+
+        for sem_key, col_idx in semester_mapping.items():
             gpa_value = s["gpas"].get(sem_key, "")
             cell = cgpa_ws.cell(row, col_idx, value=gpa_value)
             cell.border = data_border
@@ -1852,15 +1859,22 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
         cell.number_format = "0.00"
         cell.font = Font(bold=True)
 
-        # Withdrawn status - CRITICAL FIX: Show "Yes" for withdrawn students
+        # Withdrawn status - CRITICAL FIX: Show "Yes" for withdrawn students with COLOR CODING
         withdrawn_status = "Yes" if s["withdrawn"] else "No"
         cell = cgpa_ws.cell(row, 9, value=withdrawn_status)
         cell.border = data_border
         cell.fill = row_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # APPLY COLOR CODING BASED ON WITHDRAWN STATUS
         if s["withdrawn"]:
+            cell.fill = withdrawn_yes_fill  # Light red for "Yes"
             cell.font = Font(bold=True, color="FF0000")
-            print(f" ✅ Marked {s['exam_no']} as WITHDRAWN in CGPA_SUMMARY")
+            print(f" ✅ Marked {s['exam_no']} as WITHDRAWN (colored red) in CGPA_SUMMARY")
+        else:
+            cell.fill = withdrawn_no_fill  # Light green for "No"
+            cell.font = Font(bold=True, color="006400")  # Dark green text
+            
+        cell.alignment = Alignment(horizontal="center", vertical="center")
 
         row += 1
 
@@ -1960,10 +1974,10 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
     cgpa_ws.column_dimensions["A"].width = 8  # S/N
     cgpa_ws.column_dimensions["B"].width = 18  # EXAM NUMBER
     cgpa_ws.column_dimensions["C"].width = 35  # NAME
-    cgpa_ws.column_dimensions["D"].width = 12  # Semester 1
-    cgpa_ws.column_dimensions["E"].width = 12  # Semester 2
-    cgpa_ws.column_dimensions["F"].width = 12  # Semester 3
-    cgpa_ws.column_dimensions["G"].width = 12  # Semester 4
+    cgpa_ws.column_dimensions["D"].width = 10  # Y1S1 (reduced from 12)
+    cgpa_ws.column_dimensions["E"].width = 10  # Y1S2 (reduced from 12)
+    cgpa_ws.column_dimensions["F"].width = 10  # Y2S1 (reduced from 12)
+    cgpa_ws.column_dimensions["G"].width = 10  # Y2S2 (reduced from 12)
     cgpa_ws.column_dimensions["H"].width = 12  # CGPA
     cgpa_ws.column_dimensions["I"].width = 12  # WITHDRAWN
 
@@ -1979,6 +1993,8 @@ def update_cgpa_summary_sheet_fixed(wb, semester_key, header_row, set_name):
     print(
         f" ✅ Withdrawn students properly marked: {[s['exam_no'] for s in withdrawn_list]}"
     )
+    print(f" ✅ Professional headers applied: Y1S1, Y1S2, Y2S1, Y2S2")
+    print(f" ✅ Color coding applied: Green for 'No', Red for 'Yes' in withdrawn column")
 
 
 def update_cgpa_summary_with_withdrawn(wb, withdrawn_students):
