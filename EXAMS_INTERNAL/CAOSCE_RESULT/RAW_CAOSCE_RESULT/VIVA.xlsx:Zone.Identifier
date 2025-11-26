@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=http://192.168.0.253:8080/mod/feedback/show_entries.php?id=16
+HostUrl=http://192.168.0.253:8080/mod/feedback/show_entries.php?sesskey=K8YvjQJuSP&download=excel&id=16

@@ -388,67 +388,65 @@ def normalize_course_name(name):
 
 
 def find_best_course_match(column_name, course_map):
-    """Find the best matching course using enhanced matching algorithm."""
+    """Find the best matching course using enhanced matching algorithm.
+    UPDATED: First try matching as code (handles headers like 'NUR221' or 'NUR221_CA').
+    """
     if not isinstance(column_name, str):
         return None
-
     normalized_column = normalize_course_name(column_name)
-
-    # First try exact match
+    # NEW: Extract potential code (strip suffix like '_ca' if present)
+    if ' ' in normalized_column:
+        potential_code = normalized_column.split(' ')[0]
+    elif '_' in normalized_column:
+        potential_code = normalized_column.split('_')[0]
+    else:
+        potential_code = normalized_column
+    potential_code = re.sub(r"[^a-z0-9]", "", potential_code)  # Clean to alphanumeric
+    
+    # NEW: Create reverse map for code lookup (case-insensitive)
+    code_to_info = {course_info["code"].lower(): course_info for course_info in course_map.values()}
+    
+    # NEW: Check if potential_code matches a known course code
+    if potential_code in code_to_info:
+        return code_to_info[potential_code]
+    
+    # Existing: exact match on normalized title
     if normalized_column in course_map:
         return course_map[normalized_column]
-
-    # Try partial matches with higher priority
+    
+    # Existing: partial/contained matches
     for course_norm, course_info in course_map.items():
-        # Check if one is contained in the other
         if course_norm in normalized_column or normalized_column in course_norm:
             return course_info
-
-    # Try word-based matching
+    
+    # Existing: word-based matching
     column_words = set(normalized_column.split())
     best_match = None
     best_score = 0
-
     for course_norm, course_info in course_map.items():
         course_words = set(course_norm.split())
         common_words = column_words.intersection(course_words)
-
         if common_words:
             score = len(common_words)
-            # Bonus for matching key words
-            key_words = [
-                "foundation",
-                "nursing",
-                "emergency",
-                "care",
-                "communication",
-                "anatomy",
-                "physiology",
-            ]
+            key_words = ["foundation", "nursing", "emergency", "care", "communication", "anatomy", "physiology"]
             for word in key_words:
                 if word in column_words and word in course_words:
                     score += 2
-
             if score > best_score:
                 best_score = score
                 best_match = course_info
-
-    # Require at least 2 common words or 1 key word with good match
     if best_match and best_score >= 2:
         return best_match
-
-    # Final fallback: use difflib for fuzzy matching
+    
+    # Existing: fuzzy matching fallback
     best_match = None
     best_ratio = 0
-
     for course_norm, course_info in course_map.items():
         ratio = difflib.SequenceMatcher(None, normalized_column, course_norm).ratio()
-        if ratio > best_ratio and ratio > 0.6:  # Lower threshold for fuzzy matching
+        if ratio > best_ratio and ratio > 0.6:
             best_ratio = ratio
             best_match = course_info
-
     return best_match
-
 
 # ----------------------------
 # Carryover Management Functions - UPDATED: No enhanced formatting

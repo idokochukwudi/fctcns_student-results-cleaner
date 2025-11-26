@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=http://192.168.0.253:8080/mod/quiz/report.php?id=14&mode=overview&attempts=enrolled_with&onlygraded&onlyregraded=0&slotmarks=1
+HostUrl=http://192.168.0.253:8080/mod/quiz/report.php?sesskey=K8YvjQJuSP&download=excel&id=14&mode=overview&attempts=enrolled_with&onlygraded=&onlyregraded=0&slotmarks=1
