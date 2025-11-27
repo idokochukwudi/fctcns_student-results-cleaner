@@ -295,7 +295,7 @@ def load_candidate_batches(folder, batch_id=None):
             ],
         )
         phone_col = find_column_by_names(
-            cdf, ["phone1", "phone", "phone number", "PHONE", "Mobile", "PhoneNumber"]
+            cdf, ["phone1", "phone", "phone number", "PHONE", "Mobile", "PhoneNumber", "Phone No"]
         )
         state_col = find_column_by_names(
             cdf,
@@ -418,23 +418,47 @@ def format_excel_sheet(
     apply_state_colors=True,
     highlight_passing_scores=True,
     title_row=None,
+    document_heading=None,
 ):
     ws = wb[ws_name]
-    header_row = 1 if title_row is None else 2
+    header_row = 1 if title_row is None and document_heading is None else (2 if document_heading is None else 3)
+    
+    # Apply document heading if provided
+    if document_heading is not None:
+        # Insert rows for heading and date/time
+        ws.insert_rows(1)
+        ws.insert_rows(1)
+        
+        # Add document heading
+        ws.cell(row=1, column=1, value=document_heading)
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(cleaned.columns))
+        heading_cell = ws.cell(row=1, column=1)
+        heading_cell.font = Font(bold=True, size=16)
+        heading_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Add date and time
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ws.cell(row=2, column=1, value=f"Date and Time: {current_datetime}")
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(cleaned.columns))
+        datetime_cell = ws.cell(row=2, column=1)
+        datetime_cell.font = Font(bold=True, size=12)
+        datetime_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Apply title row formatting if provided
+    if title_row is not None:
+        title_row_num = 3 if document_heading is not None else 1
+        if document_heading is None:
+            ws.insert_rows(1)
+        ws.cell(row=title_row_num, column=1, value=title_row)
+        ws.merge_cells(start_row=title_row_num, start_column=1, end_row=title_row_num, end_column=len(cleaned.columns))
+        title_cell = ws.cell(row=title_row_num, column=1)
+        title_cell.font = Font(bold=True, size=14)
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
     header_font = Font(bold=True, size=12)
     for cell in ws[header_row]:
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    # Apply title row formatting if provided
-    if title_row is not None:
-        for cell in ws[1]:
-            cell.font = Font(bold=True, size=14)
-            cell.alignment = Alignment(horizontal="center", vertical="center")
-        ws.merge_cells(
-            start_row=1, start_column=1, end_row=1, end_column=len(cleaned.columns)
-        )
-        ws.cell(row=1, column=1).value = title_row
 
     if "APPLICATION ID" in cleaned.columns:
         try:
@@ -455,8 +479,11 @@ def format_excel_sheet(
 
     thin = Side(border_style="thin", color="000000")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    
+    # Apply borders to all cells including heading and title rows
+    start_border_row = 1
     for r in ws.iter_rows(
-        min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+        min_row=start_border_row, max_row=ws.max_row, min_col=1, max_col=ws.max_column
     ):
         for cell in r:
             cell.border = border
@@ -1122,11 +1149,14 @@ def process_file(
     if appid_col and appid_col != fullname_col:
         df.rename(columns={appid_col: "APPLICATION ID"}, inplace=True)
 
+    # Dynamically look for phone number column with more variations
     phone_col = find_column_by_names(
-        df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"]
+        df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber", "Phone No", "PHONE NUMBER", "Phone No."]
     )
     if phone_col:
         df.rename(columns={phone_col: "PHONE NUMBER"}, inplace=True)
+        # Clean phone numbers immediately after finding the column
+        df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
     city_col = find_column_by_names(
         df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"]
@@ -1149,7 +1179,7 @@ def process_file(
 
     if "FULL NAME" not in df.columns:
         df["FULL NAME"] = pd.NA
-    if "PHONE NUMBER" in df.columns:
+    if "PHONE NUMBER" not in df.columns:
         df["PHONE NUMBER"] = pd.NA
     if "STATE" not in df.columns:
         df["STATE"] = pd.NA
@@ -1186,7 +1216,9 @@ def process_file(
         print(f"No valid rows remain after cleaning {fname}; skipping file.")
         return None, None, None, None
 
-    df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
+    # Ensure phone numbers are cleaned (in case they weren't cleaned earlier)
+    if "PHONE NUMBER" in df.columns:
+        df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
     df.sort_values(
         by=["STATE", "_ScoreNum"],
@@ -1237,7 +1269,10 @@ def process_file(
     wb = load_workbook(out_xlsx)
     ws = wb.active
     ws.title = "Results"
-    format_excel_sheet(wb, "Results", cleaned, {}, score_header, pass_threshold)
+    
+    # Add document heading
+    document_heading = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA\nPOST UTME RESULT"
+    format_excel_sheet(wb, "Results", cleaned, {}, score_header, pass_threshold, document_heading=document_heading)
 
     absent_df, mismatch_df = create_analysis_and_charts(
         wb,
@@ -1302,11 +1337,14 @@ def process_file_for_unsorted(path):
     if appid_col and appid_col != fullname_col:
         df.rename(columns={appid_col: "APPLICATION ID"}, inplace=True)
 
+    # Dynamically look for phone number column with more variations
     phone_col = find_column_by_names(
-        df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber"]
+        df, ["Phone", "Phone number", "PHONE", "Mobile", "PhoneNumber", "Phone No", "PHONE NUMBER", "Phone No."]
     )
     if phone_col:
         df.rename(columns={phone_col: "PHONE NUMBER"}, inplace=True)
+        # Clean phone numbers immediately after finding the column
+        df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
     city_col = find_column_by_names(
         df, ["City/town", "City /town", "City", "Town", "State of Origin", "STATE"]
@@ -1329,7 +1367,7 @@ def process_file_for_unsorted(path):
 
     if "FULL NAME" not in df.columns:
         df["FULL NAME"] = pd.NA
-    if "PHONE NUMBER" in df.columns:
+    if "PHONE NUMBER" not in df.columns:
         df["PHONE NUMBER"] = pd.NA
     if "STATE" not in df.columns:
         df["STATE"] = pd.NA
@@ -1368,7 +1406,9 @@ def process_file_for_unsorted(path):
         )
         return None, None, None
 
-    df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
+    # Ensure phone numbers are cleaned (in case they weren't cleaned earlier)
+    if "PHONE NUMBER" in df.columns:
+        df["PHONE NUMBER"] = df["PHONE NUMBER"].apply(clean_phone_value)
 
     out_cols = ["FULL NAME"]
     if "APPLICATION ID" in df.columns:
@@ -1521,6 +1561,8 @@ def combine_batches(
                 return
 
             wb_unsorted = load_workbook(out_unsorted_xlsx)
+            # Add document heading to unsorted results
+            document_heading = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA\nPOST UTME RESULT"
             format_excel_sheet(
                 wb_unsorted,
                 "Unsorted Results",
@@ -1530,6 +1572,7 @@ def combine_batches(
                 pass_threshold,
                 apply_state_colors=False,
                 highlight_passing_scores=False,
+                document_heading=document_heading,
             )
             for batch_id, batch_df in batch_sheets.items():
                 safe_batch_id = re.sub(r"[^\w\s]", "_", batch_id)[:31]
@@ -1544,6 +1587,7 @@ def combine_batches(
                     apply_state_colors=False,
                     highlight_passing_scores=False,
                     title_row=title,
+                    document_heading=document_heading,
                 )
             wb_unsorted.save(out_unsorted_xlsx)
             print(
@@ -1627,8 +1671,11 @@ def combine_batches(
     wb = load_workbook(out_xlsx)
     ws = wb.active
     ws.title = "Results"
+    
+    # Add document heading
+    document_heading = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA\nPOST UTME RESULT"
     format_excel_sheet(
-        wb, "Results", combined_cleaned, {}, score_header, pass_threshold
+        wb, "Results", combined_cleaned, {}, score_header, pass_threshold, document_heading=document_heading
     )
 
     full_candidates_df, full_batch_id_map, full_numeric_to_full = (

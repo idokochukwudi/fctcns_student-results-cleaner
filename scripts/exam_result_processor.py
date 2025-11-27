@@ -7,7 +7,9 @@ WITH UPGRADE FUNCTIONALITY FIXES APPLIED
 WITH SPACING FIX FOR COURSE TITLES
 WITH ROW HEIGHT AND COLUMN WIDTH FIXES APPLIED
 WITH DYNAMIC TITLE NAMING AND ANALYSIS SUMMARY FIXES
+WITH CGPA RECALCULATION TO 4.0 SCALE AND SORTING FIXES
 """
+
 from openpyxl.cell import MergedCell
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl import load_workbook, Workbook
@@ -113,6 +115,9 @@ UPGRADE_MAX = 49
 
 # Global carryover tracker
 CARRYOVER_STUDENTS = {}
+
+# Global inactive students tracker (kept for internal tracking but not displayed)
+INACTIVE_STUDENTS = {}
 
 def is_web_mode():
     """Check if running in web mode (file upload)"""
@@ -246,6 +251,133 @@ SEMESTER_ORDER = [
 # Global student tracker
 STUDENT_TRACKER = {}
 WITHDRAWN_STUDENTS = {}
+
+# ----------------------------
+# NEW: Inactive Student Detection Functions - FIXED VERSION
+# ----------------------------
+def initialize_inactive_students_tracker():
+    """Initialize the global inactive students tracker."""
+    global INACTIVE_STUDENTS
+    INACTIVE_STUDENTS = {}
+
+def identify_inactive_students():
+    """
+    Identify students who were not withdrawn but didn't sit for subsequent semester examinations.
+    These students appear in earlier semesters but are missing from later ones, yet have status in CGPA summary.
+    FIXED: Properly track names and all missing semesters
+    """
+    global INACTIVE_STUDENTS, STUDENT_TRACKER, WITHDRAWN_STUDENTS
+    
+    print(f"\n🔍 IDENTIFYING INACTIVE STUDENTS (Not Withdrawn but Missing from Subsequent Semesters)")
+    print("=" * 80)
+    
+    inactive_students = {}
+    
+    # Track all semesters we've processed
+    all_processed_semesters = set()
+    for student_data in STUDENT_TRACKER.values():
+        all_processed_semesters.update(student_data["semesters_present"])
+    
+    # Sort semesters in processing order
+    processed_semesters_ordered = [sem for sem in SEMESTER_ORDER if sem in all_processed_semesters]
+    
+    if len(processed_semesters_ordered) < 2:
+        print("ℹ️ Need at least 2 semesters to identify inactive students")
+        return {}
+    
+    print(f"📊 Processed semesters in order: {processed_semesters_ordered}")
+    
+    for exam_no, student_data in STUDENT_TRACKER.items():
+        # Skip withdrawn students
+        if exam_no in WITHDRAWN_STUDENTS:
+            continue
+            
+        semesters_present = student_data["semesters_present"]
+        first_semester = student_data["first_seen"]
+        last_semester = student_data["last_seen"]
+        
+        # Check if student is missing any semesters between first and last appearance
+        first_index = processed_semesters_ordered.index(first_semester)
+        last_index = processed_semesters_ordered.index(last_semester)
+        
+        expected_semesters = processed_semesters_ordered[first_index:last_index + 1]
+        missing_semesters = [sem for sem in expected_semesters if sem not in semesters_present]
+        
+        if missing_semesters:
+            # FIX 1: Ensure name is properly captured
+            student_name = student_data.get("name", "Unknown")
+            if student_name == "Unknown" and "name" in student_data:
+                student_name = student_data["name"]
+                
+            inactive_students[exam_no] = {
+                "name": student_name,
+                "first_semester": first_semester,
+                "last_semester": last_semester,
+                "semesters_present": semesters_present,
+                "missing_semesters": missing_semesters,  # FIX 2: Store all missing semesters
+                "status": student_data.get("status", "Active"),
+                "current_gpa": student_data.get("current_gpa", "N/A"),
+                "cgpa_status": student_data.get("cgpa_status", "N/A"),
+                "identified_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+            print(f"⚠️ INACTIVE: {exam_no} - {student_name} - Present in {len(semesters_present)} semesters, missing {len(missing_semesters)}: {missing_semesters}")
+    
+    # Also check for students who have CGPA status but are missing from recent semesters
+    for exam_no, student_data in STUDENT_TRACKER.items():
+        if exam_no in inactive_students or exam_no in WITHDRAWN_STUDENTS:
+            continue
+            
+        # Check if student has CGPA data but is missing from the most recent semester
+        if student_data.get("has_cgpa_data", False):
+            most_recent_semester = processed_semesters_ordered[-1]
+            if most_recent_semester not in student_data["semesters_present"]:
+                # FIX 3: Check if student already in inactive list and append missing semester
+                if exam_no in inactive_students:
+                    # Add to existing missing semesters if not already there
+                    if most_recent_semester not in inactive_students[exam_no]["missing_semesters"]:
+                        inactive_students[exam_no]["missing_semesters"].append(most_recent_semester)
+                else:
+                    # Create new entry
+                    student_name = student_data.get("name", "Unknown")
+                    if student_name == "Unknown" and "name" in student_data:
+                        student_name = student_data["name"]
+                        
+                    inactive_students[exam_no] = {
+                        "name": student_name,
+                        "first_semester": student_data["first_seen"],
+                        "last_semester": student_data["last_seen"],
+                        "semesters_present": student_data["semesters_present"],
+                        "missing_semesters": [most_recent_semester],
+                        "status": student_data.get("status", "Active"),
+                        "current_gpa": student_data.get("current_gpa", "N/A"),
+                        "cgpa_status": student_data.get("cgpa_status", "Active in CGPA"),
+                        "identified_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                print(f"🎓 CGPA ACTIVE BUT MISSING: {exam_no} - {student_name} - Has CGPA but missing from {most_recent_semester}")
+    
+    INACTIVE_STUDENTS = inactive_students
+    print(f"\n📊 INACTIVE STUDENTS SUMMARY:")
+    print(f" Total inactive students identified: {len(INACTIVE_STUDENTS)}")
+    
+    # Breakdown by type
+    cgpa_active_count = sum(1 for s in inactive_students.values() if s.get("cgpa_status") == "Active in CGPA")
+    regular_inactive_count = len(inactive_students) - cgpa_active_count
+    
+    print(f" - Regular inactive (missing intermediate semesters): {regular_inactive_count}")
+    print(f" - CGPA active but missing from recent semester: {cgpa_active_count}")
+    
+    return inactive_students
+
+def abbreviate_semester_name(semester_name):
+    """Abbreviate semester names to Y1S1, Y1S2, Y2S1, Y2S2 format"""
+    abbreviations = {
+        "ND-FIRST-YEAR-FIRST-SEMESTER": "Y1S1",
+        "ND-FIRST-YEAR-SECOND-SEMESTER": "Y1S2",
+        "ND-SECOND-YEAR-FIRST-SEMESTER": "Y2S1",
+        "ND-SECOND-YEAR-SECOND-SEMESTER": "Y2S2"
+    }
+    return abbreviations.get(semester_name, semester_name)
 
 # ----------------------------
 # NOT REG Detection and Handling Functions
@@ -735,7 +867,50 @@ def check_existing_carryover_files(raw_dir, set_name, semester_key):
 
 # ----------------------------
 # CGPA Tracking Functions - FIXED: Proper GPA vs CGPA terminology
+# UPDATED: Recalculated for 4.0 scale and proper sorting
 # ----------------------------
+def get_grade_point(score):
+    """Convert score to grade point for GPA calculation - ND 4.0 SCALE."""
+    try:
+        score = float(score)
+        if score >= 70:
+            return 4.0  # A
+        elif score >= 60:
+            return 3.0  # B
+        elif score >= 50:
+            return 2.0  # C
+        elif score >= 45:
+            return 1.0  # D
+        else:
+            return 0.0  # F
+    except BaseException:
+        return 0.0
+
+def calculate_cumulative_cgpa(student_data, current_gpa, current_credits):
+    """
+    Calculate Cumulative CGPA based on all previous semesters and current semester.
+    UPDATED: For 4.0 scale
+    """
+    if not student_data:
+        return current_gpa
+        
+    total_grade_points = 0.0
+    total_credits = 0
+    
+    # Add previous semesters
+    for prev_gpa, prev_credits in zip(student_data["gpas"], student_data["credits"]):
+        total_grade_points += prev_gpa * prev_credits
+        total_credits += prev_credits
+        
+    # Add current semester
+    total_grade_points += current_gpa * current_credits
+    total_credits += current_credits
+    
+    if total_credits > 0:
+        return round(total_grade_points / total_credits, 2)
+    else:
+        return current_gpa
+
 def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     """
     Create a CGPA summary sheet that aggregates GPA across all semesters.
@@ -746,6 +921,10 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     UPDATED: Added CLASS OF AWARD column with the specified criteria
     FIXED: Dynamic GPA column detection and proper data extraction
     UPDATED: Auto-fit column width for all columns and subtle color coding for CLASS OF AWARD
+    UPDATED: INACTIVE class of award for students with less than 4 valid semester GPAs
+    UPDATED: Recalculated all GPAs for 4.0 scale and proper sorting
+    FIXED: Freeze headings (rows 1-5), proper serial numbering, and auto-fit columns
+    UPDATED: NAME and PROBATION HISTORY left aligned, abbreviated probation history
     """
     try:
         print("📊 Creating CGPA Summary Sheet...")
@@ -803,7 +982,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                             
                             if not gpa_col:
                                 continue
-                                
+                            
                             # Validate that we have actual data in these columns
                             valid_students = 0
                             sample_gpas = []
@@ -880,24 +1059,35 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                                         "probation_semesters": [],
                                     }
                                 
-                                # Extract GPA value
+                                # Extract GPA value and convert to 4.0 scale if needed
                                 gpa_value = row[gpa_col]
                                 if pd.notna(gpa_value) and str(gpa_value).strip() != "":
                                     try:
                                         gpa_float = float(gpa_value)
-                                        if 0 <= gpa_float <= 5.0:  # Valid GPA range
-                                            cgpa_data[exam_no]["gpas"][sheet_name] = gpa_float
+                                        # Convert from 5.0 scale to 4.0 scale if necessary
+                                        if gpa_float > 4.0:  # Assume it's in 5.0 scale
+                                            gpa_float = (gpa_float / 5.0) * 4.0
+                                        if 0 <= gpa_float <= 4.0:  # Valid GPA range for 4.0 scale
+                                            cgpa_data[exam_no]["gpas"][sheet_name] = round(gpa_float, 2)
                                             students_found += 1
                                             semesters_with_data.add(sheet_name)
+                                            
+                                            # Update student tracker with CGPA data
+                                            if exam_no in STUDENT_TRACKER:
+                                                STUDENT_TRACKER[exam_no]["has_cgpa_data"] = True
+                                                STUDENT_TRACKER[exam_no]["current_gpa"] = gpa_float
+                                                STUDENT_TRACKER[exam_no]["cgpa_status"] = "Active in CGPA"
                                     except (ValueError, TypeError):
                                         continue
                                 
-                                # Track probation status
+                                # Track probation status - ABBREVIATE SEMESTER NAMES
                                 if remarks_col and pd.notna(row.get(remarks_col)):
                                     remarks = str(row[remarks_col])
                                     if (remarks == "Probation" and 
                                         sheet_name not in cgpa_data[exam_no]["probation_semesters"]):
-                                        cgpa_data[exam_no]["probation_semesters"].append(sheet_name)
+                                        # Use abbreviated semester name for probation history
+                                        abbrev_semester = semester_abbreviation_map.get(sheet_name, sheet_name)
+                                        cgpa_data[exam_no]["probation_semesters"].append(abbrev_semester)
                         
                         print(f"📊 Extracted GPA data for {students_found} students in {sheet_name}")
                         
@@ -962,31 +1152,55 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             )
             row["CUMULATIVE CGPA"] = cumulative_cgpa
             
-            # Calculate CLASS OF AWARD based on the specified criteria
-            if cumulative_cgpa >= 4.5:
-                class_of_award = "Distinction"
-            elif cumulative_cgpa >= 3.5:
-                class_of_award = "Upper Credit"
-            elif cumulative_cgpa >= 2.5:
-                class_of_award = "Lower Credit"
-            elif cumulative_cgpa >= 2.0:
-                class_of_award = "Pass"
+            # FIX 1: Calculate CLASS OF AWARD with WITHDRAWN check FIRST
+            is_withdrawn = is_student_withdrawn(exam_no)
+            valid_semester_count = semester_count  # Count of semesters with valid GPA data
+
+            # CRITICAL: Check withdrawal status FIRST
+            if is_withdrawn:
+                class_of_award = "WITHDRAWN"  # Withdrawn students should show WITHDRAWN, not Pass/Fail
+            elif not is_withdrawn and valid_semester_count < 4:
+                class_of_award = "INACTIVE"
             else:
-                class_of_award = "Fail"
+                # Normal award calculation based on CGPA (4.0 scale)
+                if cumulative_cgpa >= 3.5:
+                    class_of_award = "Distinction"
+                elif cumulative_cgpa >= 3.0:
+                    class_of_award = "Upper Credit"
+                elif cumulative_cgpa >= 2.0:
+                    class_of_award = "Lower Credit"
+                elif cumulative_cgpa >= 1.0:
+                    class_of_award = "Pass"
+                else:
+                    class_of_award = "Fail"
+                    
             row["CLASS OF AWARD"] = class_of_award
-            
-            # Check if student is withdrawn
-            row["WITHDRAWN"] = "Yes" if is_student_withdrawn(exam_no) else "No"
+            row["WITHDRAWN"] = "Yes" if is_withdrawn else "No"
             summary_data.append(row)
 
         # Create summary dataframe
         if summary_data:
             summary_df = pd.DataFrame(summary_data)
-            # Sort by CGPA descending
-            if "CUMULATIVE CGPA" in summary_df.columns and len(summary_df) > 0:
-                summary_df = summary_df.sort_values("CUMULATIVE CGPA", ascending=False)
             
-            # ADD SERIAL NUMBER COLUMN
+            # UPDATED: Sort the data as requested
+            def get_sort_key(row):
+                award = row["CLASS OF AWARD"]
+                if award in ["Distinction", "Upper Credit", "Lower Credit"]:
+                    return (0, -row["CUMULATIVE CGPA"])  # Active students first
+                elif award == "INACTIVE":
+                    return (1, 0)
+                elif award == "WITHDRAWN":
+                    return (3, 0)  # Withdrawn students at the end
+                elif award == "Fail":
+                    return (2, 0)
+                else:  # Pass and others
+                    return (0, -row["CUMULATIVE CGPA"])
+            
+            # Create a temporary sort key column
+            sort_keys = summary_df.apply(get_sort_key, axis=1)
+            summary_df = summary_df.iloc[sort_keys.argsort()].reset_index(drop=True)
+            
+            # FIX 2: Add proper serial numbering after sorting
             summary_df.insert(0, "S/N", range(1, len(summary_df) + 1))
             
             print(f"✅ Successfully created CGPA summary with {len(summary_df)} students")
@@ -994,7 +1208,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             print("📋 Sample of CGPA summary data:")
             for i in range(min(5, len(summary_df))):
                 student = summary_df.iloc[i]
-                print(f"  {i+1}. {student['EXAM NUMBER']}: CGPA={student.get('CUMULATIVE CGPA', 'N/A')}, Award={student.get('CLASS OF AWARD', 'N/A')}")
+                print(f"  {i+1}. {student['S/N']}. {student['EXAM NUMBER']}: CGPA={student.get('CUMULATIVE CGPA', 'N/A')}, Award={student.get('CLASS OF AWARD', 'N/A')}, Semesters={sum(1 for sem in SEMESTER_ORDER if pd.notna(student.get(semester_abbreviation_map.get(sem, sem))))}")
         else:
             print("⚠️ No CGPA data found for any students")
             # Create empty dataframe with correct columns
@@ -1019,7 +1233,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         num_columns = len(headers)
         end_col_letter = get_column_letter(num_columns)
 
-        # ADD PROFESSIONAL HEADER WITH SCHOOL NAME
+        # ADD PROFESSIONAL HEADER WITH SCHOOL NAME - FIXED: Use exact requested format
         ws.merge_cells(f"A1:{end_col_letter}1")
         title_cell = ws["A1"]
         title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA"
@@ -1038,7 +1252,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             start_color="E6E6FA", end_color="E6E6FA", fill_type="solid"
         )
 
-        # ADD DYNAMIC TITLE ROW
+        # ADD DYNAMIC TITLE ROW - FIXED: Use exact requested format
         ws.merge_cells(f"A3:{end_col_letter}3")
         exam_title_cell = ws["A3"]
         exam_title_cell.value = "NDII CGPA SUMMARY REPORT"
@@ -1053,6 +1267,9 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         date_cell.value = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         date_cell.font = Font(italic=True, size=10)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        # Add empty row for spacing
+        ws.row_dimensions[5].height = 10
 
         # Write header starting from row 6
         for col_idx, header in enumerate(headers, 1):
@@ -1090,12 +1307,14 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                     else:
                         cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
                     
-                    # Alignment
-                    if col_idx == 1:  # S/N
+                    # FIX 1: LEFT ALIGN NAME AND PROBATION HISTORY COLUMNS
+                    if col_idx == 1:  # S/N - center
                         cell.alignment = Alignment(horizontal="center", vertical="center")
-                    elif col_idx <= 4:  # Text columns
+                    elif col_idx == 2:  # EXAM NUMBER - center
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                    elif col_idx in [3, 4]:  # NAME and PROBATION HISTORY - LEFT ALIGNED with wrap text
                         cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-                    else:  # Numeric columns
+                    else:  # All other columns (numeric) - center
                         cell.alignment = Alignment(horizontal="center", vertical="center")
                         
                     # Apply subtle color coding for CLASS OF AWARD column
@@ -1110,59 +1329,80 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                             cell.fill = PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid")  # Very light gray
                         elif value == "Fail":
                             cell.fill = PatternFill(start_color="FDE8E8", end_color="FDE8E8", fill_type="solid")  # Very light red
+                        elif value == "INACTIVE":  # FIX 1: Add color for INACTIVE
+                            cell.fill = PatternFill(start_color="FFF0F0", end_color="FFF0F0", fill_type="solid")  # Very light red/pink
+                        elif value == "WITHDRAWN":  # FIX 1: Add color for WITHDRAWN
+                            cell.fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")  # Very light gray
             
             print(f"✅ Written {len(summary_df)} students to CGPA summary sheet")
         else:
             print("⚠️ No data to write to CGPA summary sheet")
             ws.cell(row=7, column=1, value="No CGPA data available")
 
-        # AUTO-FIT COLUMN WIDTHS FOR ALL COLUMNS
-        print("📏 Auto-fitting column widths...")
+        # FIX 1: FREEZE PANES AT ROW 7 (so rows 1-6 are frozen)
+        ws.freeze_panes = "A7"
+        print("✅ Frozen headings (rows 1-6)")
+
+        # FIX 2: AUTO-FIT COLUMN WIDTHS FOR ALL COLUMNS WITH BETTER LOGIC
+        print("📏 Auto-fitting column widths to fit content...")
         
         # Define minimum and maximum widths for better control
         min_width = 8
         max_width = 35
         
-        # Auto-fit all columns based on content
-        for column in ws.columns:
+        # Enhanced auto-fit: Calculate maximum content length for each column
+        for col_idx, header in enumerate(headers, 1):
+            column_letter = get_column_letter(col_idx)
             max_length = 0
-            column_letter = get_column_letter(column[0].column)
             
-            # Skip header rows (1-5) for width calculation
-            for cell in column:
-                if cell.row >= 6:  # Only consider data rows and header
+            # Check header length first
+            header_length = len(str(header))
+            max_length = max(max_length, header_length)
+            
+            # Check data content lengths
+            for row_idx in range(7, ws.max_row + 1):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                if cell.value:
                     try:
-                        if cell.value:
-                            # Calculate length based on cell value
-                            cell_length = len(str(cell.value))
-                            if cell_length > max_length:
-                                max_length = cell_length
+                        cell_length = len(str(cell.value))
+                        # For text columns, allow more width
+                        if header in ["NAME", "PROBATION HISTORY"]:
+                            cell_length = min(cell_length, 50)  # Cap very long text
+                        max_length = max(max_length, cell_length)
                     except:
                         pass
             
-            # Add some padding and apply limits
-            adjusted_width = min(max_length + 2, max_width)
+            # Add padding and apply limits
+            adjusted_width = min(max_length + 3, max_width)  # Increased padding to 3
             adjusted_width = max(adjusted_width, min_width)
             
-            ws.column_dimensions[column_letter].width = adjusted_width
+            # Special handling for specific columns
+            if header == "S/N":
+                adjusted_width = 6
+            elif header == "EXAM NUMBER":
+                adjusted_width = min(max(adjusted_width, 15), 20)
+            elif header == "NAME":
+                adjusted_width = min(max(adjusted_width, 20), 35)
+            elif header == "PROBATION HISTORY":
+                adjusted_width = min(max(adjusted_width, 15), 25)  # Reduced width since we abbreviated
+            elif header in ["Y1S1", "Y1S2", "Y2S1", "Y2S2"]:
+                adjusted_width = min(max(adjusted_width, 8), 12)
+            elif header == "CUMULATIVE CGPA":
+                adjusted_width = min(max(adjusted_width, 12), 18)
+            elif header == "WITHDRAWN":
+                adjusted_width = min(max(adjusted_width, 10), 12)
+            elif header == "CLASS OF AWARD":
+                adjusted_width = min(max(adjusted_width, 12), 20)
             
-            print(f"   📐 Column {column_letter}: width {adjusted_width}")
-
-        # Adjust specific columns for better readability
-        specific_widths = {
-            'A': 8,   # S/N - compact
-            'B': 18,  # EXAM NUMBER - reasonable width
-            'C': 25,  # NAME - enough for full names
-            'D': 20,  # PROBATION HISTORY - compact but readable
-        }
-        
-        for col_letter, width in specific_widths.items():
-            ws.column_dimensions[col_letter].width = width
-            print(f"   🔧 Adjusted {col_letter} to fixed width: {width}")
+            ws.column_dimensions[column_letter].width = adjusted_width
+            print(f"   📐 Column {column_letter} ({header}): width {adjusted_width}")
 
         # Adjust row heights for better visibility
         for row in range(6, ws.max_row + 1):
-            ws.row_dimensions[row].height = 25
+            if row == 6:  # Header row
+                ws.row_dimensions[row].height = 25
+            else:
+                ws.row_dimensions[row].height = 20
 
         # Add summary statistics if we have data
         if not summary_df.empty:
@@ -1172,12 +1412,17 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             stats_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
             
             if "CUMULATIVE CGPA" in summary_df.columns:
+                # FIX 1: Count INACTIVE and WITHDRAWN students
+                inactive_count = (summary_df['CLASS OF AWARD'] == 'INACTIVE').sum()
+                withdrawn_count = (summary_df['CLASS OF AWARD'] == 'WITHDRAWN').sum()
+                
                 stats_data = [
                     f"Total Students: {len(summary_df)}",
                     f"Average Cumulative CGPA: {summary_df['CUMULATIVE CGPA'].mean():.2f}",
                     f"Highest Cumulative CGPA: {summary_df['CUMULATIVE CGPA'].max():.2f}",
                     f"Lowest Cumulative CGPA: {summary_df['CUMULATIVE CGPA'].min():.2f}",
-                    f"Withdrawn Students: {(summary_df['WITHDRAWN'] == 'Yes').sum()}",
+                    f"Withdrawn Students: {withdrawn_count}",
+                    f"INACTIVE Students (less than 4 semesters): {inactive_count}",
                     f"Students with Probation History: {(summary_df['PROBATION HISTORY'] != 'None').sum()}",
                 ]
                 
@@ -1197,7 +1442,12 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
 
         # Save the workbook
         wb.save(mastersheet_path)
-        print("✅ CGPA Summary sheet created successfully with auto-fit columns and color coding")
+        print("✅ CGPA Summary sheet created successfully with:")
+        print("   - Frozen headings (rows 1-6)")
+        print("   - Proper serial numbering")
+        print("   - Auto-fit column widths")
+        print("   - NAME and PROBATION HISTORY left aligned")
+        print("   - Abbreviated probation history (Y1S1, Y1S2, Y2S1, Y2S2)")
         return summary_df
         
     except Exception as e:
@@ -1209,14 +1459,9 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
 def create_analysis_sheet(mastersheet_path, timestamp):
     """
     Create an analysis sheet with comprehensive statistics.
-    FIXED: Added S/N column and improved error handling
-    FIXED: Correct student counts using EXAM NUMBER pattern detection
-    FIXED: CARRYOVER STUDENTS column now correctly counts students with Resit/Probation status
-    UPDATED: Added professional formatting with school name and title
-    UPDATED: Correctly counts probation students in carryover statistics
-    UPDATED TITLE: Changed to match the requested format
-    FIXED: Shortened semester names and improved cell content fitting
-    UPDATED: Dynamic column detection and proper analysis notes placement
+    FIXED: Dynamic header detection, robust column finding, accurate student counting, and proper serial numbering
+    ENHANCED: Professional formatting with proper cell fitting and visual appeal
+    UPDATED: REMOVED INACTIVE STUDENTS column as requested
     """
     try:
         print("📈 Creating Analysis Sheet...")
@@ -1234,7 +1479,7 @@ def create_analysis_sheet(mastersheet_path, timestamp):
             "pass_rate": [],
         }
 
-        # FIXED: Define semester short name mapping
+        # Semester short name mapping
         semester_short_names = {
             "ND-FIRST-YEAR-FIRST-SEMESTER": "Y1-1STS",
             "ND-FIRST-YEAR-SECOND-SEMESTER": "Y1-2NDS", 
@@ -1243,342 +1488,339 @@ def create_analysis_sheet(mastersheet_path, timestamp):
         }
 
         for sheet_name in wb.sheetnames:
-            if sheet_name in SEMESTER_ORDER:
-                try:
-                    # FIXED: Dynamic header row detection similar to CGPA function
-                    best_header_row = None
-                    best_df = None
-                    
-                    for header_row in range(0, 16):
-                        try:
-                            df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=header_row)
-                            
-                            if df.empty:
-                                continue
-                                
-                            exam_col = find_exam_number_column(df)
-                            if exam_col:
-                                # Check if we have valid student data
-                                valid_students = 0
-                                for idx, row in df.iterrows():
-                                    exam_no = str(row[exam_col]).strip()
-                                    if (exam_no and exam_no != "nan" and exam_no != "" and
-                                        not exam_no.lower().startswith("exam") and
-                                        not exam_no.lower().startswith("reg") and
-                                        len(exam_no) >= 3):
-                                        valid_students += 1
-                                        if valid_students >= 3:
-                                            break
-                                
-                                if valid_students >= 3:
-                                    best_header_row = header_row
-                                    best_df = df
-                                    break
-                                    
-                        except Exception:
-                            continue
-
-                    if best_header_row is None or best_df is None:
-                        print(f"⚠️ Could not find valid data in {sheet_name}")
-                        continue
+            if sheet_name not in SEMESTER_ORDER:
+                continue
+                
+            try:
+                print(f"\n🔍 Processing sheet: {sheet_name}")
+                
+                # ========================================
+                # DYNAMIC HEADER ROW DETECTION
+                # ========================================
+                best_header_row = None
+                best_df = None
+                
+                # Try different header rows (0 to 20)
+                for header_row in range(0, 21):
+                    try:
+                        df = pd.read_excel(
+                            mastersheet_path, 
+                            sheet_name=sheet_name, 
+                            header=header_row,
+                            dtype=str
+                        )
                         
-                    df = best_df
-                    
-                    # FIXED: Use EXAM NUMBER column for accurate student count
-                    exam_col = find_exam_number_column(df)
-                    total_students = 0
-                    
-                    if exam_col:
-                        # Count unique, non-empty exam numbers that match student patterns
-                        exam_numbers = []
-                        for idx, row in df.iterrows():
-                            exam_no = str(row[exam_col]).strip()
-                            # Check if it's a valid exam number (not empty, not NaN, not header-like)
-                            if (
-                                exam_no
-                                and exam_no != "nan"
-                                and exam_no != ""
-                                and not exam_no.lower().startswith("exam")
-                                and not exam_no.lower().startswith("reg")
-                                and len(exam_no) >= 3
-                            ): # Minimum reasonable length for exam number
-                                exam_numbers.append(exam_no)
-                                
-                        # Use set to get unique students and count
-                        unique_students = set(exam_numbers)
-                        total_students = len(unique_students)
-                        print(
-                            f"📊 {sheet_name}: Found {total_students} unique students from {len(exam_numbers)} exam number entries"
+                        if df.empty or len(df.columns) < 3:
+                            continue
+                        
+                        # Check if we have the required columns
+                        columns_upper = [str(col).upper().strip() for col in df.columns]
+                        
+                        # Look for exam number column
+                        exam_col_found = any(
+                            keyword in col_upper 
+                            for col_upper in columns_upper 
+                            for keyword in ["EXAM", "REG", "MATRIC", "STUDENT"]
                         )
-                    else:
-                        print(f"⚠️ Could not find exam number column in {sheet_name}")
-                        # Fallback: count non-empty S/N if available
-                        if "S/N" in df.columns:
-                            total_students = df["S/N"].notna().sum()
-                        else:
-                            total_students = len(df)
-
-                    # FIXED: Count passed students using EXAM NUMBER + REMARKS
-                    passed_all = 0
-                    if exam_col and "REMARKS" in df.columns:
-                        passed_students = set()
-                        for idx, row in df.iterrows():
-                            exam_no = str(row[exam_col]).strip()
-                            remarks = (
-                                str(row["REMARKS"]).strip()
-                                if pd.notna(row.get("REMARKS"))
-                                else ""
-                            )
-                            # Only count if it's a valid exam number and has "Passed" in remarks
-                            if (
-                                exam_no
-                                and exam_no != "nan"
-                                and exam_no != ""
-                                and not exam_no.lower().startswith("exam")
-                                and not exam_no.lower().startswith("reg")
-                                and len(exam_no) >= 3
-                                and remarks == "Passed"
-                            ):
-                                passed_students.add(exam_no)
-                        passed_all = len(passed_students)
-
-                    # FIXED: Count resit students (students with Resit status)
-                    resit_count = 0
-                    if exam_col and "REMARKS" in df.columns:
-                        resit_students = set()
-                        for idx, row in df.iterrows():
-                            exam_no = str(row[exam_col]).strip()
-                            remarks = (
-                                str(row["REMARKS"]).strip()
-                                if pd.notna(row.get("REMARKS"))
-                                else ""
-                            )
-                            if (
-                                exam_no
-                                and exam_no != "nan"
-                                and exam_no != ""
-                                and not exam_no.lower().startswith("exam")
-                                and not exam_no.lower().startswith("reg")
-                                and len(exam_no) >= 3
-                                and remarks == "Resit"
-                            ):
-                                resit_students.add(exam_no)
-                        resit_count = len(resit_students)
-
-                    # FIXED: Count probation students (students with Probation status)
-                    probation_count = 0
-                    if exam_col and "REMARKS" in df.columns:
-                        probation_students = set()
-                        for idx, row in df.iterrows():
-                            exam_no = str(row[exam_col]).strip()
-                            remarks = (
-                                str(row["REMARKS"]).strip()
-                                if pd.notna(row.get("REMARKS"))
-                                else ""
-                            )
-                            if (
-                                exam_no
-                                and exam_no != "nan"
-                                and exam_no != ""
-                                and not exam_no.lower().startswith("exam")
-                                and not exam_no.lower().startswith("reg")
-                                and len(exam_no) >= 3
-                                and remarks == "Probation"
-                            ):
-                                probation_students.add(exam_no)
-                        probation_count = len(probation_students)
-                        print(
-                            f"📊 {sheet_name}: Found {probation_count} probation students"
+                        
+                        # Look for remarks column
+                        remarks_col_found = any(
+                            "REMARK" in col_upper 
+                            for col_upper in columns_upper
                         )
-
-                    # FIXED: Calculate withdrawn students for this semester using global tracker
-                    withdrawn_count = 0
-                    if exam_col:
+                        
+                        # Look for GPA column
+                        gpa_col_found = any(
+                            "GPA" in col_upper or "GRADE POINT" in col_upper
+                            for col_upper in columns_upper
+                        )
+                        
+                        if not (exam_col_found and remarks_col_found and gpa_col_found):
+                            continue
+                        
+                        # Validate we have actual student data
+                        exam_col = None
+                        for col in df.columns:
+                            col_str = str(col).upper().strip()
+                            if any(keyword in col_str for keyword in ["EXAM", "REG", "MATRIC"]):
+                                exam_col = col
+                                break
+                        
+                        if not exam_col:
+                            continue
+                        
+                        # Count valid exam numbers
+                        valid_count = 0
                         for idx, row in df.iterrows():
                             exam_no = str(row[exam_col]).strip()
-                            if (
-                                exam_no
-                                and exam_no != "nan"
-                                and exam_no != ""
-                                and not exam_no.lower().startswith("exam")
-                                and not exam_no.lower().startswith("reg")
-                                and len(exam_no) >= 3
-                                and is_student_withdrawn(exam_no)
-                            ):
-                                withdrawal_info = get_withdrawal_history(exam_no)
-                                if (
-                                    withdrawal_info
-                                    and withdrawal_info["withdrawn_semester"] == sheet_name
-                                ):
-                                    withdrawn_count += 1
-
-                    # Calculate average GPA - only for valid students
-                    avg_gpa = 0
-                    gpa_sum = 0
-                    gpa_count = 0
-                    if exam_col and "GPA" in df.columns:
-                        for idx, row in df.iterrows():
-                            exam_no = str(row[exam_col]).strip()
-                            gpa = row["GPA"]
-                            if (
-                                exam_no
-                                and exam_no != "nan"
-                                and exam_no != ""
-                                and not exam_no.lower().startswith("exam")
-                                and not exam_no.lower().startswith("reg")
-                                and len(exam_no) >= 3
-                                and pd.notna(gpa)
-                            ):
-                                gpa_sum += gpa
-                                gpa_count += 1
-                        avg_gpa = round(gpa_sum / gpa_count, 2) if gpa_count > 0 else 0
-
-                    # Calculate pass rate
-                    pass_rate = (
-                        (passed_all / total_students * 100) if total_students > 0 else 0
-                    )
-
-                    # FIXED: Use short semester name
-                    short_semester = semester_short_names.get(sheet_name, sheet_name)
-                    
-                    analysis_data["semester"].append(short_semester)
-                    analysis_data["total_students"].append(total_students)
-                    analysis_data["passed_all"].append(passed_all)
-                    analysis_data["resit_students"].append(resit_count)
-                    analysis_data["probation_students"].append(probation_count)
-                    analysis_data["withdrawn_students"].append(withdrawn_count)
-                    analysis_data["average_gpa"].append(avg_gpa)
-                    analysis_data["pass_rate"].append(round(pass_rate, 2))
-                    
-                    print(f"📊 {short_semester} Analysis:")
-                    print(f" Total Students (Exam Number count): {total_students}")
-                    print(f" Passed All: {passed_all}")
-                    print(f" Resit Students: {resit_count}")
-                    print(f" Probation Students: {probation_count}")
-                    print(f" Withdrawn Students: {withdrawn_count}")
-                    print(f" Average GPA: {avg_gpa}")
-                    print(f" Pass Rate: {round(pass_rate, 2)}%")
-                    
-                except Exception as e:
-                    print(f"⚠️ Warning: Could not process sheet {sheet_name}: {e}")
+                            # Check if it looks like a real exam number
+                            if (exam_no and 
+                                exam_no != "nan" and 
+                                exam_no != "" and
+                                not exam_no.upper().startswith(("EXAM", "REG", "REGISTRATION", "STUDENT")) and
+                                len(exam_no) >= 5):
+                                valid_count += 1
+                                if valid_count >= 3:  # Need at least 3 valid students
+                                    break
+                        
+                        if valid_count >= 3:
+                            best_header_row = header_row
+                            best_df = df
+                            print(f"✅ Found valid header at row {header_row} with {valid_count}+ students")
+                            break
+                            
+                    except Exception as e:
+                        continue
+                
+                if best_header_row is None or best_df is None:
+                    print(f"❌ Could not find valid data structure in {sheet_name}")
                     continue
+                
+                df = best_df
+                print(f"📊 Using header row {best_header_row}")
+                
+                # ========================================
+                # DYNAMIC COLUMN DETECTION
+                # ========================================
+                
+                # Find EXAM NUMBER column
+                exam_col = None
+                for col in df.columns:
+                    col_upper = str(col).upper().strip()
+                    if any(keyword in col_upper for keyword in [
+                        "EXAM NUMBER", "EXAM NO", "REG NO", "REG. NO", 
+                        "REGISTRATION", "MATRIC", "STUDENT ID"
+                    ]):
+                        exam_col = col
+                        print(f"✅ Found EXAM column: '{col}'")
+                        break
+                
+                # Find REMARKS column
+                remarks_col = None
+                for col in df.columns:
+                    col_upper = str(col).upper().strip()
+                    if "REMARK" in col_upper:
+                        remarks_col = col
+                        print(f"✅ Found REMARKS column: '{col}'")
+                        break
+                
+                # Find GPA column
+                gpa_col = None
+                for col in df.columns:
+                    col_upper = str(col).upper().strip()
+                    if "GPA" in col_upper or "GRADE POINT" in col_upper:
+                        gpa_col = col
+                        print(f"✅ Found GPA column: '{col}'")
+                        break
+                
+                # Validate we found all required columns
+                if not exam_col:
+                    print(f"❌ Could not find EXAM NUMBER column in {sheet_name}")
+                    continue
+                if not remarks_col:
+                    print(f"❌ Could not find REMARKS column in {sheet_name}")
+                    continue
+                if not gpa_col:
+                    print(f"❌ Could not find GPA column in {sheet_name}")
+                    continue
+                
+                # ========================================
+                # COUNT STUDENTS BY STATUS
+                # ========================================
+                
+                # Use sets to track unique students
+                all_students = set()
+                passed_students = set()
+                resit_students = set()
+                probation_students = set()
+                withdrawn_students_this_sem = set()
+                gpa_values = []
+                
+                for idx, row in df.iterrows():
+                    exam_no = str(row[exam_col]).strip()
+                    
+                    # Validate exam number
+                    if not exam_no or exam_no == "nan" or exam_no == "":
+                        continue
+                    
+                    # Skip header-like values
+                    exam_no_upper = exam_no.upper()
+                    if any(keyword in exam_no_upper for keyword in [
+                        "EXAM", "REG", "REGISTRATION", "STUDENT", "MATRIC", "NUMBER"
+                    ]):
+                        continue
+                    
+                    # Must be reasonable length
+                    if len(exam_no) < 5:
+                        continue
+                    
+                    # Valid student found
+                    all_students.add(exam_no)
+                    
+                    # Get remarks
+                    remarks = str(row[remarks_col]).strip() if pd.notna(row.get(remarks_col)) else ""
+                    
+                    # Categorize by status
+                    if remarks == "Passed":
+                        passed_students.add(exam_no)
+                    elif remarks == "Resit":
+                        resit_students.add(exam_no)
+                    elif remarks == "Probation":
+                        probation_students.add(exam_no)
+                    elif remarks == "Withdrawn":
+                        withdrawn_students_this_sem.add(exam_no)
+                    
+                    # Collect GPA values
+                    gpa_val = row[gpa_col]
+                    if pd.notna(gpa_val):
+                        try:
+                            gpa_float = float(gpa_val)
+                            if 0 <= gpa_float <= 5.0:
+                                gpa_values.append(gpa_float)
+                        except (ValueError, TypeError):
+                            pass
+                
+                # Calculate statistics
+                total_students = len(all_students)
+                passed_all = len(passed_students)
+                resit_count = len(resit_students)
+                probation_count = len(probation_students)
+                withdrawn_count = len(withdrawn_students_this_sem)
+                
+                avg_gpa = round(sum(gpa_values) / len(gpa_values), 2) if gpa_values else 0.0
+                pass_rate = round((passed_all / total_students * 100), 2) if total_students > 0 else 0.0
+                
+                # Log results
+                print(f"📊 {sheet_name} Statistics:")
+                print(f"   Total Students: {total_students}")
+                print(f"   Passed: {passed_all}")
+                print(f"   Resit: {resit_count}")
+                print(f"   Probation: {probation_count}")
+                print(f"   Withdrawn: {withdrawn_count}")
+                print(f"   Average GPA: {avg_gpa}")
+                print(f"   Pass Rate: {pass_rate}%")
+                
+                # Add to analysis data
+                short_semester = semester_short_names.get(sheet_name, sheet_name)
+                analysis_data["semester"].append(short_semester)
+                analysis_data["total_students"].append(total_students)
+                analysis_data["passed_all"].append(passed_all)
+                analysis_data["resit_students"].append(resit_count)
+                analysis_data["probation_students"].append(probation_count)
+                analysis_data["withdrawn_students"].append(withdrawn_count)
+                analysis_data["average_gpa"].append(avg_gpa)
+                analysis_data["pass_rate"].append(pass_rate)
+                
+            except Exception as e:
+                print(f"⚠️ Error processing sheet {sheet_name}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
 
-        # Create analysis dataframe
-        analysis_df = pd.DataFrame(analysis_data)
+        # ========================================
+        # CREATE ANALYSIS DATAFRAME
+        # ========================================
         
-        # Add overall statistics - FIXED: Use proper aggregation
-        if not analysis_df.empty:
-            overall_stats = {
-                "semester": "OVERALL",
-                "total_students": analysis_df["total_students"].sum(),
-                "passed_all": analysis_df["passed_all"].sum(),
-                "resit_students": analysis_df["resit_students"].sum(),
-                "probation_students": analysis_df["probation_students"].sum(),
-                "withdrawn_students": analysis_df["withdrawn_students"].sum(),
-                "average_gpa": round(analysis_df["average_gpa"].mean(), 2),
-                "pass_rate": round(analysis_df["pass_rate"].mean(), 2),
-            }
-            analysis_df = pd.concat(
-                [analysis_df, pd.DataFrame([overall_stats])], ignore_index=True
-            )
+        if not analysis_data["semester"]:
+            print("❌ No analysis data collected from any semester")
+            # Create empty dataframe
+            analysis_df = pd.DataFrame({
+                "SEMESTER": [],
+                "TOTAL STUDENTS": [],
+                "PASSED ALL": [],
+                "RESIT STUDENTS": [],
+                "PROBATION STUDENTS": [],
+                "WITHDRAWN STUDENTS": [],
+                "AVERAGE GPA": [],
+                "PASS RATE (%)": []
+            })
         else:
-            # Create empty overall stats if no data
+            analysis_df = pd.DataFrame(analysis_data)
+            
+            # Rename columns to match expected format
+            analysis_df.columns = [
+                "SEMESTER",
+                "TOTAL STUDENTS",
+                "PASSED ALL",
+                "RESIT STUDENTS",
+                "PROBATION STUDENTS",
+                "WITHDRAWN STUDENTS",
+                "AVERAGE GPA",
+                "PASS RATE (%)"
+            ]
+            
+            # Add overall statistics
             overall_stats = {
-                "semester": "OVERALL",
-                "total_students": 0,
-                "passed_all": 0,
-                "resit_students": 0,
-                "probation_students": 0,
-                "withdrawn_students": 0,
-                "average_gpa": 0,
-                "pass_rate": 0,
+                "SEMESTER": "OVERALL",
+                "TOTAL STUDENTS": sum(analysis_data["total_students"]),
+                "PASSED ALL": sum(analysis_data["passed_all"]),
+                "RESIT STUDENTS": sum(analysis_data["resit_students"]),
+                "PROBATION STUDENTS": sum(analysis_data["probation_students"]),
+                "WITHDRAWN STUDENTS": sum(analysis_data["withdrawn_students"]),
+                "AVERAGE GPA": round(sum(analysis_data["average_gpa"]) / len(analysis_data["average_gpa"]), 2) if analysis_data["average_gpa"] else 0.0,
+                "PASS RATE (%)": round(sum(analysis_data["pass_rate"]) / len(analysis_data["pass_rate"]), 2) if analysis_data["pass_rate"] else 0.0,
             }
-            analysis_df = pd.DataFrame([overall_stats])
-        
-        # ADD SERIAL NUMBER COLUMN
+            analysis_df = pd.concat([analysis_df, pd.DataFrame([overall_stats])], ignore_index=True)
+            
+            print(f"\n✅ Analysis data collected for {len(analysis_data['semester'])} semesters")
+
+        # Add serial number AFTER creating the dataframe
         analysis_df.insert(0, "S/N", range(1, len(analysis_df) + 1))
 
-        # Add the analysis sheet to the workbook
+        # ========================================
+        # CREATE ANALYSIS WORKSHEET
+        # ========================================
+        
         if "ANALYSIS" in wb.sheetnames:
             del wb["ANALYSIS"]
         ws = wb.create_sheet("ANALYSIS")
 
-        # Define headers for column calculation
-        headers = [
-            "S/N",
-            "SEMESTER",
-            "TOTAL STUDENTS",
-            "PASSED ALL",
-            "RESIT STUDENTS",
-            "PROBATION STUDENTS",
-            "WITHDRAWN STUDENTS",
-            "AVERAGE GPA",
-            "PASS RATE (%)",
-        ]
+        headers = list(analysis_df.columns)  # Use actual dataframe columns
         num_columns = len(headers)
         end_col_letter = get_column_letter(num_columns)
 
-        # ADD PROFESSIONAL HEADER WITH SCHOOL NAME - UPDATED
+        # Professional header with proper row heights
+        ws.row_dimensions[1].height = 30
         ws.merge_cells(f"A1:{end_col_letter}1")
         title_cell = ws["A1"]
         title_cell.value = "FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA"
         title_cell.font = Font(bold=True, size=16, color="FFFFFF")
         title_cell.alignment = Alignment(horizontal="center", vertical="center")
-        title_cell.fill = PatternFill(
-            start_color="1E90FF", end_color="1E90FF", fill_type="solid"
-        )
+        title_cell.fill = PatternFill(start_color="1E90FF", end_color="1E90FF", fill_type="solid")
 
+        ws.row_dimensions[2].height = 25
         ws.merge_cells(f"A2:{end_col_letter}2")
         subtitle_cell = ws["A2"]
         subtitle_cell.value = "DEPARTMENT OF NURSING"
         subtitle_cell.font = Font(bold=True, size=14, color="000000")
         subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
-        subtitle_cell.fill = PatternFill(
-            start_color="E6E6FA", end_color="E6E6FA", fill_type="solid"
-        )
+        subtitle_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
 
-        # NEW: Add the dynamic title row
+        ws.row_dimensions[3].height = 22
         ws.merge_cells(f"A3:{end_col_letter}3")
         exam_title_cell = ws["A3"]
         exam_title_cell.value = "NDII SEMESTER ANALYSIS REPORT"
         exam_title_cell.font = Font(bold=True, size=12, color="000000")
         exam_title_cell.alignment = Alignment(horizontal="center", vertical="center")
-        exam_title_cell.fill = PatternFill(
-            start_color="FFFFE0", end_color="FFFFE0", fill_type="solid"  # Light yellow background
-        )
+        exam_title_cell.fill = PatternFill(start_color="FFFFE0", end_color="FFFFE0", fill_type="solid")
 
+        ws.row_dimensions[4].height = 20
         ws.merge_cells(f"A4:{end_col_letter}4")
         date_cell = ws["A4"]
-        date_cell.value = (
-            f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+        date_cell.value = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         date_cell.font = Font(italic=True, size=10)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        # Write header starting from row 6 - INCLUDING S/N COLUMN (adjusted for new rows)
+        # Add spacing row
+        ws.row_dimensions[5].height = 10
+
+        # Write headers (row 6) with proper height
+        ws.row_dimensions[6].height = 35
         for col_idx, header in enumerate(headers, 1):
-            ws.cell(row=6, column=col_idx, value=header)
-
-        # Write data starting from row 7 (adjusted for new rows)
-        for row_idx, row_data in analysis_df.iterrows():
-            ws.cell(row=row_idx + 7, column=1, value=row_data["S/N"])
-            ws.cell(row=row_idx + 7, column=2, value=row_data["semester"])
-            ws.cell(row=row_idx + 7, column=3, value=row_data["total_students"])
-            ws.cell(row=row_idx + 7, column=4, value=row_data["passed_all"])
-            ws.cell(row=row_idx + 7, column=5, value=row_data["resit_students"])
-            ws.cell(row=row_idx + 7, column=6, value=row_data["probation_students"])
-            ws.cell(row=row_idx + 7, column=7, value=row_data["withdrawn_students"])
-            ws.cell(row=row_idx + 7, column=8, value=row_data["average_gpa"])
-            ws.cell(row=row_idx + 7, column=9, value=row_data["pass_rate"])
-
-        # Style the header row (row 6)
-        for col in range(1, len(headers) + 1):
-            cell = ws.cell(row=6, column=col)
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill(
-                start_color="27ae60", end_color="27ae60", fill_type="solid"
-            )
-            cell.alignment = Alignment(horizontal="center")
+            cell = ws.cell(row=6, column=col_idx, value=header)
+            cell.font = Font(bold=True, size=10, color="FFFFFF")
+            cell.fill = PatternFill(start_color="27ae60", end_color="27ae60", fill_type="solid")
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = Border(
                 left=Side(style="thin"),
                 right=Side(style="thin"),
@@ -1586,84 +1828,62 @@ def create_analysis_sheet(mastersheet_path, timestamp):
                 bottom=Side(style="thin"),
             )
 
-        # Style data rows
-        for row in range(7, len(analysis_df) + 7):
-            # Highlight overall row
-            if ws.cell(row=row, column=2).value == "OVERALL":
-                fill_color = "FFE4B5" # Light orange for overall
-                font_color = "000000"
-                font_bold = True
-            else:
-                # Alternate row coloring for better readability
-                if row % 2 == 0:
-                    fill_color = "F0F8FF" # Light blue
-                else:
-                    fill_color = "FFFFFF" # White
-                font_color = "000000"
-                font_bold = False
+        # Write data (starting row 7)
+        for row_idx, (_, row_data) in enumerate(analysis_df.iterrows(), start=7):
+            ws.row_dimensions[row_idx].height = 25
+            
+            for col_idx, header in enumerate(headers, 1):
+                value = row_data[header]
+                if pd.isna(value):
+                    value = ""
+                    
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 
-            for col in range(1, len(headers) + 1):
-                cell = ws.cell(row=row, column=col)
-                cell.fill = PatternFill(
-                    start_color=fill_color, end_color=fill_color, fill_type="solid"
-                )
+                # Styling
+                is_overall = (row_data["SEMESTER"] == "OVERALL")
+                
+                if is_overall:
+                    cell.fill = PatternFill(start_color="FFE4B5", end_color="FFE4B5", fill_type="solid")
+                    cell.font = Font(bold=True, size=10)
+                else:
+                    if row_idx % 2 == 0:
+                        cell.fill = PatternFill(start_color="F0F8FF", end_color="F0F8FF", fill_type="solid")
+                    else:
+                        cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+                    cell.font = Font(size=10)
+                
                 cell.border = Border(
                     left=Side(style="thin"),
                     right=Side(style="thin"),
                     top=Side(style="thin"),
                     bottom=Side(style="thin"),
                 )
-                # FIXED: Apply text wrapping to all cells
-                cell.alignment = Alignment(
-                    horizontal="center", 
-                    vertical="center",
-                    wrap_text=True  # Enable text wrapping
-                )
-                if font_bold:
-                    cell.font = Font(bold=True, color=font_color)
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
-        # FIXED: Enhanced column width adjustment for better content fitting
-        print("🔄 Auto-fitting column widths for optimal content display...")
-        
-        # Set specific optimal widths
+        # Professional column widths
         column_widths = {
             'A': 8,   # S/N
-            'B': 12,  # SEMESTER (shorter due to abbreviated names)
-            'C': 15,  # TOTAL STUDENTS
-            'D': 12,  # PASSED ALL
-            'E': 15,  # RESIT STUDENTS
+            'B': 12,  # SEMESTER
+            'C': 16,  # TOTAL STUDENTS
+            'D': 14,  # PASSED ALL
+            'E': 16,  # RESIT STUDENTS
             'F': 18,  # PROBATION STUDENTS
             'G': 18,  # WITHDRAWN STUDENTS
-            'H': 12,  # AVERAGE GPA
-            'I': 15,  # PASS RATE (%)
+            'H': 14,  # AVERAGE GPA
+            'I': 16,  # PASS RATE (%)
         }
         
-        # Apply specific widths
         for col_letter, width in column_widths.items():
             ws.column_dimensions[col_letter].width = width
 
-        # FIXED: Adjust row heights for better content visibility
-        for row in range(6, ws.max_row + 1):  # Start from header row
-            max_line_count = 1
-            for cell in ws[row]:
-                if cell.value:
-                    cell_text = str(cell.value)
-                    line_count = cell_text.count('\n') + 1
-                    if line_count > max_line_count:
-                        max_line_count = line_count
-            
-            # Set row height based on line count (20 points per line)
-            row_height = max(20, 20 * max_line_count)
-            ws.row_dimensions[row].height = min(row_height, 60)  # Cap at 60
-
-        # UPDATED: Analysis notes placement - merged cells starting from column A
-        notes_row = len(analysis_df) + 8  # Adjusted for new row structure
-        
-        # ANALYSIS NOTES in column A (same as S/N column) with merged cells
-        notes_cell = ws.cell(row=notes_row, column=1, value="ANALYSIS NOTES:")
-        notes_cell.font = Font(bold=True, size=12)
-        # Merge the notes title across all columns
+        # Analysis notes with proper spacing
+        notes_row = ws.max_row + 2
+        ws.row_dimensions[notes_row].height = 25
         ws.merge_cells(start_row=notes_row, start_column=1, end_row=notes_row, end_column=num_columns)
+        notes_cell = ws.cell(row=notes_row, column=1, value="ANALYSIS NOTES:")
+        notes_cell.font = Font(bold=True, size=12, color="1E90FF")
+        notes_cell.fill = PatternFill(start_color="E6E6FA", end_color="E6E6FA", fill_type="solid")
+        notes_cell.alignment = Alignment(horizontal="center", vertical="center")
         
         notes = [
             "• Resit Students: Students with GPA ≥ 2.0 who failed ≤45% of credits",
@@ -1672,24 +1892,16 @@ def create_analysis_sheet(mastersheet_path, timestamp):
             "• Pass Rate: Percentage of students who passed all courses in the semester",
         ]
         
-        # Write each note in merged cells starting from column A
         for i, note in enumerate(notes):
             note_row = notes_row + i + 1
-            note_cell = ws.cell(row=note_row, column=1, value=note)
-            # Merge each note across all columns
+            ws.row_dimensions[note_row].height = 22
             ws.merge_cells(start_row=note_row, start_column=1, end_row=note_row, end_column=num_columns)
+            note_cell = ws.cell(row=note_row, column=1, value=note)
             note_cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+            note_cell.font = Font(size=10, italic=True)
 
         wb.save(mastersheet_path)
-        print(
-            "✅ Analysis sheet created successfully with S/N column, shortened semester names, and proper cell fitting"
-        )
-        print(
-            "✅ FIXED: Probation students now correctly counted and separated from resit students"
-        )
-        print(
-            "✅ FIXED: Analysis notes now properly placed in column A with merged cells"
-        )
+        print("✅ Analysis sheet created successfully with proper serial numbering and professional formatting")
         return analysis_df
         
     except Exception as e:
@@ -1999,7 +2211,7 @@ def normalize_for_matching(s):
     return s
 
 # ----------------------------
-# Student Tracking Functions
+# Student Tracking Functions - FIXED: Now properly tracks names
 # ----------------------------
 def initialize_student_tracker():
     """Initialize the global student tracker."""
@@ -2008,11 +2220,11 @@ def initialize_student_tracker():
     WITHDRAWN_STUDENTS = {}
 
 def update_student_tracker(
-    semester_key, exam_numbers, withdrawn_students=None, probation_students=None
+    semester_key, exam_numbers, withdrawn_students=None, probation_students=None, exam_number_to_name_map=None
 ):
     """
     Update the student tracker with current semester's students.
-    UPDATED: Tracks probation status separately
+    UPDATED: Tracks probation status separately and FIXED name tracking
     """
     global STUDENT_TRACKER, WITHDRAWN_STUDENTS
     
@@ -2032,7 +2244,14 @@ def update_student_tracker(
 
     # Track probation students
     probation_count = 0
+    
+    # FIX 1: Use the exam_number_to_name_map to get proper names
     for exam_no in exam_numbers:
+        # Get the name from the mapping if available
+        student_name = "Unknown"
+        if exam_number_to_name_map and exam_no in exam_number_to_name_map:
+            student_name = exam_number_to_name_map[exam_no]
+        
         if exam_no not in STUDENT_TRACKER:
             STUDENT_TRACKER[exam_no] = {
                 "first_seen": semester_key,
@@ -2043,11 +2262,20 @@ def update_student_tracker(
                 "withdrawn_semester": None,
                 "probation_history": [],
                 "current_probation": False,
+                "has_cgpa_data": False,
+                "current_gpa": 0.0,
+                "cgpa_status": "Not in CGPA",
+                "name": student_name,  # FIX 1: Store the name properly
             }
         else:
             STUDENT_TRACKER[exam_no]["last_seen"] = semester_key
             if semester_key not in STUDENT_TRACKER[exam_no]["semesters_present"]:
                 STUDENT_TRACKER[exam_no]["semesters_present"].append(semester_key)
+            
+            # FIX 1: Update the name if we have a new one
+            if exam_number_to_name_map and exam_no in exam_number_to_name_map:
+                STUDENT_TRACKER[exam_no]["name"] = exam_number_to_name_map[exam_no]
+            
             # Check if student was previously withdrawn and has reappeared
             if STUDENT_TRACKER[exam_no]["withdrawn"]:
                 print(f"⚠️ PREVIOUSLY WITHDRAWN STUDENT REAPPEARED: {exam_no}")
@@ -2195,7 +2423,7 @@ def get_user_set_choice(available_sets):
             print(f"❌ Error: {e}. Please try again.")
 
 # ----------------------------
-# Grade and GPA calculation
+# Grade and GPA calculation - UPDATED for 4.0 scale
 # ----------------------------
 def get_grade(score):
     """Convert numeric score to letter grade - single letter only."""
@@ -2216,24 +2444,7 @@ def get_grade(score):
     except BaseException:
         return "F"
 
-def get_grade_point(score):
-    """Convert score to grade point for GPA calculation - NIGERIAN 5.0 SCALE."""
-    try:
-        score = float(score)
-        if score >= 70:
-            return 5.0 # A
-        elif score >= 60:
-            return 4.0 # B
-        elif score >= 50:
-            return 3.0 # C
-        elif score >= 45:
-            return 2.0 # D
-        elif score >= 40:
-            return 1.0 # E
-        else:
-            return 0.0 # F
-    except BaseException:
-        return 0.0
+# UPDATED: get_grade_point function is now at the top with the CGPA functions
 
 # ----------------------------
 # Load Course Data
@@ -2739,30 +2950,6 @@ def load_all_previous_cgpas_for_cumulative(output_dir, current_semester_key, tim
 
     print(f"📊 Loaded cumulative data for {len(all_student_data)} students")
     return all_student_data
-
-def calculate_cumulative_cgpa(student_data, current_gpa, current_credits):
-    """
-    Calculate Cumulative CGPA based on all previous semesters and current semester.
-    """
-    if not student_data:
-        return current_gpa
-        
-    total_grade_points = 0.0
-    total_credits = 0
-    
-    # Add previous semesters
-    for prev_gpa, prev_credits in zip(student_data["gpas"], student_data["credits"]):
-        total_grade_points += prev_gpa * prev_credits
-        total_credits += prev_credits
-        
-    # Add current semester
-    total_grade_points += current_gpa * current_credits
-    total_credits += current_credits
-    
-    if total_credits > 0:
-        return round(total_grade_points / total_credits, 2)
-    else:
-        return current_gpa
 
 def get_cumulative_cgpa(current_gpa, previous_cgpa, current_credits, previous_credits):
     """
@@ -3514,6 +3701,8 @@ def process_single_file(
     Enhanced with data transformation for transposed formats and NOT REG handling.
     UPDATED TITLE: Dynamic title based on semester being processed
     UPDATED: Applied row height and column width fixes
+    UPDATED: FIXED name tracking in student tracker
+    UPDATED: Recalculated GPAs for 4.0 scale
     """
     fname = os.path.basename(path)
     print(f"🔍 Processing file: {fname} for semester: {semester_key}")
@@ -3980,10 +4169,13 @@ def process_single_file(
             exam_no = str(row["EXAM NUMBER"]).strip()
             probation_students.append(exam_no)
 
+    # FIX 2: Create exam number to name mapping for proper name tracking
+    exam_number_to_name_map = dict(zip(mastersheet["EXAM NUMBER"], mastersheet["NAME"]))
+
     # Update student tracker with current semester's students (after filtering)
     exam_numbers = mastersheet["EXAM NUMBER"].astype(str).str.strip().tolist()
     update_student_tracker(
-        semester_key, exam_numbers, withdrawn_students, probation_students
+        semester_key, exam_numbers, withdrawn_students, probation_students, exam_number_to_name_map
     )
 
     # Identify and save carryover students after processing
@@ -4779,6 +4971,7 @@ def main():
     # Initialize trackers
     initialize_student_tracker()
     initialize_carryover_tracker()
+    initialize_inactive_students_tracker()
 
     # Check if running in web mode
     if is_web_mode():
@@ -4915,9 +5108,16 @@ def main():
             mastersheet_path = os.path.join(set_output_dir, f"mastersheet_{ts}.xlsx")
             if os.path.exists(mastersheet_path):
                 print(f"📊 Creating CGPA_SUMMARY and ANALYSIS worksheets...")
+                
+                # FIX 2: Identify inactive students FIRST before creating sheets
+                print(f"🔍 Identifying inactive students...")
+                identify_inactive_students()
+                
+                # THEN create the sheets that depend on this data
                 create_cgpa_summary_sheet(mastersheet_path, ts)
-                create_analysis_sheet(mastersheet_path, ts)
-                print(f"✅ Successfully added CGPA_SUMMARY and ANALYSIS worksheets")
+                create_analysis_sheet(mastersheet_path, ts)  # Now INACTIVE_STUDENTS will be populated
+                
+                print(f"✅ Successfully added all worksheets (CGPA_SUMMARY, ANALYSIS)")
 
             # Create ZIP of the entire set results
             try:
@@ -4939,6 +5139,7 @@ def main():
         print(f"\n📊 STUDENT TRACKING SUMMARY:")
         print(f"Total unique students tracked: {len(STUDENT_TRACKER)}")
         print(f"Total withdrawn students: {len(WITHDRAWN_STUDENTS)}")
+        print(f"Total inactive students: {len(INACTIVE_STUDENTS)}")
         
         # Print carryover summary
         if CARRYOVER_STUDENTS:
@@ -4951,6 +5152,19 @@ def main():
                 semester_counts[semester] = semester_counts.get(semester, 0) + 1
             for semester, count in semester_counts.items():
                 print(f" {semester}: {count} students")
+
+        # Print inactive students summary
+        if INACTIVE_STUDENTS:
+            print(f"\n📋 INACTIVE STUDENTS SUMMARY:")
+            cgpa_active_count = sum(1 for s in INACTIVE_STUDENTS.values() if s.get("cgpa_status") == "Active in CGPA")
+            regular_inactive_count = len(INACTIVE_STUDENTS) - cgpa_active_count
+            print(f" Regular inactive (missing intermediate semesters): {regular_inactive_count}")
+            print(f" CGPA active but missing from recent semester: {cgpa_active_count}")
+            
+            # Show sample of inactive students
+            print(f" Sample inactive students:")
+            for i, (exam_no, data) in enumerate(list(INACTIVE_STUDENTS.items())[:5]):
+                print(f"  {i+1}. {exam_no}: {data['name']} - Present in {len(data['semesters_present'])} semesters, missing {len(data['missing_semesters'])}: {', '.join(data['missing_semesters'])}")
 
         # Print withdrawn students who reappeared
         reappeared_count = 0
@@ -5076,6 +5290,7 @@ def process_in_non_interactive_mode(params, base_dir_norm):
 
     # Initialize carryover tracker
     initialize_carryover_tracker()
+    initialize_inactive_students_tracker()
 
     # Process each set and semester
     total_processed = 0
@@ -5173,9 +5388,16 @@ def process_in_non_interactive_mode(params, base_dir_norm):
         mastersheet_path = os.path.join(set_output_dir, f"mastersheet_{ts}.xlsx")
         if os.path.exists(mastersheet_path):
             print(f"📊 Creating CGPA_SUMMARY and ANALYSIS worksheets...")
+            
+            # FIX 2: Identify inactive students FIRST before creating sheets
+            print(f"🔍 Identifying inactive students...")
+            identify_inactive_students()
+            
+            # THEN create the sheets that depend on this data
             create_cgpa_summary_sheet(mastersheet_path, ts)
-            create_analysis_sheet(mastersheet_path, ts)
-            print(f"✅ Successfully added CGPA_SUMMARY and ANALYSIS worksheets")
+            create_analysis_sheet(mastersheet_path, ts)  # Now INACTIVE_STUDENTS will be populated
+            
+            print(f"✅ Successfully added all worksheets")
 
         # Create ZIP of the entire set results
         try:
@@ -5211,6 +5433,15 @@ def process_in_non_interactive_mode(params, base_dir_norm):
             semester_counts[semester] = semester_counts.get(semester, 0) + 1
         for semester, count in semester_counts.items():
             print(f" {semester}: {count} students")
+            
+    # Print inactive students summary
+    if INACTIVE_STUDENTS:
+        print(f"\n📋 INACTIVE STUDENTS SUMMARY:")
+        print(f" Total inactive students: {len(INACTIVE_STUDENTS)}")
+        cgpa_active_count = sum(1 for s in INACTIVE_STUDENTS.values() if s.get("cgpa_status") == "Active in CGPA")
+        regular_inactive_count = len(INACTIVE_STUDENTS) - cgpa_active_count
+        print(f" - Regular inactive (missing intermediate semesters): {regular_inactive_count}")
+        print(f" - CGPA active but missing from recent semester: {cgpa_active_count}")
             
     return total_processed > 0
 
