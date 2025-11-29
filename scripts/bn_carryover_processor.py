@@ -21,6 +21,7 @@ CRITICAL FIX APPLIED:
 7. Early variable initialization
 8. Progress indicators for long operations
 9. Fixed improper finally block placement
+10. UPDATED: All instances of "Probation" changed to "Resit" in remarks, status, and summary calculations
 """
 
 import os
@@ -1555,7 +1556,7 @@ def calculate_cgpa(student_data, current_gpa, current_credits):
 
 
 # ============================================================
-# CRITICAL FIX: Enhanced Remarks Calculation
+# CRITICAL FIX: Enhanced Remarks Calculation - UPDATED: "Probation" changed to "Resit"
 # ============================================================
 def calculate_student_remarks(cu_passed, cu_failed, total_credits, gpa, student_had_carryover_update=False):
     """
@@ -1570,7 +1571,7 @@ def calculate_student_remarks(cu_passed, cu_failed, total_credits, gpa, student_
         student_had_carryover_update: Whether student had carryover updates
     
     Returns:
-        str: Remarks (PASSED, RESIT, PROBATION, or WITHDRAW)
+        str: Remarks (PASSED, RESIT, or WITHDRAW)
     """
     # Calculate passed percentage
     passed_percent = cu_passed / total_credits if total_credits > 0 else 0
@@ -1589,9 +1590,10 @@ def calculate_student_remarks(cu_passed, cu_failed, total_credits, gpa, student_
             print(f"  ⚠️ CARRYOVER STUDENT STILL WITHDRAWN: passed only {passed_percent*100:.1f}%")
         return "WITHDRAW"
     
-    # Has failures but passed ≥45%, assign RESIT or PROBATION based on GPA
+    # Has failures but passed ≥45%, assign RESIT (previously was "RESIT" or "PROBATION" based on GPA)
+    # UPDATED: All cases now return "RESIT" instead of "PROBATION"
     else:
-        remarks = "RESIT" if gpa >= 2.0 else "PROBATION"
+        remarks = "RESIT"  # Changed from: "RESIT" if gpa >= 2.0 else "PROBATION"
         if student_had_carryover_update:
             print(f"  📝 CARRYOVER STUDENT {remarks}: GPA: {gpa}, {cu_failed} CU failed")
         return remarks
@@ -1700,9 +1702,8 @@ def apply_student_sorting_with_serial_numbers(ws, header_row, headers_dict):
         elif (
             "RESIT" in remarks_upper
             or "CARRYOVER" in remarks_upper
-            or "PROBATION" in remarks_upper
         ):
-            priority = 2  # Carryover - middle
+            priority = 2  # Carryover/Resit - middle
         else:
             priority = 1  # Passed - first
         student_rows.append(
@@ -1715,7 +1716,7 @@ def apply_student_sorting_with_serial_numbers(ws, header_row, headers_dict):
                 "exam_no": exam_no,  # Store exam number for secondary sorting
             }
         )
-    # Sort by priority (Passed first, then Carryover, then Withdrawn)
+    # Sort by priority (Passed first, then Carryover/Resit, then Withdrawn)
     # Within each group, sort by GPA (descending), then by exam number
     student_rows.sort(
         key=lambda x: (x["priority"], -float(x["gpa"] if x["gpa"] else 0), x["exam_no"])
@@ -1838,7 +1839,6 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
         total_students = 0
         passed_students = 0
         resit_students = 0
-        probation_students = 0
         withdrawn_students = 0
         course_failures = {course: 0 for course in fresh_course_columns}
 
@@ -1864,8 +1864,6 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
                             passed_students += 1
                         elif "RESIT" in remarks_upper or "CARRYOVER" in remarks_upper:
                             resit_students += 1
-                        elif "PROBATION" in remarks_upper:
-                            probation_students += 1
                         elif "WITHDRAW" in remarks_upper:
                             withdrawn_students += 1
                     break
@@ -1909,7 +1907,6 @@ def update_summary_section_fixed(ws, headers, header_row, course_columns):
             total_students,
             passed_students,
             resit_students,
-            probation_students,
             withdrawn_students,
         )
 
@@ -2016,7 +2013,6 @@ def update_summary_text_with_counts(
     total_students,
     passed_students,
     resit_students,
-    probation_students,
     withdrawn_students,
 ):
     """Update summary text with current counts"""
@@ -2056,14 +2052,15 @@ def update_summary_text_with_counts(
             ws.cell(row=current_row, column=1).value = new_value
             print(f" ✅ Updated resit (GPA >=2.00): {resit_students}")
         elif "GRADE POINT AVERAGE (GPA) BELOW 2.00 FAILED" in cell_str:
+            # UPDATED: Changed from "probation" to "resit"
             new_value = re.sub(
                 r"A TOTAL OF \d+ STUDENTS",
-                f"A total of {probation_students} students",
+                f"A total of {resit_students} students",
                 cell_value,
                 flags=re.I,
             )
             ws.cell(row=current_row, column=1).value = new_value
-            print(f" ✅ Updated probation: {probation_students}")
+            print(f" ✅ Updated resit (GPA <2.00): {resit_students}")
         elif "FAILED IN MORE THAN 45%" in cell_str:
             new_value = re.sub(
                 r"A TOTAL OF \d+ STUDENTS",
@@ -3006,8 +3003,6 @@ def update_analysis_sheet_fixed(wb, semester_key, set_name):
             elif "PASSED" in str(remarks).upper():
                 stats["passed"] += 1
             elif "RESIT" in str(remarks).upper() or "CARRYOVER" in str(remarks).upper():
-                stats["carryover"] += 1
-            elif "PROBATION" in str(remarks).upper():
                 stats["carryover"] += 1
 
             try:

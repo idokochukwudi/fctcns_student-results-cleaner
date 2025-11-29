@@ -1,0 +1,94 @@
+{
+  "7443": {
+    "exam_number": "7443",
+    "name": "Abubakar  Nabila",
+    "carryover_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 74.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 74.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7596": {
+    "exam_number": "7596",
+    "name": "Ozongwu Chinazaekpere Grace",
+    "carryover_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 47.0,
+        "resit_score": 80.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 47.0,
+        "resit_score": 80.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7618": {
+    "exam_number": "7618",
+    "name": "Theophilus Bukola Chrysoprase",
+    "carryover_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 63.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 49.0,
+        "resit_score": 63.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "7620": {
+    "exam_number": "7620",
+    "name": "Udeh Shulammite Amaranna",
+    "carryover_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 58.0
+      }
+    },
+    "passed_resit_courses": {
+      "GNS317": {
+        "course_code": "GNS317",
+        "course_title": "Community-Based Practice",
+        "credit_unit": 4.0,
+        "original_score": 48.0,
+        "resit_score": 58.0
+      }
+    },
+    "failed_resit_courses": {}
+  }
+}
