@@ -1,0 +1,94 @@
+{
+  "FCTCONS/ND23/087": {
+    "exam_number": "FCTCONS/ND23/087",
+    "name": "RICKSON REJOICE USOKO",
+    "carryover_courses": {
+      "NUS125": {
+        "course_code": "NUS125",
+        "course_title": "Pharmacology I",
+        "credit_unit": 3.0,
+        "original_score": 41.0,
+        "resit_score": 73.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS125": {
+        "course_code": "NUS125",
+        "course_title": "Pharmacology I",
+        "credit_unit": 3.0,
+        "original_score": 41.0,
+        "resit_score": 73.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND23/096": {
+    "exam_number": "FCTCONS/ND23/096",
+    "name": "BENJAMIN AMARACHUKWU MARVELOUS",
+    "carryover_courses": {
+      "NUS121": {
+        "course_code": "NUS121",
+        "course_title": "Human Anatomy II",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 68.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS121": {
+        "course_code": "NUS121",
+        "course_title": "Human Anatomy II",
+        "credit_unit": 4.0,
+        "original_score": 44.0,
+        "resit_score": 68.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND23/114": {
+    "exam_number": "FCTCONS/ND23/114",
+    "name": "YAKUBU PRISCILLA ASHEZIE",
+    "carryover_courses": {
+      "NUS123": {
+        "course_code": "NUS123",
+        "course_title": "Developmental Psychology",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 70.0
+      }
+    },
+    "passed_resit_courses": {
+      "NUS123": {
+        "course_code": "NUS123",
+        "course_title": "Developmental Psychology",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 70.0
+      }
+    },
+    "failed_resit_courses": {}
+  },
+  "FCTCONS/ND23/117": {
+    "exam_number": "FCTCONS/ND23/117",
+    "name": "SYLVESTER FLO+D19URISH",
+    "carryover_courses": {
+      "EED126": {
+        "course_code": "EED126",
+        "course_title": "Intro. To Entrepreneurship",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 53.0
+      }
+    },
+    "passed_resit_courses": {
+      "EED126": {
+        "course_code": "EED126",
+        "course_title": "Intro. To Entrepreneurship",
+        "credit_unit": 2.0,
+        "original_score": 43.0,
+        "resit_score": 53.0
+      }
+    },
+    "failed_resit_courses": {}
+  }
+}
