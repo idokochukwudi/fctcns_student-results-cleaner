@@ -40,11 +40,11 @@ Since deployment in 2025, the system has demonstrated exceptional results:
 - [Installation Guide](#installation-guide)
 - [Operational Procedures](#operational-procedures)
 - [Support and Maintenance](#support-and-maintenance)
-- [Performance Metrics](#performance-metrics)
-- [Future Development](#future-development)
+- [Performance Metrics and Impact Assessment](#Performance-Metrics-and-Impact-Assessment)
+- [Future Enhancement Roadmap](#Future-Enhancement-Roadmap)
 - [Contact and Support](#contact-and-support) 
 
-## System Architecture
+# System Architecture
 
 ### Technical Stack
 | Component              | Technology                       | Purpose                                      |
@@ -132,7 +132,7 @@ STUDENT_RESULT_CLEANER/
 └───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Technical Implementation
+# Technical Implementation
 
 ### Core Processing Engine
 The system's processing engine intelligently handles program-specific requirements:
@@ -201,7 +201,7 @@ class ExamProcessor:
       }
       ```
 
-## Core Functionality
+# Core Functionality
 
 ### Regular Examination Processing Workflow
 1. 📥 **INPUT:** Raw Excel files (CA, Objective, Examination components)  
@@ -236,7 +236,7 @@ class ExamProcessor:
 - **Objective Examinations:** Responsible for organizing and standardizing Objective examination results
 - **JAMB Database:** Name standardization and data cleaning  
 
-## User Interface
+# User Interface
 
 ### Dashboard Overview
 The system features a comprehensive web-based interface accessible through standard browsers. The interface is organized into logical sections for efficient workflow management.
@@ -371,7 +371,7 @@ Tracks students with various academic statuses including those needing intervent
 - **Advanced Search:** Comprehensive search capabilities across processed results.
 - **Responsive Design:** Optimized for various screen sizes and devices.
 
-## Deployment Strategy
+# Deployment Strategy
 
 ### Current Deployment (Production)
 
@@ -392,7 +392,7 @@ SINGLE WORKSTATION DEPLOYMENT:
     ├── Manual backup procedures
     └── Single-user operation model
 ```
-## Future Enhancement Roadmap
+# Future Enhancement Roadmap
 
 | Phase    | Description                                    | Priority | Timeline   |
 |----------|------------------------------------------------|----------|------------|
@@ -422,9 +422,7 @@ COLLEGE NETWORK INFRASTRUCTURE
     └── Audit and Compliance Server
 ```
 
-## Installation Guide
-
----
+# Installation Guide
 
 ## Prerequisites
 
@@ -601,7 +599,7 @@ gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 "app:app"
 
 **Note:** The application runs on port 5000. Ensure this port is not blocked by Windows Firewall or other security software.
 
-## Operational Procedures
+# Operational Procedures
 
 ### Standard Operating Procedure
 
@@ -665,7 +663,7 @@ cp ~/fctcns_student-results-cleaner/processing.log $BACKUP_DIR/
 # Retention policy: Keep 7 days of backups
 find $BACKUP_ROOT -name "EXAMS_BACKUP_*" -type d -mtime +7 -exec rm -rf {} \;
 ```
-## Support and Maintenance
+# Support and Maintenance
 
 ### Troubleshooting Guide
 
@@ -712,7 +710,7 @@ df -h               # Disk space
 - Increase Gunicorn timeout for large files
 - Clear cache between processing sessions
 
-## Performance Metrics and Impact Assessment
+# Performance Metrics and Impact Assessment
 
 ### Quantitative Performance Improvements
 
@@ -739,7 +737,7 @@ df -h               # Disk space
 > "The carryover tracking and automated processing have been game-changers for our academic administration."
 – Academic Secretary
 
-## Contact and Support
+# Contact and Support
 
 ### Primary Support Contact
 - **Developer:** Chukwudi Idoko Ernest  
