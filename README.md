@@ -244,6 +244,7 @@ The system features a comprehensive web-based interface accessible through stand
 ## Dashboard Sections
 
 ### 1. Main Dashboard Section
+
 ![Main Dashboard](./img/homepage_1.png)  
 Primary interface showing institutional branding, welcome message, and quick access to all major processing functions including ND, BN, BM, CAOSCE, and specialized examinations.
 
@@ -288,6 +289,7 @@ Organized by program type (ND, BN, BM e.t.c) with ZIP archive downloads containi
 ### 5. Results and Reports
 
 **NDII CGPA Summary Report**  
+
 ![CGPA Summary](./img/nd_cgpa_summary1.png)  
 
 ![CGPA Summary](./img/nd_cgpa_summary2.png)
@@ -302,6 +304,7 @@ Comprehensive CGPA summary showing exam numbers, names, probation history, semes
 Semester-by-semester analysis showing total students, passed all, resit students, probation students, withdrawn students, average GPA, and pass rate percentage.
 
 **Individual Student Transcripts**  
+
 ![Failed Courses](./img/nd_student_report2.png)  
 Shows failed course status with "To Resit Courses" remark.  
 
@@ -336,6 +339,7 @@ Station-based assessment scores across clinical and practical stations with tota
 *Detailed scoring methodology showing total possible score of 300 marks and pass/fail criteria (50.0% per paper).*
 
 **Performance Analysis**  
+
 ![Performance Analysis](./img/caosce_summary_analysis_section.png)  
 Examination summary and performance analysis including total candidates, overall average, highest/lowest scores.
 
@@ -355,6 +359,7 @@ Shows failed candidates with specific failed papers identified.
 Shows students achieving "Distinction" classification with CGPAs ranging from 3.42 to 3.88.
 
 **Lower Credit/Inactive Students**  
+
 ![Lower Credit](./img/nd_cgpa_summary2.png)  
 Tracks students with various academic statuses including those needing intervention or with inactive status.
 
