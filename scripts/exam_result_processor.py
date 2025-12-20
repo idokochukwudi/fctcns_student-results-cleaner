@@ -3,12 +3,10 @@
 """
 exam_result_processor.py
 
-Complete script with ENFORCED probation/withdrawal rule, integrated carryover student management, and NOT REG detection.
-
-WITH FIXED PREVIOUS CGPA LOADING LOGIC:
-- Previous CGPA now loads from actual previous semester worksheet (not CGPA_SUMMARY)
-- Previous CGPA correctly mapped by semester progression
-- Proper CGPA calculation with 4.0 scale
+Complete script with FIXED CGPA CALCULATION DISCREPANCY.
+CORRECTED: CGPA calculation logic for Y2S2 to match CGPA_SUMMARY.
+FIXED: Single source of truth for CGPA calculations.
+ENHANCED: Proper cumulative CGPA calculation across all semesters.
 """
 
 from openpyxl.cell import MergedCell
@@ -855,7 +853,11 @@ def check_existing_carryover_files(raw_dir, set_name, semester_key):
 # ----------------------------
 # CGPA Tracking Functions - FIXED: Proper GPA vs CGPA terminology
 # UPDATED: Recalculated for 4.0 scale and proper sorting
+# FIXED: Single source of truth for CGPA calculations
 # ----------------------------
+
+# Global storage for cumulative CGPA data - SINGLE SOURCE OF TRUTH
+CUMULATIVE_CGPA_DATA = {}  # Format: {exam_no: {"gpas": [], "credits": [], "total_grade_points": 0, "total_credits": 0}}
 
 def get_grade_point(score):
     """Convert score to grade point for GPA calculation - ND 4.0 SCALE."""
@@ -903,10 +905,54 @@ def calculate_cumulative_cgpa(student_data, current_gpa, current_credits):
     else:
         return current_gpa
 
+def update_cumulative_cgpa_data(exam_no, semester_gpa, semester_credits, semester_key):
+    """
+    Update the SINGLE SOURCE OF TRUTH for cumulative CGPA data.
+    This ensures consistency between student reports and CGPA_SUMMARY.
+    """
+    global CUMULATIVE_CGPA_DATA
+    
+    if exam_no not in CUMULATIVE_CGPA_DATA:
+        CUMULATIVE_CGPA_DATA[exam_no] = {
+            "gpas": [],
+            "credits": [],
+            "total_grade_points": 0,
+            "total_credits": 0,
+            "semesters": []
+        }
+    
+    # Add current semester data
+    CUMULATIVE_CGPA_DATA[exam_no]["gpas"].append(semester_gpa)
+    CUMULATIVE_CGPA_DATA[exam_no]["credits"].append(semester_credits)
+    CUMULATIVE_CGPA_DATA[exam_no]["semesters"].append(semester_key)
+    
+    # Recalculate total
+    CUMULATIVE_CGPA_DATA[exam_no]["total_grade_points"] += semester_gpa * semester_credits
+    CUMULATIVE_CGPA_DATA[exam_no]["total_credits"] += semester_credits
+    
+    # Calculate current CGPA
+    if CUMULATIVE_CGPA_DATA[exam_no]["total_credits"] > 0:
+        current_cgpa = CUMULATIVE_CGPA_DATA[exam_no]["total_grade_points"] / CUMULATIVE_CGPA_DATA[exam_no]["total_credits"]
+        return round(current_cgpa, 2)
+    else:
+        return semester_gpa
+
+def get_cumulative_cgpa_for_student(exam_no):
+    """Get the cumulative CGPA for a student from the single source of truth."""
+    global CUMULATIVE_CGPA_DATA
+    
+    if exam_no not in CUMULATIVE_CGPA_DATA:
+        return None
+    
+    student_data = CUMULATIVE_CGPA_DATA[exam_no]
+    if student_data["total_credits"] > 0:
+        return round(student_data["total_grade_points"] / student_data["total_credits"], 2)
+    return 0.0
+
 def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     """
     Create a CGPA summary sheet that aggregates GPA across all semesters.
-    FIXED: Proper header row detection based on actual worksheet structure
+    FIXED: Uses the SINGLE SOURCE OF TRUTH (CUMULATIVE_CGPA_DATA) for consistency.
     UPDATED: Added S/N column and fixed creation logic
     UPDATED: Professional column headings (Y1S1, Y1S2, Y2S1, Y2S2) and color-coded withdrawn status
     UPDATED TITLE: Changed to match the requested format
@@ -917,15 +963,28 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
     UPDATED: Recalculated all GPAs for 4.0 scale and proper sorting
     FIXED: Freeze headings (rows 1-5), proper serial numbering, and auto-fit columns
     UPDATED: NAME and PROBATION HISTORY left aligned, abbreviated probation history
+    FIXED: Uses the single source of truth for CGPA calculations
     """
     try:
-        print("📊 Creating CGPA Summary Sheet...")
+        print("📊 Creating CGPA Summary Sheet using SINGLE SOURCE OF TRUTH...")
         
         # Load the mastersheet workbook
         wb = load_workbook(mastersheet_path)
         
-        # Collect CGPA data from all semesters
+        # Collect CGPA data from all semesters - USE SINGLE SOURCE OF TRUTH
         cgpa_data = {}
+        
+        # First, populate from our single source of truth
+        for exam_no, student_data in CUMULATIVE_CGPA_DATA.items():
+            if exam_no not in cgpa_data:
+                # We'll get name and probation history from the actual semester sheets
+                cgpa_data[exam_no] = {
+                    "name": "Unknown",
+                    "gpas": {},  # Will be populated from semester sheets
+                    "status": "Active",
+                    "probation_semesters": [],
+                    "cumulative_cgpa": get_cumulative_cgpa_for_student(exam_no)
+                }
         
         # Map full semester names to abbreviated professional headings
         semester_abbreviation_map = {
@@ -934,8 +993,11 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             "ND-SECOND-YEAR-FIRST-SEMESTER": "Y2S1",
             "ND-SECOND-YEAR-SECOND-SEMESTER": "Y2S2"
         }
+        
         # Track which semesters we actually found data for
         semesters_with_data = set()
+        
+        # Now get per-semester GPAs and other info from the sheets
         for sheet_name in wb.sheetnames:
             if sheet_name in SEMESTER_ORDER:
                 try:
@@ -945,6 +1007,8 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                     best_header_row = None
                     best_gpa_col = None
                     best_exam_col = None
+                    best_name_col = None
+                    best_remarks_col = None
                     best_df = None
                     
                     # Try header rows from 0 to 20 (covering all possible positions)
@@ -972,6 +1036,22 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                             
                             if not gpa_col:
                                 continue
+                            
+                            # Look for name column
+                            name_col = None
+                            for col in df.columns:
+                                col_str = str(col).upper().strip()
+                                if "NAME" in col_str and "COURSE" not in col_str:
+                                    name_col = col
+                                    break
+                            
+                            # Look for remarks column
+                            remarks_col = None
+                            for col in df.columns:
+                                col_str = str(col).upper().strip()
+                                if "REMARK" in col_str:
+                                    remarks_col = col
+                                    break
                             
                             # Validate that we have actual data in these columns
                             valid_students = 0
@@ -1001,9 +1081,10 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                                 best_header_row = header_row
                                 best_gpa_col = gpa_col
                                 best_exam_col = exam_col
+                                best_name_col = name_col
+                                best_remarks_col = remarks_col
                                 best_df = df
                                 print(f"✅ Found valid data at header row {header_row}: {valid_students} students with GPA")
-                                print(f"   Sample: {sample_gpas[:3]}")  # Show first 3 samples
                                 break
                                     
                         except Exception as e:
@@ -1015,19 +1096,11 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                         df = best_df
                         exam_col = best_exam_col
                         gpa_col = best_gpa_col
+                        name_col = best_name_col
+                        remarks_col = best_remarks_col
                         
                         print(f"📊 Processing {sheet_name} with header row {best_header_row}")
-                        print(f"📝 Using columns - Exam: '{exam_col}', GPA: '{gpa_col}'")
-                        
-                        # Also look for name and remarks columns
-                        name_col = None
-                        remarks_col = None
-                        for col in df.columns:
-                            col_str = str(col).upper().strip()
-                            if "NAME" in col_str and "COURSE" not in col_str:
-                                name_col = col
-                            elif "REMARKS" in col_str:
-                                remarks_col = col
+                        print(f"📝 Using columns - Exam: '{exam_col}', GPA: '{gpa_col}', Name: '{name_col}'")
                         
                         students_found = 0
                         for idx, row in df.iterrows():
@@ -1040,14 +1113,16 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                                 
                                 if exam_no not in cgpa_data:
                                     cgpa_data[exam_no] = {
-                                        "name": (
-                                            str(row[name_col]) if name_col and pd.notna(row.get(name_col))
-                                            else ""
-                                        ),
+                                        "name": "",
                                         "gpas": {},
                                         "status": "Active",
                                         "probation_semesters": [],
+                                        "cumulative_cgpa": None
                                     }
+                                
+                                # Update name if available
+                                if name_col and pd.notna(row.get(name_col)):
+                                    cgpa_data[exam_no]["name"] = str(row[name_col])
                                 
                                 # Extract GPA value and convert to 4.0 scale if needed
                                 gpa_value = row[gpa_col]
@@ -1083,29 +1158,14 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                         
                     else:
                         print(f"❌ Could not find valid GPA data in {sheet_name} after trying all header rows")
-                        # Try to debug by showing available columns from first few rows
-                        try:
-                            for test_row in [0, 1, 2, 3, 4, 5]:
-                                test_df = pd.read_excel(mastersheet_path, sheet_name=sheet_name, header=test_row)
-                                if not test_df.empty:
-                                    print(f"   Row {test_row} columns: {[str(col) for col in test_df.columns[:8]]}")
-                                    # Show sample data
-                                    if len(test_df) > 0:
-                                        sample = {}
-                                        for col in test_df.columns[:5]:
-                                            sample[col] = test_df.iloc[0][col]
-                                        print(f"   Sample data: {sample}")
-                                    break
-                        except Exception as e:
-                            print(f"   Debug failed: {e}")
                         
                 except Exception as e:
                     print(f"⚠️ Warning: Could not process sheet {sheet_name}: {e}")
-                    import traceback
-                    traceback.print_exc()
                     continue
+        
         print(f"📊 Total students with CGPA data: {len(cgpa_data)}")
         print(f"📊 Semesters with data: {semesters_with_data}")
+        
         # Create CGPA summary dataframe with probation tracking
         summary_data = []
         for exam_no, data in cgpa_data.items():
@@ -1119,7 +1179,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 ),
             }
             
-            # Add GPA for each semester using abbreviated headings and calculate cumulative
+            # Add GPA for each semester using abbreviated headings
             total_gpa = 0
             semester_count = 0
             for semester in SEMESTER_ORDER:
@@ -1133,16 +1193,30 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 else:
                     abbrev_semester = semester_abbreviation_map.get(semester, semester)
                     row[abbrev_semester] = None
-                    
-            # Calculate Cumulative CGPA
-            cumulative_cgpa = (
-                round(total_gpa / semester_count, 2) if semester_count > 0 else 0.0
-            )
+            
+            # CRITICAL FIX: Use the SINGLE SOURCE OF TRUTH for Cumulative CGPA
+            if data.get("cumulative_cgpa") is not None:
+                # Use the pre-calculated cumulative CGPA from our single source
+                cumulative_cgpa = data["cumulative_cgpa"]
+            elif exam_no in CUMULATIVE_CGPA_DATA:
+                # Fallback to recalculating from our stored data
+                student_data = CUMULATIVE_CGPA_DATA[exam_no]
+                if student_data["total_credits"] > 0:
+                    cumulative_cgpa = round(student_data["total_grade_points"] / student_data["total_credits"], 2)
+                else:
+                    cumulative_cgpa = 0.0
+            elif semester_count > 0:
+                # Last resort: calculate from semester GPAs
+                cumulative_cgpa = round(total_gpa / semester_count, 2) if semester_count > 0 else 0.0
+            else:
+                cumulative_cgpa = 0.0
+                
             row["CUMULATIVE CGPA"] = cumulative_cgpa
             
             # FIX 1: Calculate CLASS OF AWARD with WITHDRAWN check FIRST
             is_withdrawn = is_student_withdrawn(exam_no)
             valid_semester_count = semester_count  # Count of semesters with valid GPA data
+            
             # CRITICAL: Check withdrawal status FIRST
             if is_withdrawn:
                 class_of_award = "WITHDRAWN"  # Withdrawn students should show WITHDRAWN, not Pass/Fail
@@ -1164,6 +1238,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             row["CLASS OF AWARD"] = class_of_award
             row["WITHDRAWN"] = "Yes" if is_withdrawn else "No"
             summary_data.append(row)
+        
         # Create summary dataframe
         if summary_data:
             summary_df = pd.DataFrame(summary_data)
@@ -1204,10 +1279,12 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 + ["CUMULATIVE CGPA", "WITHDRAWN", "CLASS OF AWARD"]
             )
             summary_df = pd.DataFrame(columns=headers)
+        
         # Add the summary sheet to the workbook
         if "CGPA_SUMMARY" in wb.sheetnames:
             del wb["CGPA_SUMMARY"]
         ws = wb.create_sheet("CGPA_SUMMARY")
+        
         # Define headers for column calculation
         headers = (
             ["S/N", "EXAM NUMBER", "NAME", "PROBATION HISTORY"]
@@ -1216,6 +1293,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         )
         num_columns = len(headers)
         end_col_letter = get_column_letter(num_columns)
+        
         # ADD PROFESSIONAL HEADER WITH SCHOOL NAME - FIXED: Use exact requested format
         ws.merge_cells(f"A1:{end_col_letter}1")
         title_cell = ws["A1"]
@@ -1225,6 +1303,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         title_cell.fill = PatternFill(
             start_color="1E90FF", end_color="1E90FF", fill_type="solid"
         )
+        
         ws.merge_cells(f"A2:{end_col_letter}2")
         subtitle_cell = ws["A2"]
         subtitle_cell.value = "DEPARTMENT OF NURSING"
@@ -1233,6 +1312,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         subtitle_cell.fill = PatternFill(
             start_color="E6E6FA", end_color="E6E6FA", fill_type="solid"
         )
+        
         # ADD DYNAMIC TITLE ROW - FIXED: Use exact requested format
         ws.merge_cells(f"A3:{end_col_letter}3")
         exam_title_cell = ws["A3"]
@@ -1242,13 +1322,16 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         exam_title_cell.fill = PatternFill(
             start_color="FFFFE0", end_color="FFFFE0", fill_type="solid"
         )
+        
         ws.merge_cells(f"A4:{end_col_letter}4")
         date_cell = ws["A4"]
         date_cell.value = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         date_cell.font = Font(italic=True, size=10)
         date_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
         # Add empty row for spacing
         ws.row_dimensions[5].height = 10
+        
         # Write header starting from row 6
         for col_idx, header in enumerate(headers, 1):
             cell = ws.cell(row=6, column=col_idx, value=header)
@@ -1261,6 +1344,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                 top=Side(style="thin"),
                 bottom=Side(style="thin"),
             )
+        
         # Write data starting from row 7
         if not summary_df.empty:
             for row_idx, row_data in enumerate(summary_df.to_dict("records"), 7):
@@ -1315,9 +1399,11 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         else:
             print("⚠️ No data to write to CGPA summary sheet")
             ws.cell(row=7, column=1, value="No CGPA data available")
+        
         # FIX 1: FREEZE PANES AT ROW 7 (so rows 1-6 are frozen)
         ws.freeze_panes = "A7"
         print("✅ Frozen headings (rows 1-6)")
+        
         # FIX 2: AUTO-FIT COLUMN WIDTHS FOR ALL COLUMNS WITH BETTER LOGIC
         print("📏 Auto-fitting column widths to fit content...")
         
@@ -1371,12 +1457,14 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
             
             ws.column_dimensions[column_letter].width = adjusted_width
             print(f"   📐 Column {column_letter} ({header}): width {adjusted_width}")
+        
         # Adjust row heights for better visibility
         for row in range(6, ws.max_row + 1):
             if row == 6:  # Header row
                 ws.row_dimensions[row].height = 25
             else:
                 ws.row_dimensions[row].height = 20
+        
         # Add summary statistics if we have data
         if not summary_df.empty:
             stats_row = len(summary_df) + 8
@@ -1412,6 +1500,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
                         cell.font = Font(bold=True)
                     elif stat.startswith("  -"):
                         cell.font = Font(italic=True)
+        
         # Save the workbook
         wb.save(mastersheet_path)
         print("✅ CGPA Summary sheet created successfully with:")
@@ -1420,6 +1509,7 @@ def create_cgpa_summary_sheet(mastersheet_path, timestamp):
         print("   - Auto-fit column widths")
         print("   - NAME and PROBATION HISTORY left aligned")
         print("   - Abbreviated probation history (Y1S1, Y1S2, Y2S1, Y2S2)")
+        print("   - SINGLE SOURCE OF TRUTH for CGPA calculations")
         return summary_df
         
     except Exception as e:
@@ -3056,6 +3146,7 @@ def get_custom_semester_selection():
 # UPDATED: Now includes both previous CGPA and current CGPA
 # FIXED: Added proper error handling for missing reportlab installation
 # UPDATED: Dynamic date based on current processing date
+# FIXED: Uses SINGLE SOURCE OF TRUTH for CGPA calculations
 # ----------------------------
 
 def generate_individual_student_pdf(
@@ -3074,7 +3165,8 @@ def generate_individual_student_pdf(
     upgrade_min_threshold=None,
 ):
     """
-    FIXED VERSION: Properly separates Current GPA, Previous CGPA, and Current CGPA
+    FIXED VERSION: Uses SINGLE SOURCE OF TRUTH for CGPA calculations.
+    Ensures Current CGPA matches exactly what's in CGPA_SUMMARY.
     """
     try:
         # Try to import reportlab modules
@@ -3410,7 +3502,7 @@ def generate_individual_student_pdf(
         elems.append(Spacer(1, 14))
         
         # ========================================================================
-        # CORRECTED GPA AND CGPA CALCULATION LOGIC
+        # CORRECTED GPA AND CGPA CALCULATION LOGIC - SINGLE SOURCE OF TRUTH
         # ========================================================================
         
         # Step 1: Calculate CURRENT GPA (current semester only)
@@ -3453,59 +3545,67 @@ def generate_individual_student_pdf(
         if display_previous_cgpa == "N/A":
             print(f"⚠️ No previous CGPA data for {exam_no} (first semester or data missing)")
         
-        # Step 3: Calculate CURRENT CGPA (cumulative including current semester)
-        current_cgpa = current_gpa  # Initialize with current semester GPA
+        # Step 3: Get CURRENT CGPA from SINGLE SOURCE OF TRUTH
+        current_cgpa = get_cumulative_cgpa_for_student(exam_no)
         
-        if cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
-            student_history = cumulative_cgpa_data[exam_no]
-            
-            # Sum all previous semesters
-            cumulative_grade_points = sum(
-                gpa * credits 
-                for gpa, credits in zip(
-                    student_history.get("gpas", []), 
-                    student_history.get("credits", [])
+        if current_cgpa is None:
+            # If not in single source yet, calculate it
+            if cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
+                student_history = cumulative_cgpa_data[exam_no]
+                
+                # Sum all previous semesters
+                cumulative_grade_points = sum(
+                    gpa * credits 
+                    for gpa, credits in zip(
+                        student_history.get("gpas", []), 
+                        student_history.get("credits", [])
+                    )
                 )
-            )
-            cumulative_credits = sum(student_history.get("credits", []))
-            
-            # Add current semester
-            cumulative_grade_points += current_semester_grade_points
-            cumulative_credits += current_semester_units
-            
-            # Calculate CGPA
-            if cumulative_credits > 0:
-                current_cgpa = round(cumulative_grade_points / cumulative_credits, 2)
-                print(f"✅ Calculated Current CGPA for {exam_no}: {current_cgpa:.2f}")
-                print(f"   Total: {cumulative_grade_points:.1f} points / {cumulative_credits} units")
+                cumulative_credits = sum(student_history.get("credits", []))
+                
+                # Add current semester
+                cumulative_grade_points += current_semester_grade_points
+                cumulative_credits += current_semester_units
+                
+                # Calculate CGPA
+                if cumulative_credits > 0:
+                    current_cgpa = round(cumulative_grade_points / cumulative_credits, 2)
+                    print(f"✅ Calculated Current CGPA for {exam_no}: {current_cgpa:.2f}")
+                    print(f"   Total: {cumulative_grade_points:.1f} points / {cumulative_credits} units")
+                else:
+                    current_cgpa = current_gpa
+                    print(f"⚠️ No cumulative credits, using current semester GPA: {current_cgpa:.2f}")
+            elif previous_cgpa_value is not None:
+                # Fallback: Use weighted average if we have previous CGPA but no detailed history
+                estimated_prev_credits = 30  # Adjust based on your institution's typical load
+                
+                cumulative_grade_points = (previous_cgpa_value * estimated_prev_credits) + current_semester_grade_points
+                cumulative_credits = estimated_prev_credits + current_semester_units
+                
+                if cumulative_credits > 0:
+                    current_cgpa = round(cumulative_grade_points / cumulative_credits, 2)
+                    print(f"✅ Estimated Current CGPA for {exam_no}: {current_cgpa:.2f}")
+                    print(f"   (Using estimated previous credits: {estimated_prev_credits})")
             else:
+                # No previous data: Current CGPA = Current GPA
                 current_cgpa = current_gpa
-                print(f"⚠️ No cumulative credits, using current semester GPA: {current_cgpa:.2f}")
+                print(f"ℹ️ No previous data for {exam_no}, Current CGPA = Current GPA: {current_cgpa:.2f}")
         
-        elif previous_cgpa_value is not None:
-            # Fallback: Use weighted average if we have previous CGPA but no detailed history
-            estimated_prev_credits = 30  # Adjust based on your institution's typical load
-            
-            cumulative_grade_points = (previous_cgpa_value * estimated_prev_credits) + current_semester_grade_points
-            cumulative_credits = estimated_prev_credits + current_semester_units
-            
-            if cumulative_credits > 0:
-                current_cgpa = round(cumulative_grade_points / cumulative_credits, 2)
-                print(f"✅ Estimated Current CGPA for {exam_no}: {current_cgpa:.2f}")
-                print(f"   (Using estimated previous credits: {estimated_prev_credits})")
-        else:
-            # No previous data: Current CGPA = Current GPA
-            current_cgpa = current_gpa
-            print(f"ℹ️ No previous data for {exam_no}, Current CGPA = Current GPA: {current_cgpa:.2f}")
+        # CRITICAL: Update the single source of truth with current semester data
+        update_cumulative_cgpa_data(exam_no, current_gpa, current_semester_units, semester_key)
+        
+        # Get the final CGPA from the single source to ensure consistency
+        final_current_cgpa = get_cumulative_cgpa_for_student(exam_no) or current_cgpa
         
         # Validation checks
         print(f"\n📊 FINAL VALUES for {exam_no}:")
         print(f"   Current GPA (this semester only):        {current_gpa:.2f}")
         print(f"   Previous CGPA (before this semester):    {display_previous_cgpa}")
-        print(f"   Current CGPA (cumulative with current):  {current_cgpa:.2f}")
+        print(f"   Current CGPA (from single source):       {final_current_cgpa:.2f}")
         
+        # Verify consistency
         if previous_cgpa_value is not None:
-            if abs(current_gpa - current_cgpa) < 0.01:
+            if abs(current_gpa - final_current_cgpa) < 0.01:
                 print(f"⚠️ WARNING: Current GPA and Current CGPA are identical!")
                 print(f"   This should only happen if student has no prior academic history.")
                 print(f"   But Previous CGPA exists ({previous_cgpa_value:.2f}), so this is likely an error.")
@@ -3515,7 +3615,7 @@ def generate_individual_student_pdf(
         # ========================================================================
         
         display_current_gpa = current_gpa
-        display_current_cgpa = current_cgpa
+        display_current_cgpa = final_current_cgpa  # Use the value from single source
         
         # Summary values for PDF
         tcpe = round(current_semester_grade_points, 1)
@@ -3599,7 +3699,7 @@ def generate_individual_student_pdf(
                 Paragraph("<b>TCUF:</b>", styles["Normal"]),
                 str(tcuf),
                 Paragraph("<b>CURRENT CGPA:</b>", styles["Normal"]),
-                f"{display_current_cgpa:.2f}",  # ✅ Updated cumulative
+                f"{display_current_cgpa:.2f}",  # ✅ From SINGLE SOURCE OF TRUTH
             ],
         ]
         
@@ -3674,6 +3774,7 @@ def generate_individual_student_pdf(
 
 # ----------------------------
 # Main file processing (Enhanced with Data Transformation and NOT REG handling)
+# FIXED: Uses SINGLE SOURCE OF TRUTH for CGPA calculations
 # ----------------------------
 
 def process_single_file(
@@ -3701,6 +3802,7 @@ def process_single_file(
     UPDATED: Recalculated GPAs for 4.0 scale
     
     FIXED: Added Previous CGPA and Current CGPA calculation to Excel mastersheet
+    FIXED: Uses SINGLE SOURCE OF TRUTH for CGPA calculations
     """
     fname = os.path.basename(path)
     print(f"🔍 Processing file: {fname} for semester: {semester_key}")
@@ -4083,18 +4185,26 @@ def process_single_file(
     
     # ========================================================================
     # CRITICAL FIX: ADDED PREVIOUS CGPA AND CURRENT CGPA CALCULATION TO EXCEL
+    # Uses SINGLE SOURCE OF TRUTH for consistency
     # ========================================================================
     print("🎯 Calculating CGPA values for Excel mastersheet...")
     
-    # Calculate Previous CGPA (from all completed semesters before current)
     def calculate_previous_cgpa(row):
-        """Calculate Previous CGPA from cumulative data (excluding current semester)."""
+        """Calculate Previous CGPA from single source of truth (excluding current semester)."""
         exam_no = str(row["EXAM NUMBER"]).strip()
         
+        if exam_no in CUMULATIVE_CGPA_DATA:
+            student_data = CUMULATIVE_CGPA_DATA[exam_no]
+            # Check if we have any previous data (excluding current semester)
+            if student_data["total_credits"] > 0 and len(student_data["semesters"]) > 0:
+                # If current semester hasn't been added yet, use existing cumulative
+                if semester_key not in student_data["semesters"]:
+                    if student_data["total_credits"] > 0:
+                        return round(student_data["total_grade_points"] / student_data["total_credits"], 2)
+        
+        # Check cumulative_cgpa_data as fallback
         if cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
             student_history = cumulative_cgpa_data[exam_no]
-            
-            # Use only previous semesters (exclude current)
             prev_gpas = student_history.get("gpas", [])
             prev_credits = student_history.get("credits", [])
             
@@ -4103,44 +4213,21 @@ def process_single_file(
                 total_credits = sum(prev_credits)
                 
                 if total_credits > 0:
-                    previous_cgpa = round(total_points / total_credits, 2)
-                    print(f"📊 {exam_no}: Previous CGPA calculated = {previous_cgpa:.2f} from {len(prev_gpas)} semesters")
-                    return previous_cgpa
+                    return round(total_points / total_credits, 2)
         
-        # Return N/A if no previous data
         return "N/A"
     
-    # Calculate Current CGPA (cumulative including current semester)
     def calculate_current_cgpa(row):
-        """Calculate Current CGPA (cumulative including current semester)."""
+        """Calculate Current CGPA using SINGLE SOURCE OF TRUTH."""
         exam_no = str(row["EXAM NUMBER"]).strip()
         current_gpa = row["GPA"]
+        current_credits = row["Total Registered CU"]
         
-        if cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
-            student_history = cumulative_cgpa_data[exam_no]
-            
-            # Get previous semester data
-            prev_gpas = student_history.get("gpas", [])
-            prev_credits = student_history.get("credits", [])
-            
-            # Add current semester
-            current_grade_points = row["TCPE"]
-            current_credits = row["Total Registered CU"]
-            
-            if prev_gpas and prev_credits:
-                total_points = sum(gpa * credit for gpa, credit in zip(prev_gpas, prev_credits))
-                total_points += current_grade_points
-                
-                total_credits = sum(prev_credits) + current_credits
-                
-                if total_credits > 0:
-                    current_cgpa = round(total_points / total_credits, 2)
-                    print(f"📊 {exam_no}: Current CGPA calculated = {current_cgpa:.2f} (includes current semester)")
-                    return current_cgpa
+        # Update the single source of truth
+        current_cgpa = update_cumulative_cgpa_data(exam_no, current_gpa, current_credits, semester_key)
         
-        # If no previous data, use current GPA as CGPA
-        print(f"📊 {exam_no}: No previous data, Current CGPA = Current GPA = {current_gpa:.2f}")
-        return current_gpa
+        print(f"📊 {exam_no}: Current CGPA calculated = {current_cgpa:.2f} (from single source)")
+        return current_cgpa
     
     # Apply CGPA calculations
     print("🔍 Calculating Previous CGPA values...")
@@ -4824,6 +4911,7 @@ def process_single_file(
     wb.save(out_xlsx)
     print(f"✅ Mastersheet saved: {out_xlsx}")
     print(f"📊 CGPA columns added to Excel: PREVIOUS CGPA and CURRENT CGPA")
+    print(f"📊 SINGLE SOURCE OF TRUTH updated for {len(CUMULATIVE_CGPA_DATA)} students")
     
     # Generate individual student PDF with previous CGPAs and Cumulative CGPA
     safe_sem = re.sub(r"[^\w\-]", "_", sem)
@@ -4984,6 +5072,11 @@ def main():
     initialize_student_tracker()
     initialize_carryover_tracker()
     initialize_inactive_students_tracker()
+    
+    # Initialize SINGLE SOURCE OF TRUTH for CGPA
+    global CUMULATIVE_CGPA_DATA
+    CUMULATIVE_CGPA_DATA = {}
+    
     # Check if running in web mode
     if is_web_mode():
         uploaded_file_path = get_uploaded_file_path()
@@ -5280,6 +5373,10 @@ def process_in_non_interactive_mode(params, base_dir_norm):
     # Initialize carryover tracker
     initialize_carryover_tracker()
     initialize_inactive_students_tracker()
+    # Initialize SINGLE SOURCE OF TRUTH for CGPA
+    global CUMULATIVE_CGPA_DATA
+    CUMULATIVE_CGPA_DATA = {}
+    
     # Process each set and semester
     total_processed = 0
     for nd_set in sets_to_process:
