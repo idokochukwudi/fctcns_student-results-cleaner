@@ -3165,8 +3165,7 @@ def generate_individual_student_pdf(
     upgrade_min_threshold=None,
 ):
     """
-    FIXED VERSION: Uses SINGLE SOURCE OF TRUTH for CGPA calculations.
-    Ensures Current CGPA matches exactly what's in CGPA_SUMMARY.
+    FIXED VERSION: Header line breaks and column widths corrected.
     """
     try:
         # Try to import reportlab modules
@@ -3188,9 +3187,9 @@ def generate_individual_student_pdf(
         print(f"❌ ERROR: ReportLab is not installed. Cannot generate PDF.")
         print(f"💡 Please install it with: pip install reportlab")
         print(f"⚠️ Skipping PDF generation, but Excel processing will continue")
-        return None  # Return None instead of False to indicate skipping
+        return None
     
-    # FIX: Validate inputs before proceeding
+    # Validate inputs
     if mastersheet_df is None or mastersheet_df.empty:
         print("⚠️ No student data to generate PDF")
         return None
@@ -3266,12 +3265,18 @@ def generate_individual_student_pdf(
             except Exception as e:
                 print(f"Warning: Could not load logo: {e}")
         
-        # Header table with logo and title
+        # ============================================================
+        # 🔧 FIX #1: HEADER WITH PROPER LINE BREAK
+        # ============================================================
+        # Header table with logo and title (with line break)
         if logo_img:
             header_data = [
                 [
                     logo_img,
-                    Paragraph("FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA", main_header_style),
+                    Paragraph(
+                        "FCT COLLEGE OF NURSING SCIENCES<br/><br/>GWAGWALADA, FCT-ABUJA",  # ✅ Added <br/> for line break
+                        main_header_style
+                    ),
                 ]
             ]
             header_table = Table(header_data, colWidths=[1.0 * inch, 5.0 * inch])
@@ -3287,13 +3292,16 @@ def generate_individual_student_pdf(
             elems.append(header_table)
         else:
             elems.append(
-                Paragraph("FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA, FCT-ABUJA", main_header_style)
+                Paragraph(
+                    "FCT COLLEGE OF NURSING SCIENCES<br/><br/>GWAGWALADA, FCT-ABUJA",  # ✅ Added <br/> for line break
+                    main_header_style
+                )
             )
         
         # Address and contact info
         elems.append(Paragraph("P.O.Box 507, Gwagwalada-Abuja, Nigeria", header_style))
         elems.append(Paragraph("<b>DEPARTMENT OF NURSING</b>", header_style))
-        elems.append(Paragraph("fctsonexamsoffice@gmail.com", header_style))
+        elems.append(Paragraph("info@fctcns.edu.ng", header_style))
         elems.append(Spacer(1, 8))
         
         # Dynamic title based on semester
@@ -3302,26 +3310,29 @@ def generate_individual_student_pdf(
         # Get current date
         current_date = datetime.now().strftime("%B %d, %Y")
         if "SECOND-YEAR-SECOND-SEMESTER" in semester_key:
-            exam_title = f"NATIONAL DIPLOMA YEAR TWO SECOND SEMESTER EXAMINATIONS RESULT — {current_date}"
+            exam_title = f"NATIONAL DIPLOMA YEAR TWO SECOND SEMESTER EXAMINATIONS RESULT <br/><br/> {current_date}"
         else:
             exam_title = f"NATIONAL DIPLOMA {level_display} {semester_display} EXAMINATIONS RESULT — {current_date}"
         
         elems.append(Paragraph(exam_title, title_style))
-        elems.append(Paragraph("(THIS IS NOT A TRANSCRIPT)", subtitle_style))
+        elems.append(Paragraph("<br/><br/>(THIS IS NOT A TRANSCRIPT)", subtitle_style))
         elems.append(Spacer(1, 8))
         
         # Student particulars
         exam_no = str(r.get("EXAM NUMBER", r.get("REG. No", "")))
         student_name = str(r.get("NAME", ""))
         
-        # Particulars table
+        # ============================================================
+        # 🔧 FIX #2: INCREASED COLUMN WIDTHS FOR PARTICULARS TABLE
+        # ============================================================
+        # Particulars table with wider columns
         particulars_data = [
             [Paragraph("<b>STUDENT'S PARTICULARS</b>", styles["Normal"])],
             [Paragraph("<b>NAME:</b>", styles["Normal"]), student_name],
             [
                 Paragraph("<b>LEVEL OF<br/>STUDY:</b>", styles["Normal"]),
                 level_display,
-                Paragraph("<b>SEMESTER:</b>", styles["Normal"]),
+                Paragraph("<b>SEMESTER:</b>", styles["Normal"]),  # ✅ This label now has more space
                 semester_display,
             ],
             [
@@ -3331,8 +3342,11 @@ def generate_individual_student_pdf(
                 set_code,
             ],
         ]
+        
+        # ✅ INCREASED column widths - especially for SEMESTER column
         particulars_table = Table(
-            particulars_data, colWidths=[1.2 * inch, 2.3 * inch, 0.8 * inch, 1.5 * inch]
+            particulars_data, 
+            colWidths=[1.2 * inch, 1.9 * inch, 1.0 * inch, 1.5 * inch]
         )
         particulars_table.setStyle(
             TableStyle(
@@ -3501,133 +3515,52 @@ def generate_individual_student_pdf(
         elems.append(course_table)
         elems.append(Spacer(1, 14))
         
-        # ========================================================================
-        # CORRECTED GPA AND CGPA CALCULATION LOGIC - SINGLE SOURCE OF TRUTH
-        # ========================================================================
-        
-        # Step 1: Calculate CURRENT GPA (current semester only)
+        # Calculate GPA and CGPA values
         current_gpa = (
             round(current_semester_grade_points / current_semester_units, 2) 
             if current_semester_units > 0 
             else 0.0
         )
         
-        print(f"✅ Student {exam_no} - Current Semester GPA: {current_gpa:.2f}")
-        print(f"   Current Semester: {current_semester_grade_points:.1f} points / {current_semester_units} units")
-        
-        # Step 2: Get PREVIOUS CGPA (from all completed semesters BEFORE current)
+        # Get Previous CGPA
         previous_cgpa_value = None
-        
-        # Try to load from previous_cgpas dict
         if previous_cgpas and exam_no in previous_cgpas:
             previous_cgpa_value = previous_cgpas[exam_no]
-            print(f"✅ Found Previous CGPA for {exam_no}: {previous_cgpa_value:.2f}")
-        else:
-            # Try to calculate from cumulative data (exclude current semester)
-            if cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
-                student_history = cumulative_cgpa_data[exam_no]
-                if student_history.get("gpas") and len(student_history["gpas"]) > 0:
-                    # Calculate PREVIOUS CGPA from historical data only
-                    prev_total_points = sum(
-                        gpa * credits 
-                        for gpa, credits in zip(student_history["gpas"], student_history["credits"])
-                    )
-                    prev_total_credits = sum(student_history["credits"])
-                    
-                    if prev_total_credits > 0:
-                        previous_cgpa_value = round(prev_total_points / prev_total_credits, 2)
-                        print(f"✅ Calculated Previous CGPA for {exam_no}: {previous_cgpa_value:.2f}")
-                        print(f"   From {len(student_history['gpas'])} previous semester(s)")
+        elif cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
+            student_history = cumulative_cgpa_data[exam_no]
+            if student_history.get("gpas") and len(student_history["gpas"]) > 0:
+                prev_total_points = sum(
+                    gpa * credits 
+                    for gpa, credits in zip(student_history["gpas"], student_history["credits"])
+                )
+                prev_total_credits = sum(student_history["credits"])
+                
+                if prev_total_credits > 0:
+                    previous_cgpa_value = round(prev_total_points / prev_total_credits, 2)
         
-        # Set display value
         display_previous_cgpa = previous_cgpa_value if previous_cgpa_value is not None else "N/A"
         
-        if display_previous_cgpa == "N/A":
-            print(f"⚠️ No previous CGPA data for {exam_no} (first semester or data missing)")
-        
-        # Step 3: Get CURRENT CGPA from SINGLE SOURCE OF TRUTH
+        # Get Current CGPA from single source of truth
         current_cgpa = get_cumulative_cgpa_for_student(exam_no)
-        
         if current_cgpa is None:
-            # If not in single source yet, calculate it
-            if cumulative_cgpa_data and exam_no in cumulative_cgpa_data:
-                student_history = cumulative_cgpa_data[exam_no]
-                
-                # Sum all previous semesters
-                cumulative_grade_points = sum(
-                    gpa * credits 
-                    for gpa, credits in zip(
-                        student_history.get("gpas", []), 
-                        student_history.get("credits", [])
-                    )
-                )
-                cumulative_credits = sum(student_history.get("credits", []))
-                
-                # Add current semester
-                cumulative_grade_points += current_semester_grade_points
-                cumulative_credits += current_semester_units
-                
-                # Calculate CGPA
-                if cumulative_credits > 0:
-                    current_cgpa = round(cumulative_grade_points / cumulative_credits, 2)
-                    print(f"✅ Calculated Current CGPA for {exam_no}: {current_cgpa:.2f}")
-                    print(f"   Total: {cumulative_grade_points:.1f} points / {cumulative_credits} units")
-                else:
-                    current_cgpa = current_gpa
-                    print(f"⚠️ No cumulative credits, using current semester GPA: {current_cgpa:.2f}")
-            elif previous_cgpa_value is not None:
-                # Fallback: Use weighted average if we have previous CGPA but no detailed history
-                estimated_prev_credits = 30  # Adjust based on your institution's typical load
-                
-                cumulative_grade_points = (previous_cgpa_value * estimated_prev_credits) + current_semester_grade_points
-                cumulative_credits = estimated_prev_credits + current_semester_units
-                
-                if cumulative_credits > 0:
-                    current_cgpa = round(cumulative_grade_points / cumulative_credits, 2)
-                    print(f"✅ Estimated Current CGPA for {exam_no}: {current_cgpa:.2f}")
-                    print(f"   (Using estimated previous credits: {estimated_prev_credits})")
-            else:
-                # No previous data: Current CGPA = Current GPA
-                current_cgpa = current_gpa
-                print(f"ℹ️ No previous data for {exam_no}, Current CGPA = Current GPA: {current_cgpa:.2f}")
+            current_cgpa = current_gpa
         
-        # CRITICAL: Update the single source of truth with current semester data
         update_cumulative_cgpa_data(exam_no, current_gpa, current_semester_units, semester_key)
-        
-        # Get the final CGPA from the single source to ensure consistency
         final_current_cgpa = get_cumulative_cgpa_for_student(exam_no) or current_cgpa
         
-        # Validation checks
-        print(f"\n📊 FINAL VALUES for {exam_no}:")
-        print(f"   Current GPA (this semester only):        {current_gpa:.2f}")
-        print(f"   Previous CGPA (before this semester):    {display_previous_cgpa}")
-        print(f"   Current CGPA (from single source):       {final_current_cgpa:.2f}")
-        
-        # Verify consistency
-        if previous_cgpa_value is not None:
-            if abs(current_gpa - final_current_cgpa) < 0.01:
-                print(f"⚠️ WARNING: Current GPA and Current CGPA are identical!")
-                print(f"   This should only happen if student has no prior academic history.")
-                print(f"   But Previous CGPA exists ({previous_cgpa_value:.2f}), so this is likely an error.")
-        
-        # ========================================================================
-        # Prepare display values for PDF
-        # ========================================================================
-        
         display_current_gpa = current_gpa
-        display_current_cgpa = final_current_cgpa  # Use the value from single source
+        display_current_cgpa = final_current_cgpa
         
-        # Summary values for PDF
+        # Summary values
         tcpe = round(current_semester_grade_points, 1)
         tcup = current_semester_units_passed
         tcuf = current_semester_units_failed
         
-        # Student status
+        # Student status and remarks
         student_status = r.get("REMARKS", "Passed")
         withdrawal_history = get_withdrawal_history(exam_no)
         previously_withdrawn = withdrawal_history is not None
         
-        # Failed courses
         failed_courses_str = str(r.get("FAILED COURSES", ""))
         failed_courses_list = (
             [c.strip() for c in failed_courses_str.split(",") if c.strip()]
@@ -3636,7 +3569,7 @@ def generate_individual_student_pdf(
         )
         failed_courses_formatted = format_failed_courses_remark(failed_courses_list)
         
-        # Remarks
+        # Build remarks
         final_remarks_lines = []
         if previously_withdrawn and withdrawal_history["withdrawn_semester"] == semester_key:
             if failed_courses_formatted:
@@ -3677,29 +3610,26 @@ def generate_individual_student_pdf(
         
         final_remarks = "<br/>".join(final_remarks_lines)
         
-        # ========================================================================
-        # PDF SUMMARY TABLE WITH CORRECT VALUES
-        # ========================================================================
-        
+        # Summary table
         summary_data = [
             [Paragraph("<b>SUMMARY</b>", styles["Normal"]), "", "", ""],
             [
                 Paragraph("<b>TCPE:</b>", styles["Normal"]),
                 f"{tcpe:.1f}",
                 Paragraph("<b>CURRENT GPA:</b>", styles["Normal"]),
-                f"{display_current_gpa:.2f}",  # ✅ Current semester only
+                f"{display_current_gpa:.2f}",
             ],
             [
                 Paragraph("<b>TCUP:</b>", styles["Normal"]),
                 str(tcup),
                 Paragraph("<b>PREVIOUS CGPA:</b>", styles["Normal"]),
-                f"{display_previous_cgpa:.2f}" if display_previous_cgpa != "N/A" else "N/A",  # ✅ Historical cumulative
+                f"{display_previous_cgpa:.2f}" if display_previous_cgpa != "N/A" else "N/A",
             ],
             [
                 Paragraph("<b>TCUF:</b>", styles["Normal"]),
                 str(tcuf),
                 Paragraph("<b>CURRENT CGPA:</b>", styles["Normal"]),
-                f"{display_current_cgpa:.2f}",  # ✅ From SINGLE SOURCE OF TRUTH
+                f"{display_current_cgpa:.2f}",
             ],
         ]
         
@@ -3709,7 +3639,6 @@ def generate_individual_student_pdf(
             remarks_paragraph, "", ""
         ])
         
-        # Row heights
         row_heights = [0.3 * inch] * len(summary_data)
         total_remark_lines = len(final_remarks_lines)
         if total_remark_lines > 1:
@@ -3723,8 +3652,8 @@ def generate_individual_student_pdf(
         summary_table.setStyle(
             TableStyle(
                 [
-                    ("SPAN", (0, 0), (3, 0)),  # "SUMMARY" spans all columns
-                    ("SPAN", (1, len(summary_data) - 1), (3, len(summary_data) - 1)),  # REMARKS spans columns 2-4
+                    ("SPAN", (0, 0), (3, 0)),
+                    ("SPAN", (1, len(summary_data) - 1), (3, len(summary_data) - 1)),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                     ("BACKGROUND", (0, 0), (3, 0), colors.HexColor("#E0E0E0")),
                     ("ALIGN", (0, 0), (3, 0), "CENTER"),
@@ -4439,7 +4368,7 @@ def process_single_file(
     current_date = datetime.now().strftime("%B %d, %Y")
     if "SECOND-YEAR-SECOND-SEMESTER" in semester_key:
         # Use the specific format for NDII Second Semester
-        exam_title = f"NATIONAL DIPLOMA YEAR TWO SECOND SEMESTER EXAMINATIONS RESULT — {current_date}"
+        exam_title = f"NATIONAL DIPLOMA YEAR TWO SECOND SEMESTER EXAMINATIONS RESULT <br/><br/> {current_date}"
     else:
         # Dynamic title for other semesters
         year, semester_num, level_display, semester_display, set_code = get_semester_display_info(semester_key)
