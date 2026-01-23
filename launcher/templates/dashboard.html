@@ -1005,15 +1005,12 @@
                             <h3>📝 PUTME Processing</h3>
                             <p>Process Post-UTME examination results</p>
                         </a>
-                        <!-- CAOSCE FIXED SECTION -->
-                        <form action="{{ url_for('run_script', script_name='caosce') }}" method="POST" style="margin: 0; display: inline;">
-                            <button type="submit" class="action-btn" style="border: none; width: 100%; cursor: pointer; background: transparent;">
-                                <div class="action-icon">📊</div>
-                                <strong>CAOSCE Results</strong>
-                                <span>Process CAOSCE exams</span>
-                            </button>
-                        </form>
-                        <!-- END CAOSCE FIX -->
+                        <!-- UPDATED: CAOSCE Processing with Upgrade Template -->
+                        <a href="{{ url_for('caosce_upgrade_template') }}" class="action-btn">
+                            <div class="action-icon">📊</div>
+                            <strong>CAOSCE Results</strong>
+                            <span>Process CAOSCE exams</span>
+                        </a>
                         <a href="{{ url_for('run_script', script_name='clean') }}" class="action-btn">
                             <div class="action-icon">📝</div>
                             <strong>Internal Exams</strong>

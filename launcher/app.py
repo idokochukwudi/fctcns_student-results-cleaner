@@ -139,7 +139,7 @@ def create_missing_zips():
             if not scattered_files and not scattered_dirs:
                 logger.info(f"ℹ️ No files to zip in {clean_dir}")
                 continue
-             
+         
             logger.info(f"📦 Found {len(scattered_files)} files and {len(scattered_dirs)} directories to zip for {script_name}")
          
             # FIX: Check if there are actual files before creating ZIP
@@ -4649,6 +4649,125 @@ def jamb_processor():
         traceback.print_exc()
         flash(f"Error: {str(e)}", "error")
         return redirect(url_for("jamb_processor"))
+
+# ============================================================================
+# NEW: CAOSCE Processing Routes with Upgrade Feature
+# ============================================================================
+@app.route("/caosce_upgrade_template")
+@login_required
+def caosce_upgrade_template():
+    """Show CAOSCE upgrade options template"""
+    try:
+        return render_template(
+            "caosce_upgrade_template.html",
+            college=COLLEGE,
+            department=DEPARTMENT,
+            environment="Railway Production" if not is_local_environment() else "Local Development"
+        )
+    except Exception as e:
+        logger.error(f"CAOSCE upgrade template error: {e}")
+        flash(f"Error loading CAOSCE upgrade template: {str(e)}", "error")
+        return redirect(url_for("dashboard"))
+
+@app.route("/process_caosce_with_upgrade", methods=["POST"])
+@login_required
+def process_caosce_with_upgrade():
+    """Process CAOSCE results with selected upgrade threshold"""
+    try:
+        upgrade_threshold = request.form.get("upgrade_threshold", "0")
+        
+        logger.info(f"Processing CAOSCE with upgrade threshold: {upgrade_threshold}")
+        
+        # Validate input directory
+        input_dir = os.path.join(BASE_DIR, "CAOSCE_RESULT", "RAW_CAOSCE_RESULT")
+        
+        if not os.path.exists(input_dir):
+            flash("CAOSCE RAW directory not found", "error")
+            return redirect(url_for("dashboard"))
+        
+        # Check for files
+        caosce_files = [f for f in os.listdir(input_dir) 
+                       if f.lower().endswith(('.xlsx', '.xls')) 
+                       and not f.startswith('~')]
+        
+        if not caosce_files:
+            flash("No CAOSCE files found to process", "error")
+            return redirect(url_for("dashboard"))
+        
+        # Setup environment with upgrade threshold
+        env = os.environ.copy()
+        env["BASE_DIR"] = BASE_DIR
+        env["UPGRADE_THRESHOLD"] = str(upgrade_threshold)
+        
+        # Get script path
+        script_path = os.path.join(SCRIPT_DIR, "caosce_result.py")
+        
+        if not os.path.exists(script_path):
+            flash(f"CAOSCE processor script not found at {script_path}", "error")
+            return redirect(url_for("dashboard"))
+        
+        logger.info(f"Running CAOSCE processor: {script_path}")
+        
+        # Run script
+        result = subprocess.run(
+            [sys.executable, script_path],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=600,
+        )
+        
+        output_lines = result.stdout.splitlines()
+        error_lines = result.stderr.splitlines()
+        
+        # Log output
+        logger.info("=== CAOSCE PROCESSING OUTPUT ===")
+        for line in output_lines:
+            logger.info(line)
+        
+        if error_lines:
+            logger.error("=== CAOSCE PROCESSING ERRORS ===")
+            for line in error_lines:
+                logger.error(line)
+        
+        # Check success
+        if result.returncode == 0:
+            # Count upgraded students
+            upgraded_count = 0
+            for line in output_lines:
+                if "Upgraded" in line and "scores" in line:
+                    match = re.search(r'Upgraded (\d+) scores', line)
+                    if match:
+                        upgraded_count = int(match.group(1))
+                        break
+            
+            success_msg = "CAOSCE processing completed successfully!"
+            if int(upgrade_threshold) > 0 and upgraded_count > 0:
+                success_msg += f" Upgraded {upgraded_count} student(s) from {upgrade_threshold}-49 to 50."
+            elif int(upgrade_threshold) > 0:
+                success_msg += " No students required upgrades."
+            
+            # Enforce ZIP-only policy
+            clean_dir = os.path.join(BASE_DIR, "CAOSCE_RESULT", "CLEAN_CAOSCE_RESULT")
+            if os.path.exists(clean_dir):
+                enforce_zip_only_policy(clean_dir)
+            
+            flash(success_msg, "success")
+        else:
+            error_msg = error_lines[-1] if error_lines else "Unknown error"
+            flash(f"CAOSCE processing failed: {error_msg}", "error")
+        
+        return redirect(url_for("download_center"))
+    
+    except subprocess.TimeoutExpired:
+        flash("CAOSCE processing timed out after 10 minutes", "error")
+        return redirect(url_for("dashboard"))
+    except Exception as e:
+        logger.error(f"CAOSCE processing error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("dashboard"))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
