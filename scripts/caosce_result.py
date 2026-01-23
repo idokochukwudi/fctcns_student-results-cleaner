@@ -1,16 +1,13 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 """
-caosce_result_enhanced_refactored.py
+caosce_result_fixed_all_papers.py
 ENHANCED CAOSCE cleaning script with multi-college support and multi-paper processing
-- Processes Paper I, Paper II, and CAOSCE station-based exams
-- Creates ONE workbook with TWO sheets: CAOSCE Results and Combined Results
-- Removes "Overall average" student rows from raw data
-- Extracts actual overall averages from raw files
-- Creates single OVERALL AVERAGE row with proper values
-- Dynamic logo selection based on college detection
-- NEW: Added REMARK and Failed Papers columns with 50 pass mark
-- NEW: Enhanced sorting - Passed students first, then Failed sorted by number of failed papers
-- FIXED: Highest individual score calculation in documentation
+   FIXED: Now properly processes Paper I, Paper II, and Paper III (Midwifery) files
+   FIXED: Handles "Set2023A Class-PAPER X-grades" format specifically
+   FIXED: Better column detection for all paper formats
+   FIXED: Dynamic VIVA score detection (/10 or /30) with proper scaling
+   FIXED: Standard OSCE grading applied
+   UPDATED: Stations now maintain /10 and create 90% column instead of /15
 """
 
 import os
@@ -61,31 +58,64 @@ DEFAULT_CLEAN_DIR = os.path.join(DEFAULT_BASE_DIR, "CLEAN_CAOSCE_RESULT")
 
 LOGO_BASE_PATH = os.path.join(os.path.expanduser("~"), "student_result_cleaner", "launcher", "static")
 
-TIMESTAMP_FMT = "%Y-%m-%d_%H%M%S"  # FIXED: Changed from "%Y-%m-d_%H%M%S" to "%Y-%m-%d_%H%M%S"
+TIMESTAMP_FMT = "%Y-%m-d_%H%M%S"
 CURRENT_YEAR = datetime.now().year
 
-# Paper patterns
+# UPDATED: OSCE station weights - stations sum to 90% (6 stations × 15% each), viva is 10%
+# Stations are out of 10 marks each, but weighted at 15% each in the total 90%
+OSCE_STATION_WEIGHTS = {
+    "procedure_station_one": 15.0,    # 15% of total OSCE (part of 90%)
+    "procedure_station_three": 15.0,  # 15% of total OSCE (part of 90%)
+    "procedure_station_five": 15.0,   # 15% of total OSCE (part of 90%)
+    "question_station_two": 15.0,     # 15% of total OSCE (part of 90%)
+    "question_station_four": 15.0,    # 15% of total OSCE (part of 90%)
+    "question_station_six": 15.0,     # 15% of total OSCE (part of 90%)
+    "viva": 10.0,                     # 10% of total OSCE (standard)
+}
+
+# Paper patterns - UPDATED TO INCLUDE "Class-PAPER X-grades" format
 PAPER_I_PATTERNS = [
     r"PAPERI_PAPERII-PAPER I-grades",
     r"PAPER I", 
     r"PAPER 1",
-    r"PAPERI"
+    r"PAPERI",
+    r"CLASS-PAPER I",
+    r"CLASS-PAPER 1"
 ]
 
 PAPER_II_PATTERNS = [
     r"PAPERI_PAPERII-PAPER II-grades",
     r"PAPER II",
     r"PAPER 2", 
-    r"PAPERII"
+    r"PAPERII",
+    r"CLASS-PAPER II",
+    r"CLASS-PAPER 2"
 ]
 
-# Combined paper patterns (new format)
+PAPER_III_PATTERNS = [
+    r"PAPER III",
+    r"PAPER 3",
+    r"PAPERIII",
+    r"MIDWIFERY",
+    r"PAPER 3.*MIDWIFERY",
+    r"PAPER III.*MIDWIFERY",
+    r"MIDWIFERY.*PAPER",
+    r"PAPER.*MIDWIFERY",
+    r"CLASS-PAPER III",
+    r"CLASS-PAPER 3"
+]
+
+# Combined paper patterns (updated to include PAPER III)
 COMBINED_PAPER_PATTERNS = [
     r"paper[_\s]*i[_\s]*paper[_\s]*ii",
     r"paper[_\s]*1[_\s]*paper[_\s]*2",
+    r"paper[_\s]*i[_\s]*paper[_\s]*ii[_\s]*paper[_\s]*iii",
+    r"paper[_\s]*1[_\s]*paper[_\s]*2[_\s]*paper[_\s]*3",
     r"combined[_\s]*papers",
     r"paper[_\s]*i[_\s]*&\s*paper[_\s]*ii",
-    r"paper[_\s]*i[_\s]*and[_\s]*paper[_\s]*ii"
+    r"paper[_\s]*i[_\s]*and[_\s]*paper[_\s]*ii",
+    r"all[_\s]*papers",
+    r"papers[_\s]*i[_\s]*ii[_\s]*iii"
 ]
 
 # Station mapping
@@ -99,19 +129,20 @@ STATION_COLUMN_MAP = {
     "viva": "VIVA",
 }
 
-# Station display names with denominators
+# UPDATED: Station display names - stations show as /10 but have (15%) weight in total
 STATION_DISPLAY_NAMES = {
-    "procedure_station_one": "PS ONE",
-    "procedure_station_three": "PS THREE", 
-    "procedure_station_five": "PS FIVE",
-    "question_station_two": "QS TWO",
-    "question_station_four": "QS FOUR",
-    "question_station_six": "QS SIX",
-    "viva": "VIVA"
+    "procedure_station_one": "PS ONE (/10) (15%)",
+    "procedure_station_three": "PS THREE (/10) (15%)", 
+    "procedure_station_five": "PS FIVE (/10) (15%)",
+    "question_station_two": "QS TWO (/10) (15%)",
+    "question_station_four": "QS FOUR (/10) (15%)",
+    "question_station_six": "QS SIX (/10) (15%)",
+    "viva": "VIVA (/10) (10%)"
 }
 
 # Pass mark configuration
 PASS_MARK = 50.0  # 50% pass mark for all papers
+OSCE_TOTAL_WEIGHT = 100.0  # Total OSCE is 100% (sum of all station weights)
 
 # Styling
 NO_SCORE_FILL = PatternFill(start_color="FFCCCC", end_color="FFCCCC", fill_type="solid")
@@ -123,9 +154,9 @@ DATE_FONT = Font(bold=True, size=11, name="Calibri", color="1F4E78")
 HEADER_FILL = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
 AVERAGE_FILL = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
 AVERAGE_FONT = Font(bold=True, size=10, name="Calibri", color="7F6000")
-PASS_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # Green for Pass
+PASS_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
 PASS_FONT = Font(bold=True, size=10, name="Calibri", color="006100")
-FAIL_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")  # Red for Fail
+FAIL_FILL = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 FAIL_FONT = Font(bold=True, size=10, name="Calibri", color="9C0006")
 FAILED_PAPERS_FONT = Font(size=10, name="Calibri", color="9C0006")
 SUMMARY_HEADER_FONT = Font(bold=True, size=12, name="Calibri", color="1F4E78", underline="single")
@@ -149,14 +180,36 @@ logger = logging.getLogger(__name__)
 # Helper Functions
 # ---------------------------
 
-def determine_remark_and_failed_papers(paper_i_score, paper_ii_score, caosce_score):
+def determine_remark_and_failed_papers(paper_i_score, paper_ii_score, paper_iii_score, caosce_score):
     """
     Determine REMARK and Failed Papers based on pass mark of 50
+    Updated to include PAPER III
     
     Returns: (remark, failed_papers, failed_count)
     """
     failed_papers = []
     failed_count = 0
+    
+    # Convert scores to float for comparison
+    try:
+        paper_i_score = float(paper_i_score) if paper_i_score is not None else 0.0
+    except (ValueError, TypeError):
+        paper_i_score = 0.0
+    
+    try:
+        paper_ii_score = float(paper_ii_score) if paper_ii_score is not None else 0.0
+    except (ValueError, TypeError):
+        paper_ii_score = 0.0
+    
+    try:
+        paper_iii_score = float(paper_iii_score) if paper_iii_score is not None else 0.0
+    except (ValueError, TypeError):
+        paper_iii_score = 0.0
+    
+    try:
+        caosce_score = float(caosce_score) if caosce_score is not None else 0.0
+    except (ValueError, TypeError):
+        caosce_score = 0.0
     
     # Check each paper against pass mark
     if (paper_i_score < PASS_MARK and paper_i_score > 0) or paper_i_score == 0:
@@ -164,6 +217,9 @@ def determine_remark_and_failed_papers(paper_i_score, paper_ii_score, caosce_sco
         failed_count += 1
     if (paper_ii_score < PASS_MARK and paper_ii_score > 0) or paper_ii_score == 0:
         failed_papers.append("Failed Paper 2")
+        failed_count += 1
+    if (paper_iii_score < PASS_MARK and paper_iii_score > 0) or paper_iii_score == 0:
+        failed_papers.append("Failed Paper 3 (Midwifery)")
         failed_count += 1
     if (caosce_score < PASS_MARK and caosce_score > 0) or caosce_score == 0:
         failed_papers.append("Failed CAOSCE")
@@ -191,9 +247,7 @@ def determine_remark_and_failed_papers(paper_i_score, paper_ii_score, caosce_sco
     return remark, failed_papers_str, failed_count
 
 def detect_college_from_exam_numbers(exam_numbers):
-    """
-    Detect college based on exam number patterns with better logic
-    """
+    """Detect college based on exam number patterns"""
     if not exam_numbers:
         return "YAGONGWO", COLLEGE_CONFIGS["YAGONGWO"]
     
@@ -265,9 +319,10 @@ def find_viva_score_col(df):
         "enter student score below", "enter student's score", "score", "grade"
     ])
 
-def find_grade_column(df):
+def find_grade_column(df, filename="", station_key=None):
     """
-    Dynamically find the grade/score column
+    Dynamically find the grade/score column with special handling for "Class-PAPER X-grades" format
+    FIXED: Now properly detects VIVA/10 and scales it to VIVA/30 for OSCE calculation
     Returns tuple: (column_name, max_score)
     """
     # First, look for any column containing / followed by a number
@@ -277,9 +332,50 @@ def find_grade_column(df):
         if match:
             try:
                 max_score = float(match.group(1))
+                # Special handling for VIVA station
+                if station_key == "viva":
+                    # Check if it's VIVA/10 and needs scaling
+                    if max_score == 10.0 and ("viva" in cn.lower() or "oral" in cn.lower()):
+                        logger.info(f"  Found VIVA/10 column, will scale to VIVA/30 for OSCE calculation")
+                        return (c, 30.0)  # Return 30 for scaling, but keep column name
+                    elif max_score == 30.0 and ("viva" in cn.lower() or "oral" in cn.lower()):
+                        logger.info(f"  Found VIVA/30 column, using as-is")
+                        return (c, 30.0)
                 return (c, max_score)
             except:
                 pass
+    
+    # For "Class-PAPER X-grades" format, check for specific patterns
+    if "CLASS-PAPER" in filename.upper():
+        logger.info(f"  Detected 'Class-PAPER X-grades' format for {filename}")
+        
+        # Look for columns with "grade", "total", or "score" (case insensitive)
+        for c in df.columns:
+            cn = str(c).strip().lower()
+            if "grade" in cn or "score" in cn or "total" in cn or "mark" in cn:
+                logger.info(f"  Found likely grade column for Class-PAPER format: '{c}'")
+                return (c, 100.0)  # Papers are out of 100
+    
+    # Special handling for VIVA station - check for VIVA-specific columns
+    if station_key == "viva":
+        for c in df.columns:
+            cn = str(c).strip().lower()
+            if "viva" in cn or "oral" in cn:
+                # Try to extract max score from column name
+                match = re.search(r'/([\d.]+)', cn)
+                if match:
+                    try:
+                        max_score = float(match.group(1))
+                        if max_score == 10.0:
+                            logger.info(f"  Found VIVA/10 column '{c}', will scale to 30")
+                            return (c, 30.0)
+                        else:
+                            return (c, max_score)
+                    except:
+                        pass
+                # If no / found, assume it's out of 10 and needs scaling
+                logger.info(f"  Found VIVA column without denominator '{c}', assuming /10 and scaling to /30")
+                return (c, 30.0)  # Scale to 30
     
     # Fallback: look for columns with 'grade', 'total', or 'score'
     for c in df.columns:
@@ -287,9 +383,22 @@ def find_grade_column(df):
         cn_lower = cn.lower()
         
         if "grade" in cn_lower or "total" in cn_lower or "score" in cn_lower:
-            return (c, 10.0)  # Default to 10 for stations
+            # For stations, default to 10; for papers, default to 100
+            if station_key and station_key != "viva":
+                return (c, 10.0)  # Default for procedure/question stations
+            else:
+                return (c, 100.0)  # Default for papers
     
-    return (None, 10.0)
+    # Ultimate fallback: use the last column that's not likely to be ID or name
+    logger.warning(f"  Could not find grade column by name. Using fallback.")
+    for c in reversed(df.columns):
+        cn = str(c).strip().lower()
+        # Skip columns that are likely to be ID or name columns
+        if not any(keyword in cn for keyword in ["name", "id", "no", "number", "mat", "reg"]):
+            logger.info(f"  Using fallback grade column: '{c}'")
+            return (c, 100.0)  # Default to 100 for papers
+    
+    return (None, 100.0)  # Default to 100 for papers if nothing found
 
 def extract_exam_number_from_fullname(text):
     if pd.isna(text):
@@ -356,23 +465,25 @@ def is_overall_average_row(row, username_col, fullname_col):
 def apply_autofit_columns(ws, header_row, data_end_row):
     """
     Apply optimal column widths based on content in data range only
+    FIXED: Properly sizes FAILED PAPERS column and all other columns
     """
+    # First pass: calculate maximum lengths
+    max_lengths = {}
     for col_idx in range(1, ws.max_column + 1):
-        col_letter = get_column_letter(col_idx)
         max_length = 0
+        col_letter = get_column_letter(col_idx)
         
-        # Check header first
+        # Check header
         header_cell = ws.cell(row=header_row, column=col_idx)
         header_value = str(header_cell.value or "")
         max_length = len(header_value)
         
-        # Check data rows (from header+1 to data_end_row)
+        # Check data rows
         for row_idx in range(header_row + 1, data_end_row + 1):
             try:
                 cell = ws.cell(row=row_idx, column=col_idx)
                 if cell.value is not None:
                     cell_value = str(cell.value)
-                    # For numeric values with specific formats
                     if isinstance(cell.value, (int, float)):
                         if cell.number_format == '0.00':
                             cell_value = f"{cell.value:.2f}"
@@ -385,45 +496,64 @@ def apply_autofit_columns(ws, header_row, data_end_row):
             except:
                 pass
         
-        # Apply optimal width with padding - more generous padding
-        optimal_width = min(50, max(8, max_length + 4))  # Increased padding from +2 to +4
+        max_lengths[col_idx] = max_length
+    
+    # Second pass: set optimal widths with intelligent sizing
+    for col_idx, max_length in max_lengths.items():
+        col_letter = get_column_letter(col_idx)
+        header_cell = ws.cell(row=header_row, column=col_idx)
+        header_value = str(header_cell.value or "")
         
-        # Set reasonable limits with more generous minimums
+        # Calculate base width
+        optimal_width = min(80, max(8, max_length + 4))
+        
+        # Apply intelligent sizing based on column type
         if header_value == "S/N":
             optimal_width = max(6, min(optimal_width, 8))
         elif header_value in ["MAT NO.", "EXAM NO."]:
-            optimal_width = max(15, min(optimal_width, 25))  # Increased min width
+            optimal_width = max(12, min(optimal_width, 20))
         elif header_value == "FULL NAME":
-            optimal_width = max(30, min(optimal_width, 45))  # Increased min width for better name display
-        elif "Score/" in header_value or "VIVA/" in header_value:
-            optimal_width = max(12, min(optimal_width, 18))  # Increased for score columns
+            optimal_width = max(25, min(optimal_width, 40))
+        elif "Score/" in header_value or "VIVA/" in header_value or "(15%)" in header_value or "(10%)" in header_value:
+            optimal_width = max(15, min(optimal_width, 20))
         elif "Total Raw Score" in header_value:
             optimal_width = max(18, min(optimal_width, 25))
         elif "Percentage" in header_value:
             optimal_width = max(15, min(optimal_width, 18))
-        elif "PAPER I" in header_value or "PAPER II" in header_value or "CAOSCE" in header_value:
-            optimal_width = max(15, min(optimal_width, 20))  # Increased for paper columns
+        elif "PAPER I" in header_value or "PAPER II" in header_value or "PAPER III" in header_value or "CAOSCE" in header_value:
+            optimal_width = max(15, min(optimal_width, 20))
         elif "OVERALL AVERAGE" in header_value:
-            optimal_width = max(18, min(optimal_width, 25))
+            optimal_width = max(18, min(optimal_width, 22))
         elif "REMARK" in header_value:
-            optimal_width = max(12, min(optimal_width, 15))
+            optimal_width = max(10, min(optimal_width, 15))
         elif "FAILED PAPERS" in header_value:
-            optimal_width = max(25, min(optimal_width, 35))  # Wider for failed papers list
+            # CRITICAL FIX: Make FAILED PAPERS column wider to show all content
+            optimal_width = max(40, min(optimal_width, 60))
+            # If there's long content, make it even wider
+            if max_length > 50:
+                optimal_width = min(80, max_length + 10)
         else:
-            optimal_width = max(12, min(optimal_width, 25))  # Increased default min width
+            optimal_width = max(12, min(optimal_width, 25))
         
-        # Ensure the column is wide enough for the header
+        # Ensure header fits
         header_length = len(header_value)
         if header_length + 2 > optimal_width:
             optimal_width = header_length + 2
-            
+        
         ws.column_dimensions[col_letter].width = optimal_width
+        
+        # Set wrap text for long content columns
+        if header_value == "FAILED PAPERS":
+            for row_idx in range(header_row + 1, data_end_row + 1):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                cell.alignment = Alignment(vertical="center", wrap_text=True)
 
 def create_document_sections(ws, total_students, avg_percentage, highest_percentage, lowest_percentage, 
                            total_max_score, data_end_row, college_config, sheet_type="CAOSCE"):
     """
     Create well-structured summary, analysis and signatories sections
-    FIXED: Correctly calculates highest and lowest individual scores
+    Updated to include PAPER III (Midwifery) documentation
+    FIXED: Signatories section adjusted for better layout after autofit
     """
     doc_start_row = data_end_row + 3
     
@@ -433,31 +563,77 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     ws.merge_cells(f"A{summary_header_row}:{last_col_letter}{summary_header_row}")
     
     if sheet_type == "COMBINED":
-        ws.cell(row=summary_header_row, column=1, value="EXAMINATION SUMMARY")
+        # Determine number of papers from column headers
+        paper_columns = []
+        for col in range(1, ws.max_column + 1):
+            cell_value = ws.cell(row=7, column=col).value
+            if cell_value and ("PAPER" in str(cell_value).upper() or "MIDWIFERY" in str(cell_value).upper() or "CAOSCE" in str(cell_value).upper()):
+                paper_columns.append(cell_value)
+        
+        paper_count = len(paper_columns)
+        
+        if paper_count >= 4:  # Papers I, II, III + CAOSCE
+            ws.cell(row=summary_header_row, column=1, value=f"EXAMINATION SUMMARY ({paper_count} Papers)")
+            summary_rows = [
+                "",
+                f"Total Possible Score: {paper_count * 100} marks (100 per paper)",
+                "",
+                "Scoring Methodology:",
+            ]
+            
+            # Add specific methodology for each paper
+            if any("PAPER I" in str(col).upper() for col in paper_columns):
+                summary_rows.append("- Paper I Score: 0-100 marks")
+            if any("PAPER II" in str(col).upper() for col in paper_columns):
+                summary_rows.append("- Paper II Score: 0-100 marks")
+            if any("PAPER III" in str(col).upper() or "MIDWIFERY" in str(col).upper() for col in paper_columns):
+                summary_rows.append("- Paper III (Midwifery) Score: 0-100 marks")
+            if any("CAOSCE" in str(col).upper() for col in paper_columns):
+                summary_rows.append("- CAOSCE Score: 0-100 marks (percentage from station performance)")
+            
+            summary_rows.extend([
+                f"- Overall Average = Sum of all papers ÷ {paper_count}",
+                "",
+                "Pass/Fail Criteria:",
+                f"- Pass Mark: {PASS_MARK}% for each paper",
+                "- REMARK: 'Passed' if all papers ≥ 50%, 'Failed' otherwise",
+                "- Failed Papers: Lists specific failed papers",
+            ])
+        else:  # Default format
+            ws.cell(row=summary_header_row, column=1, value="EXAMINATION SUMMARY")
+            summary_rows = [
+                "",
+                f"Total Possible Score: {paper_count * 100} marks (100 per paper)",
+                "",
+                "Scoring Methodology:",
+                "- Each Paper Score: 0-100 marks",
+                f"- Overall Average = Sum of all papers ÷ {paper_count}",
+                "",
+                "Pass/Fail Criteria:",
+                f"- Pass Mark: {PASS_MARK}% for each paper",
+                "- REMARK: 'Passed' if all papers ≥ 50%, 'Failed' otherwise",
+                "- Failed Papers: Lists specific failed papers",
+            ]
+    else:
+        # CAOSCE sheet - UPDATED OSCE Grading with stations /10
+        ws.cell(row=summary_header_row, column=1, value="OSCE EXAMINATION SUMMARY (Updated Grading)")
         summary_rows = [
             "",
-            f"Total Possible Score: 300 marks (100 per paper)",
+            "Updated OSCE Station Configuration:",
+            "- 6 Stations (Procedure Stations 1, 3, 5 and Question Stations 2, 4, 6)",
+            "- Each station scored out of 10 marks",
+            "- Each station weighted at 15% of total OSCE (6 × 15% = 90%)",
+            "- VIVA scored out of 10 marks, weighted at 10% of total OSCE",
             "",
             "Scoring Methodology:",
-            "- Paper I Score: 0-100 marks",
-            "- Paper II Score: 0-100 marks", 
-            "- CAOSCE Score: 0-100 marks (percentage from station performance)",
-            "- Overall Average = (Paper I + Paper II + CAOSCE) ÷ 3",
+            "1. Sum of all 6 stations (maximum 60 marks)",
+            "2. Convert to 90% weight: (sum ÷ 60) × 90",
+            "3. Add VIVA score converted to 10%: (VIVA ÷ 10) × 10",
+            "4. Total OSCE Score = Step 2 + Step 3",
             "",
             "Pass/Fail Criteria:",
-            f"- Pass Mark: {PASS_MARK}% for each paper (Paper I, Paper II, CAOSCE)",
-            "- REMARK: 'Passed' if all papers ≥ 50%, 'Failed' otherwise",
-            "- Failed Papers: Lists specific failed papers (Paper 1, Paper 2, CAOSCE)",
-        ]
-    else:
-        ws.cell(row=summary_header_row, column=1, value="EXAMINATION SUMMARY")
-        summary_rows = [
-            "",
-            f"Total Possible Score: {total_max_score} marks",
-            "",
-            "Scoring Methodology:",
-            "Total Raw Score = Sum of all station scores",
-            f"Percentage = (Total Raw Score ÷ {total_max_score}) × 100",
+            f"- Pass Mark: {PASS_MARK}%",
+            "- REMARK: 'Passed' if ≥ 50%, 'Failed' otherwise",
         ]
     
     ws.cell(row=summary_header_row, column=1).font = SUMMARY_HEADER_FONT
@@ -483,29 +659,36 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     
     if sheet_type == "COMBINED":
         # Get paper-wise averages from the overall average row
-        paper_i_avg = 0
-        paper_ii_avg = 0
-        caosce_avg = 0
+        paper_averages = {}
+        paper_failed_counts = {}
+        total_passed = 0
+        total_failed = 0
         
-        # Find the overall average row and extract values
-        # header_row is at TITLE_ROWS + 1 = 7
+        # Find paper columns and their indices
+        paper_columns_indices = {}
+        for col_idx in range(1, ws.max_column + 1):
+            cell_value = ws.cell(row=7, column=col_idx).value
+            if cell_value and ("PAPER" in str(cell_value).upper() or "MIDWIFERY" in str(cell_value).upper() or "CAOSCE" in str(cell_value).upper()):
+                paper_columns_indices[col_idx] = cell_value
+        
+        # Find the overall average row
         calculated_header_row = 7
+        overall_avg_row_idx = None
         for row_idx in range(calculated_header_row + 1, data_end_row + 1):
-            if ws.cell(row=row_idx, column=2).value == "OVERALL AVERAGE":  # MAT NO. column
-                paper_i_avg = ws.cell(row=row_idx, column=4).value or 0  # PAPER I column
-                paper_ii_avg = ws.cell(row=row_idx, column=5).value or 0  # PAPER II column
-                caosce_avg = ws.cell(row=row_idx, column=6).value or 0  # CAOSCE column
+            if ws.cell(row=row_idx, column=2).value == "OVERALL AVERAGE":
+                overall_avg_row_idx = row_idx
+                for col_idx, paper_name in paper_columns_indices.items():
+                    cell_value = ws.cell(row=row_idx, column=col_idx).value
+                    if cell_value is not None:
+                        try:
+                            paper_averages[paper_name] = float(cell_value)
+                        except (ValueError, TypeError):
+                            paper_averages[paper_name] = 0.0
+                    else:
+                        paper_averages[paper_name] = 0.0
                 break
         
         # Calculate pass/fail statistics
-        total_passed = 0
-        total_failed = 0
-        paper_i_failed = 0
-        paper_ii_failed = 0
-        caosce_failed = 0
-        
-        # FIXED: Calculate highest and lowest individual scores from the actual data
-        # Get all student overall averages (excluding the "OVERALL AVERAGE" row)
         student_overall_scores = []
         
         for row_idx in range(calculated_header_row + 1, data_end_row + 1):
@@ -513,30 +696,58 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
             if mat_no == "OVERALL AVERAGE":
                 continue
                 
-            paper_i_score = ws.cell(row=row_idx, column=4).value or 0
-            paper_ii_score = ws.cell(row=row_idx, column=5).value or 0
-            caosce_score = ws.cell(row=row_idx, column=6).value or 0
-            overall_score = ws.cell(row=row_idx, column=7).value or 0  # OVERALL AVERAGE column
-            remark = ws.cell(row=row_idx, column=8).value  # REMARK column (Column H)
+            # Get overall score
+            overall_score = 0
+            for col_idx in range(ws.max_column, 0, -1):
+                cell_value = ws.cell(row=row_idx, column=col_idx).value
+                if cell_value and ("OVERALL AVERAGE" in str(cell_value) or col_idx == 7):  # Find overall column
+                    try:
+                        overall_score = float(cell_value) if cell_value is not None else 0
+                    except (ValueError, TypeError):
+                        overall_score = 0
+                    break
             
             student_overall_scores.append(overall_score)
+            
+            # Get remark
+            remark = ""
+            for col_idx in range(1, ws.max_column + 1):
+                cell_value = ws.cell(row=row_idx, column=col_idx).value
+                if cell_value == "Passed" or cell_value == "Failed":
+                    remark = cell_value
+                    break
             
             if remark == "Passed":
                 total_passed += 1
             elif remark == "Failed":
                 total_failed += 1
+            
+            # Count failures per paper
+            for col_idx, paper_name in paper_columns_indices.items():
+                score_cell = ws.cell(row=row_idx, column=col_idx).value
+                score = 0
+                if score_cell is not None:
+                    try:
+                        score = float(score_cell)
+                    except (ValueError, TypeError):
+                        score = 0
                 
-            if paper_i_score < PASS_MARK:
-                paper_i_failed += 1
-            if paper_ii_score < PASS_MARK:
-                paper_ii_failed += 1
-            if caosce_score < PASS_MARK:
-                caosce_failed += 1
+                if score < PASS_MARK:
+                    if paper_name not in paper_failed_counts:
+                        paper_failed_counts[paper_name] = 0
+                    paper_failed_counts[paper_name] += 1
         
-        # FIXED: Calculate highest and lowest from actual student scores
+        # Calculate highest and lowest scores
         if student_overall_scores:
-            # Filter out zeros and None values
-            valid_scores = [score for score in student_overall_scores if score is not None and score > 0]
+            # Filter out None values and ensure numeric
+            valid_scores = []
+            for score in student_overall_scores:
+                if score is not None:
+                    try:
+                        valid_scores.append(float(score))
+                    except (ValueError, TypeError):
+                        pass
+            
             if valid_scores:
                 highest_individual = round(max(valid_scores), 2)
                 lowest_individual = round(min(valid_scores), 2)
@@ -550,9 +761,6 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
         # Calculate percentages
         passed_percentage = (total_passed / total_students * 100) if total_students > 0 else 0
         failed_percentage = (total_failed / total_students * 100) if total_students > 0 else 0
-        paper_i_failed_pct = (paper_i_failed / total_students * 100) if total_students > 0 else 0
-        paper_ii_failed_pct = (paper_ii_failed / total_students * 100) if total_students > 0 else 0
-        caosce_failed_pct = (caosce_failed / total_students * 100) if total_students > 0 else 0
         
         # Calculate class performance rating
         performance_rating = ""
@@ -567,12 +775,13 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
         else:
             performance_rating = "POOR"
         
+        # Build analysis rows
         analysis_rows = [
             "",
             f"Total Candidates: {total_students}",
             f"Overall Class Average: {avg_percentage}%",
-            f"Highest Individual Score: {highest_individual}%",  # FIXED: Use calculated highest_individual
-            f"Lowest Individual Score: {lowest_individual}%",    # FIXED: Use calculated lowest_individual
+            f"Highest Individual Score: {highest_individual}%",
+            f"Lowest Individual Score: {lowest_individual}%",
             f"Class Performance Rating: {performance_rating}",
             "",
             "════════════════════════════════════════════════════════════════",
@@ -582,25 +791,43 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
             "",
             "════════════════════════════════════════════════════════════════",
             "PAPER-WISE PERFORMANCE ANALYSIS:",
-            f"• Paper I Average: {paper_i_avg:.1f}%",
-            f"• Paper II Average: {paper_ii_avg:.1f}%", 
-            f"• CAOSCE Average: {caosce_avg:.1f}%",
-            "",
-            "════════════════════════════════════════════════════════════════",
-            "PAPER-WISE FAILURE ANALYSIS:",
-            f"• Failed Paper 1: {paper_i_failed} ({paper_i_failed_pct:.1f}%)",
-            f"• Failed Paper 2: {paper_ii_failed} ({paper_ii_failed_pct:.1f}%)",
-            f"• Failed CAOSCE: {caosce_failed} ({caosce_failed_pct:.1f}%)",
         ]
+        
+        # Add each paper's average
+        for paper_name, avg_score in paper_averages.items():
+            analysis_rows.append(f"• {paper_name} Average: {avg_score:.1f}%")
+        
+        analysis_rows.append("")
+        analysis_rows.append("════════════════════════════════════════════════════════════════")
+        analysis_rows.append("PAPER-WISE FAILURE ANALYSIS:")
+        
+        # Add each paper's failure count
+        for paper_name, failed_count in paper_failed_counts.items():
+            failed_pct = (failed_count / total_students * 100) if total_students > 0 else 0
+            analysis_rows.append(f"• Failed {paper_name}: {failed_count} ({failed_pct:.1f}%)")
     else:
-        # For CAOSCE sheet
+        # For CAOSCE sheet - UPDATED OSCE specific
         analysis_rows = [
             "",
             f"Total Candidates: {total_students}",
-            f"Overall Average Percentage: {avg_percentage}%",
-            f"Highest Percentage Score: {highest_percentage}%",
-            f"Lowest Percentage Score: {lowest_percentage}%",
+            f"Overall OSCE Average: {avg_percentage}%",
+            f"Highest OSCE Score: {highest_percentage}%",
+            f"Lowest OSCE Score: {lowest_percentage}%",
+            "",
+            "Performance Rating:",
         ]
+        
+        # Add performance rating for OSCE
+        if avg_percentage >= 70:
+            analysis_rows.append("• EXCELLENT: Strong OSCE performance")
+        elif avg_percentage >= 60:
+            analysis_rows.append("• GOOD: Satisfactory OSCE performance")
+        elif avg_percentage >= 50:
+            analysis_rows.append("• AVERAGE: Acceptable OSCE performance")
+        elif avg_percentage >= 40:
+            analysis_rows.append("• BELOW AVERAGE: Needs improvement in OSCE")
+        else:
+            analysis_rows.append("• POOR: Significant OSCE deficiencies")
     
     for i, line in enumerate(analysis_rows, 1):
         row_num = analysis_start_row + i
@@ -617,166 +844,240 @@ def create_document_sections(ws, total_students, avg_percentage, highest_percent
     # ====================== SIGNATORIES SECTION ======================
     signatories_start_row = analysis_start_row + len(analysis_rows) + 3
     
-    # Improved signatories layout - using 2-column layout
-    # Left side: EXAMINERS' NAME & SIGNATURE (columns A-D)
-    examiners_col_start = 1  # Column A
-    examiners_col_end = 4    # Column D (4 columns wide)
+    # Get total number of columns to determine layout
+    total_columns = ws.max_column
     
-    ws.merge_cells(f"A{signatories_start_row}:{get_column_letter(examiners_col_end)}{signatories_start_row}")
-    ws.cell(row=signatories_start_row, column=1, value="EXAMINERS' NAME & SIGNATURE:")
-    ws.cell(row=signatories_start_row, column=1).font = SIGNATURE_FONT
-    ws.cell(row=signatories_start_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
-    
-    # Add 4 numbered lines with proper spacing
-    for i in range(1, 5):
-        row_num = signatories_start_row + i
-        ws.merge_cells(f"A{row_num}:{get_column_letter(examiners_col_end)}{row_num}")
+    # Adjust signatories layout based on available columns
+    if total_columns >= 8:
+        # Wide layout: Use column grouping
+        examiners_col_end = total_columns // 2
+        approved_col_start = examiners_col_end + 1
+        approved_col_end = total_columns
         
-        # Create longer signature lines that fit properly
-        signature_line = f"{i}. _______________________________________________________________"
-        ws.cell(row=row_num, column=1, value=signature_line)
-        ws.cell(row=row_num, column=1).font = SIGNATURE_LINE_FONT
-        ws.cell(row=row_num, column=1).alignment = Alignment(horizontal="left", vertical="center")
+        # Examiners section
+        ws.merge_cells(f"A{signatories_start_row}:{get_column_letter(examiners_col_end)}{signatories_start_row}")
+        ws.cell(row=signatories_start_row, column=1, value="EXAMINERS' NAME & SIGNATURE:")
+        ws.cell(row=signatories_start_row, column=1).font = SIGNATURE_FONT
+        ws.cell(row=signatories_start_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
         
-        # Add more spacing between lines
-        ws.row_dimensions[row_num].height = 25  # Increased height for better spacing
-    
-    # Right side: Approved by (columns E-H)
-    approved_col_start = 5   # Column E
-    approved_col_end = 8     # Column H (4 columns wide)
-    
-    # Adjust column widths for signature section
-    for col in range(approved_col_start, approved_col_end + 1):
-        ws.column_dimensions[get_column_letter(col)].width = 25
-    
-    ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row}:{get_column_letter(approved_col_end)}{signatories_start_row}")
-    approved_cell = ws.cell(row=signatories_start_row, column=approved_col_start, value="APPROVED BY:")
-    approved_cell.font = SIGNATURE_FONT
-    approved_cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Space before signature line
-    ws.row_dimensions[signatories_start_row + 1].height = 20
-    
-    # Signature line - LONGER line that fits
-    ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 2}:{get_column_letter(approved_col_end)}{signatories_start_row + 2}")
-    signature_cell = ws.cell(row=signatories_start_row + 2, column=approved_col_start, 
-                             value="________________________________________________________________")
-    signature_cell.font = SIGNATURE_LINE_FONT
-    signature_cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Space before title
-    ws.row_dimensions[signatories_start_row + 3].height = 10
-    
-    ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 4}:{get_column_letter(approved_col_end)}{signatories_start_row + 4}")
-    provost_cell = ws.cell(row=signatories_start_row + 4, column=approved_col_start, value="PROVOST'S SIGNATURE")
-    provost_cell.font = SIGNATURE_FONT
-    provost_cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Space before name
-    ws.row_dimensions[signatories_start_row + 5].height = 20
-    
-    ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 6}:{get_column_letter(approved_col_end)}{signatories_start_row + 6}")
-    name_cell = ws.cell(row=signatories_start_row + 6, column=approved_col_start, 
-                       value="NAME: ____________________________________________________________")
-    name_cell.font = SIGNATURE_LINE_FONT
-    name_cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Space before date
-    ws.row_dimensions[signatories_start_row + 7].height = 10
-    
-    ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 8}:{get_column_letter(approved_col_end)}{signatories_start_row + 8}")
-    date_cell = ws.cell(row=signatories_start_row + 8, column=approved_col_start, 
-                       value="DATE: _____________________________________________________________")
-    date_cell.font = SIGNATURE_LINE_FONT
-    date_cell.alignment = Alignment(horizontal="center", vertical="center")
-    
-    # Add extra spacing at the bottom
-    ws.row_dimensions[signatories_start_row + 9].height = 15
+        # Add 4 numbered lines for examiners
+        for i in range(1, 5):
+            row_num = signatories_start_row + i
+            ws.merge_cells(f"A{row_num}:{get_column_letter(examiners_col_end)}{row_num}")
+            signature_line = f"{i}. _______________________________________________________________"
+            ws.cell(row=row_num, column=1, value=signature_line)
+            ws.cell(row=row_num, column=1).font = SIGNATURE_LINE_FONT
+            ws.cell(row=row_num, column=1).alignment = Alignment(horizontal="left", vertical="center")
+            ws.row_dimensions[row_num].height = 25
+        
+        # Approved by section
+        ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row}:{get_column_letter(approved_col_end)}{signatories_start_row}")
+        approved_cell = ws.cell(row=signatories_start_row, column=approved_col_start, value="APPROVED BY:")
+        approved_cell.font = SIGNATURE_FONT
+        approved_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Empty row
+        ws.row_dimensions[signatories_start_row + 1].height = 20
+        
+        # Signature line
+        ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 2}:{get_column_letter(approved_col_end)}{signatories_start_row + 2}")
+        signature_cell = ws.cell(row=signatories_start_row + 2, column=approved_col_start, 
+                                 value="________________________________________________________________")
+        signature_cell.font = SIGNATURE_LINE_FONT
+        signature_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        ws.row_dimensions[signatories_start_row + 3].height = 10
+        
+        # Provost title
+        ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 4}:{get_column_letter(approved_col_end)}{signatories_start_row + 4}")
+        provost_cell = ws.cell(row=signatories_start_row + 4, column=approved_col_start, value="PROVOST'S SIGNATURE")
+        provost_cell.font = SIGNATURE_FONT
+        provost_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        ws.row_dimensions[signatories_start_row + 5].height = 20
+        
+        # Name line
+        ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 6}:{get_column_letter(approved_col_end)}{signatories_start_row + 6}")
+        name_cell = ws.cell(row=signatories_start_row + 6, column=approved_col_start, 
+                           value="NAME: ____________________________________________________________")
+        name_cell.font = SIGNATURE_LINE_FONT
+        name_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        ws.row_dimensions[signatories_start_row + 7].height = 10
+        
+        # Date line
+        ws.merge_cells(f"{get_column_letter(approved_col_start)}{signatories_start_row + 8}:{get_column_letter(approved_col_end)}{signatories_start_row + 8}")
+        date_cell = ws.cell(row=signatories_start_row + 8, column=approved_col_start, 
+                           value="DATE: _____________________________________________________________")
+        date_cell.font = SIGNATURE_LINE_FONT
+        date_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        ws.row_dimensions[signatories_start_row + 9].height = 15
+    else:
+        # Narrow layout: Stack vertically
+        examiners_col_end = total_columns
+        
+        # Examiners section
+        ws.merge_cells(f"A{signatories_start_row}:{get_column_letter(examiners_col_end)}{signatories_start_row}")
+        ws.cell(row=signatories_start_row, column=1, value="EXAMINERS' NAME & SIGNATURE:")
+        ws.cell(row=signatories_start_row, column=1).font = SIGNATURE_FONT
+        ws.cell(row=signatories_start_row, column=1).alignment = Alignment(horizontal="left", vertical="center")
+        
+        # Add 4 numbered lines for examiners
+        for i in range(1, 5):
+            row_num = signatories_start_row + i
+            ws.merge_cells(f"A{row_num}:{get_column_letter(examiners_col_end)}{row_num}")
+            signature_line = f"{i}. _______________________________________________________________"
+            ws.cell(row=row_num, column=1, value=signature_line)
+            ws.cell(row=row_num, column=1).font = SIGNATURE_LINE_FONT
+            ws.cell(row=row_num, column=1).alignment = Alignment(horizontal="left", vertical="center")
+            ws.row_dimensions[row_num].height = 25
+        
+        # Spacing before approved section
+        approved_start_row = signatories_start_row + 6
+        
+        # Approved by header
+        ws.merge_cells(f"A{approved_start_row}:{get_column_letter(examiners_col_end)}{approved_start_row}")
+        approved_cell = ws.cell(row=approved_start_row, column=1, value="APPROVED BY:")
+        approved_cell.font = SIGNATURE_FONT
+        approved_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Signature line
+        ws.merge_cells(f"A{approved_start_row + 2}:{get_column_letter(examiners_col_end)}{approved_start_row + 2}")
+        signature_cell = ws.cell(row=approved_start_row + 2, column=1, 
+                                 value="________________________________________________________________")
+        signature_cell.font = SIGNATURE_LINE_FONT
+        signature_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Provost title
+        ws.merge_cells(f"A{approved_start_row + 4}:{get_column_letter(examiners_col_end)}{approved_start_row + 4}")
+        provost_cell = ws.cell(row=approved_start_row + 4, column=1, value="PROVOST'S SIGNATURE")
+        provost_cell.font = SIGNATURE_FONT
+        provost_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Name line
+        ws.merge_cells(f"A{approved_start_row + 6}:{get_column_letter(examiners_col_end)}{approved_start_row + 6}")
+        name_cell = ws.cell(row=approved_start_row + 6, column=1, 
+                           value="NAME: ____________________________________________________________")
+        name_cell.font = SIGNATURE_LINE_FONT
+        name_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Date line
+        ws.merge_cells(f"A{approved_start_row + 8}:{get_column_letter(examiners_col_end)}{approved_start_row + 8}")
+        date_cell = ws.cell(row=approved_start_row + 8, column=1, 
+                           value="DATE: _____________________________________________________________")
+        date_cell.font = SIGNATURE_LINE_FONT
+        date_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        ws.row_dimensions[approved_start_row + 9].height = 15
     
     return signatories_start_row + 10
 
 def detect_paper_type(filename):
     """
-    Detect if file is Paper I, Paper II, CAOSCE station, or Combined Papers
+    Detect if file is Paper I, Paper II, Paper III (Midwifery), CAOSCE station, or Combined Papers
+    FIXED: Now properly handles "Set2023A Class-PAPER X-grades" format with word boundaries
     """
-    # Normalize filename for better matching
     fname_upper = filename.upper()
     fname_lower = filename.lower()
     
     logger.debug(f"Detecting paper type for: {filename}")
     
-    # Check for combined paper patterns first - make these more specific
-    # ADDED: Handle "PAPER I and II" pattern
-    combined_patterns = [
-        r"paper[_\s]*i[_\s]*paper[_\s]*ii",
-        r"paper[_\s]*1[_\s]*paper[_\s]*2",
-        r"combined[_\s]*papers",
-        r"paper[_\s]*i[_\s]*&\s*paper[_\s]*ii",
-        r"paper[_\s]*i[_\s]*and[_\s]*paper[_\s]*ii",  # This should catch "PAPER I and II"
-        r"paper[_\s]*i[_\s]*&[_\s]*ii",
-        r"papers[_\s]*i[_\s]*ii",
-        r"papers[_\s]*1[_\s]*2"
-    ]
-    
-    for pattern in combined_patterns:
+    # Check for combined paper patterns first (using regex)
+    for pattern in COMBINED_PAPER_PATTERNS:
         if re.search(pattern, fname_lower, re.IGNORECASE):
             logger.info(f"  Detected as COMBINED_PAPERS based on pattern: {pattern}")
             return "COMBINED_PAPERS"
     
-    # Also check for files that might contain both Paper I and Paper II data
-    # Even if not explicitly named as combined
-    if ("PAPER" in fname_upper and "I" in fname_upper and "II" in fname_upper) or \
-       ("PAPER" in fname_upper and "1" in fname_upper and "2" in fname_upper) or \
-       ("PAPER" in fname_upper and "AND" in fname_upper and "II" in fname_upper):  # Added this line
-        logger.info(f"  Detected as COMBINED_PAPERS (contains 'PAPER', 'I', and 'II')")
+    # CRITICAL FIX: Use regex word boundaries and handle both space and hyphen
+    # Check for files that EXPLICITLY contain both Paper I AND Paper II
+    
+    # More flexible patterns that handle "CLASS-PAPER II-grades" format
+    has_paper_i = bool(re.search(r'\bPAPER[\s-]+I\b(?!I)', fname_upper))
+    has_paper_ii = bool(re.search(r'\bPAPER[\s-]+II\b', fname_upper))
+    has_paper_iii = bool(re.search(r'\bPAPER[\s-]+III\b', fname_upper))
+    
+    # Only treat as combined if it has MULTIPLE distinct paper markers
+    if (has_paper_i and has_paper_ii) or (has_paper_i and has_paper_iii) or (has_paper_ii and has_paper_iii):
+        logger.info(f"  Detected as COMBINED_PAPERS (contains multiple paper markers)")
         return "COMBINED_PAPERS"
     
-    # Check for Paper I patterns (case-insensitive)
-    paper_i_indicators = [
-        "PAPER I", "PAPER 1", "PAPERI", "PAPER_I", "PAPER-I",
-        "PAPERI_PAPERII-PAPER I", "PAPER I-GRADES"
+    # Check for MIDWIFERY with other papers
+    if "MIDWIFERY" in fname_upper and ("PAPER I" in fname_upper or "PAPER II" in fname_upper):
+        logger.info(f"  Detected as COMBINED_PAPERS (contains 'MIDWIFERY' with other papers)")
+        return "COMBINED_PAPERS"
+    
+    # Now check for individual papers - Paper III FIRST (most specific)
+    # FIXED: More flexible patterns that handle hyphens and spaces
+    paper_iii_patterns = [
+        r"\bCLASS-PAPER[\s-]+III\b",
+        r"\bCLASS-PAPER[\s-]+3\b",
+        r"\bPAPER[\s-]+III\b",
+        r"\bPAPER[\s-]+3\b",
+        r"\bPAPERIII\b",
+        r"\bMIDWIFERY\b",
+        r"\bPAPER[\s-]+3.*MIDWIFERY\b",
+        r"\bPAPER[\s-]+III.*MIDWIFERY\b",
     ]
     
-    for indicator in paper_i_indicators:
-        if indicator.upper() in fname_upper:
-            # Make sure it's not Paper II
-            if "PAPER II" not in fname_upper and "PAPER 2" not in fname_upper:
-                logger.info(f"  Detected as PAPER_I based on: {indicator}")
-                return "PAPER_I"
+    for pattern in paper_iii_patterns:
+        if re.search(pattern, fname_upper, re.IGNORECASE):
+            logger.info(f"  Detected as PAPER_III based on pattern: {pattern}")
+            return "PAPER_III"
     
-    # Check for Paper II patterns (case-insensitive)
-    paper_ii_indicators = [
-        "PAPER II", "PAPER 2", "PAPERII", "PAPER_II", "PAPER-II",
-        "PAPERI_PAPERII-PAPER II", "PAPER II-GRADES"
+    # FIXED: Check for Paper II patterns
+    paper_ii_patterns = [
+        r"\bCLASS-PAPER[\s-]+II\b",
+        r"\bCLASS-PAPER[\s-]+2\b",
+        r"\bPAPER[\s-]+II\b",
+        r"\bPAPER[\s-]+2\b",
+        r"\bPAPERII\b",
+        r"PAPERI_PAPERII-PAPER[\s-]+II",
+        r"PAPER[\s-]+II-GRADES"
     ]
     
-    for indicator in paper_ii_indicators:
-        if indicator.upper() in fname_upper:
-            logger.info(f"  Detected as PAPER_II based on: {indicator}")
+    for pattern in paper_ii_patterns:
+        if re.search(pattern, fname_upper, re.IGNORECASE):
+            logger.info(f"  Detected as PAPER_II based on pattern: {pattern}")
             return "PAPER_II"
+    
+    # FIXED: Check for Paper I patterns
+    paper_i_patterns = [
+        r"\bCLASS-PAPER[\s-]+I\b(?!\s*I)",
+        r"\bCLASS-PAPER[\s-]+1\b",
+        r"\bPAPER[\s-]+I\b(?!\s*I)",
+        r"\bPAPER[\s-]+1\b",
+        r"\bPAPERI\b(?!I)",
+        r"PAPERI_PAPERII-PAPER[\s-]+I\b(?!\s*I)",
+        r"PAPER[\s-]+I-GRADES"
+    ]
+    
+    for pattern in paper_i_patterns:
+        if re.search(pattern, fname_upper, re.IGNORECASE):
+            logger.info(f"  Detected as PAPER_I based on pattern: {pattern}")
+            return "PAPER_I"
     
     # Check for CAOSCE station patterns
     if any(station in fname_lower for station in ["procedure", "question", "viva", "ps-", "qs-", "ps1", "ps3", "ps5", "qs2", "qs4", "qs6"]):
         logger.info(f"  Detected as CAOSCE_STATION")
         return "CAOSCE_STATION"
     
-    logger.info(f"  Detected as UNKNOWN")
+    logger.info(f"  Detected as UNKNOWN: {filename}")
     return "UNKNOWN"
 
 def process_paper_files(files, raw_dir):
     """
-    Process Paper I and Paper II files including combined format
-    Returns: dict with paper results {exam_no: {"PAPER I": score, "PAPER II": score}}
-    FIXED VERSION with better debugging
+    Process Paper I, Paper II, and Paper III (Midwifery) files including combined format
+    FIXED: Now properly processes "Set2023A Class-PAPER X-grades" format
     """
     paper_results = {}
-    paper_averages = {"PAPER I": [], "PAPER II": []}
+    paper_averages = {"PAPER I": [], "PAPER II": [], "PAPER III": []}
     
     logger.info("=" * 60)
-    logger.info("STARTING PAPER FILES PROCESSING")
+    logger.info("STARTING PAPER FILES PROCESSING (I, II, and III)")
     logger.info("=" * 60)
     
-    # First, identify and process COMBINED_PAPERS files (highest priority)
+    # First, identify and process COMBINED_PAPERS files
     combined_files = []
     separate_paper_files = []
     
@@ -784,16 +1085,18 @@ def process_paper_files(files, raw_dir):
         paper_type = detect_paper_type(fname)
         if paper_type == "COMBINED_PAPERS":
             combined_files.append(fname)
-        elif paper_type in ["PAPER_I", "PAPER_II"]:
+        elif paper_type in ["PAPER_I", "PAPER_II", "PAPER_III"]:
             separate_paper_files.append(fname)
+        else:
+            logger.debug(f"  Skipping {fname} - not a paper file")
     
     logger.info(f"Found {len(combined_files)} combined paper file(s)")
-    logger.info(f"Found {len(separate_paper_files)} separate paper file(s)")
+    logger.info(f"Found {len(separate_paper_files)} separate paper file(s): {separate_paper_files}")
     
-    # Process COMBINED files first (they take precedence)
+    # Process COMBINED files first
     for fname in combined_files:
         logger.info(f"\n{'='*60}")
-        logger.info(f"Processing COMBINED file (HIGHEST PRIORITY): {fname}")
+        logger.info(f"Processing COMBINED file: {fname}")
         logger.info(f"{'='*60}")
         
         path = os.path.join(raw_dir, fname)
@@ -809,7 +1112,7 @@ def process_paper_files(files, raw_dir):
             
         df.rename(columns=lambda c: str(c).strip(), inplace=True)
         
-        # Process combined papers format using our fixed function
+        # Process combined papers
         processed_combined = process_combined_papers(df, fname)
         
         logger.info(f"\n📊 Combined file processing summary:")
@@ -817,16 +1120,7 @@ def process_paper_files(files, raw_dir):
         
         if not processed_combined:
             logger.error(f"❌ CRITICAL: process_combined_papers returned EMPTY for {fname}!")
-            logger.error(f"   This file should contain Paper I and II scores but none were extracted!")
             continue
-        
-        # Show sample data
-        logger.info(f"\n📋 Sample data from combined file (first 5 students):")
-        for i, (exam_no, data) in enumerate(list(processed_combined.items())[:5]):
-            logger.info(f"   {i+1}. {exam_no}:")
-            logger.info(f"      Name: {data.get('FULL NAME')}")
-            logger.info(f"      Paper I: {data.get('PAPER I')}")
-            logger.info(f"      Paper II: {data.get('PAPER II')}")
         
         # Merge results from combined file into paper_results
         students_added = 0
@@ -838,24 +1132,26 @@ def process_paper_files(files, raw_dir):
                 paper_results[exam_no] = {
                     "PAPER I": 0.00,
                     "PAPER II": 0.00,
+                    "PAPER III": 0.00,
                     "FULL NAME": data.get("FULL NAME")
                 }
                 students_added += 1
             
-            # Update Paper I score - ALWAYS use combined file data
-            paper_i_score = data.get("PAPER I")
-            if paper_i_score is not None:
-                paper_results[exam_no]["PAPER I"] = paper_i_score
-                if paper_i_score > 0:
-                    paper_averages["PAPER I"].append(paper_i_score)
-                    students_updated += 1
-            
-            # Update Paper II score - ALWAYS use combined file data
-            paper_ii_score = data.get("PAPER II")
-            if paper_ii_score is not None:
-                paper_results[exam_no]["PAPER II"] = paper_ii_score
-                if paper_ii_score > 0:
-                    paper_averages["PAPER II"].append(paper_ii_score)
+            # Update Paper scores
+            for paper in ["PAPER I", "PAPER II", "PAPER III"]:
+                paper_score = data.get(paper)
+                if paper_score is not None:
+                    try:
+                        numeric_score = float(paper_score)
+                    except (ValueError, TypeError):
+                        numeric_score = 0.00
+                    
+                    paper_results[exam_no][paper] = numeric_score
+                    if numeric_score > 0:
+                        if paper not in paper_averages:
+                            paper_averages[paper] = []
+                        paper_averages[paper].append(numeric_score)
+                        students_updated += 1
             
             # Update full name if not set
             if data.get("FULL NAME") and not paper_results[exam_no]["FULL NAME"]:
@@ -866,13 +1162,14 @@ def process_paper_files(files, raw_dir):
         logger.info(f"   Students updated: {students_updated}")
         logger.info(f"   Total students in paper_results: {len(paper_results)}")
     
-    # Now process separate PAPER_I and PAPER_II files (lower priority)
-    # These should ONLY fill in missing data, NOT overwrite combined file data
+    # Process separate PAPER_I, PAPER_II, and PAPER_III files
     for fname in separate_paper_files:
         paper_type = detect_paper_type(fname)
         path = os.path.join(raw_dir, fname)
         
-        logger.info(f"\nProcessing {paper_type} file (LOW PRIORITY - fill missing only): {fname}")
+        logger.info(f"\n{'='*40}")
+        logger.info(f"Processing {paper_type} file: {fname}")
+        logger.info(f"{'='*40}")
         
         try:
             if fname.lower().endswith(".csv"):
@@ -885,16 +1182,23 @@ def process_paper_files(files, raw_dir):
             
         df.rename(columns=lambda c: str(c).strip(), inplace=True)
         
-        # Find columns
+        # DEBUG: Show columns for this specific file
+        logger.info(f"  Columns in {fname}: {list(df.columns)}")
+        
+        # Find columns - SPECIAL HANDLING for "Set2023A Class-PAPER X-grades" format
         username_col = find_username_col(df)
         fullname_col = find_fullname_col(df)
-        grade_col, max_score = find_grade_column(df)
+        
+        # FIXED: Use the updated find_grade_column function that handles "Class-PAPER" format
+        grade_col, max_score = find_grade_column(df, fname)
         
         if not grade_col:
-            logger.warning(f"No grade column found in {fname}")
+            logger.error(f"  CRITICAL: Could not find grade column in {fname}")
             continue
             
-        logger.info(f"  Found grade column: '{grade_col}' (max score: {max_score})")
+        logger.info(f"  Using grade column: '{grade_col}' (max score: {max_score})")
+        logger.info(f"  Username column: '{username_col}'")
+        logger.info(f"  Fullname column: '{fullname_col}'")
         
         # Remove unwanted columns
         for pattern in UNWANTED_COL_PATTERNS:
@@ -903,9 +1207,11 @@ def process_paper_files(files, raw_dir):
         
         rows_processed = 0
         rows_filled = 0
-        paper_label = paper_type.replace("_", " ")  # "PAPER I" or "PAPER II"
+        paper_label = paper_type.replace("_", " ")  # "PAPER I", "PAPER II", or "PAPER III"
         
-        for _, row in df.iterrows():
+        logger.info(f"  Processing {len(df)} rows for {paper_label}")
+        
+        for idx, row in df.iterrows():
             # Skip overall average rows
             if is_overall_average_row(row, username_col, fullname_col):
                 continue
@@ -913,28 +1219,32 @@ def process_paper_files(files, raw_dir):
             exam_no = None
             full_name = None
             
-            # Extract exam number
-            if username_col:
+            # Extract exam number - try multiple approaches
+            if username_col and pd.notna(row.get(username_col)):
                 exam_no = sanitize_exam_no(row.get(username_col))
             
-            if not exam_no and fullname_col:
+            # Try fullname column if username didn't work
+            if (not exam_no or exam_no == "") and fullname_col and pd.notna(row.get(fullname_col)):
                 fullname_value = str(row.get(fullname_col, "")).strip()
                 exam_no = extract_exam_number_from_fullname(fullname_value)
                 if exam_no:
                     full_name = extract_fullname_from_text(fullname_value, exam_no)
             
-            if not exam_no:
+            # Try scanning all columns for exam number patterns
+            if not exam_no or exam_no == "":
                 for col in df.columns:
+                    if col == username_col or col == fullname_col:
+                        continue
                     val = str(row.get(col, "")).strip()
                     if re.search(r'BN/A\d{2}/\d{3}|FCTCONS/ND\d{2}/\d{3}|\b\d{4}\b', val):
                         exam_no = sanitize_exam_no(val)
                         break
             
-            if not exam_no:
+            if not exam_no or exam_no == "":
                 continue
             
             # Extract full name
-            if not full_name and fullname_col:
+            if not full_name and fullname_col and pd.notna(row.get(fullname_col)):
                 full_name = str(row.get(fullname_col, "")).strip()
                 if full_name and not re.search(r'[A-Za-z]{3,}', full_name):
                     full_name = None
@@ -944,6 +1254,7 @@ def process_paper_files(files, raw_dir):
                 paper_results[exam_no] = {
                     "PAPER I": 0.00,
                     "PAPER II": 0.00,
+                    "PAPER III": 0.00,
                     "FULL NAME": full_name
                 }
             
@@ -955,21 +1266,28 @@ def process_paper_files(files, raw_dir):
             score_val = numeric_safe(row.get(grade_col))
             
             if score_val is not None:
-                # Normalize to percentage out of 100
-                normalized_score = (score_val / max_score) * 100
+                # For "Class-PAPER X-grades" files, scores are usually already percentages
+                # But normalize if needed
+                if score_val > 100:  # If score is > 100, it might be raw marks
+                    normalized_score = (score_val / max_score) * 100
+                else:
+                    normalized_score = score_val
+                
                 rounded_score = round(normalized_score, 2)
                 
-                # Only fill if this score is currently 0.00 (not set from combined file)
+                # Only fill if this score is currently 0.00
                 current_score = paper_results[exam_no][paper_label]
                 if current_score == 0.00:
                     paper_results[exam_no][paper_label] = rounded_score
+                    if paper_label not in paper_averages:
+                        paper_averages[paper_label] = []
                     paper_averages[paper_label].append(rounded_score)
                     rows_filled += 1
-                    rows_processed += 1
+                rows_processed += 1
         
         logger.info(f"  Processed {rows_processed} rows, filled {rows_filled} missing scores from {fname}")
     
-    # Final summary with verification
+    # Final summary
     logger.info(f"\n{'='*60}")
     logger.info(f"PAPER FILES PROCESSING COMPLETE")
     logger.info(f"{'='*60}")
@@ -978,63 +1296,22 @@ def process_paper_files(files, raw_dir):
     if paper_results:
         paper_i_count = sum(1 for data in paper_results.values() if data["PAPER I"] > 0)
         paper_ii_count = sum(1 for data in paper_results.values() if data["PAPER II"] > 0)
+        paper_iii_count = sum(1 for data in paper_results.values() if data["PAPER III"] > 0)
         
         logger.info(f"Students with Paper I scores: {paper_i_count}")
         logger.info(f"Students with Paper II scores: {paper_ii_count}")
+        logger.info(f"Students with Paper III scores: {paper_iii_count}")
         
-        if paper_averages["PAPER I"]:
-            avg_i = sum(paper_averages["PAPER I"]) / len(paper_averages["PAPER I"])
-            logger.info(f"Paper I Average: {avg_i:.2f}%")
-        
-        if paper_averages["PAPER II"]:
-            avg_ii = sum(paper_averages["PAPER II"]) / len(paper_averages["PAPER II"])
-            logger.info(f"Paper II Average: {avg_ii:.2f}%")
-        
-        # Show sample
-        logger.info(f"\n📋 Sample final results (first 10 students):")
-        for i, (exam_no, data) in enumerate(list(paper_results.items())[:10]):
-            logger.info(f"   {i+1}. {exam_no}:")
-            logger.info(f"      Paper I: {data['PAPER I']}")
-            logger.info(f"      Paper II: {data['PAPER II']}")
-        
-        # Final verification - check specific students
-        logger.info(f"\n{'='*60}")
-        logger.info(f"FINAL PAPER RESULTS VERIFICATION")
-        logger.info(f"{'='*60}")
-        
-        # Check specific students from your sample
-        test_students = ["BN/A23/002", "BN/A23/004", "BN/A23/007", "BN/A23/008", "BN/A23/010"]
-        for test_student in test_students:
-            if test_student in paper_results:
-                data = paper_results[test_student]
-                logger.info(f"  ✓ {test_student}: Paper I={data['PAPER I']}, Paper II={data['PAPER II']}")
-                
-                # Check if Paper II score matches expected from your sample
-                expected_scores = {
-                    "BN/A23/002": 94,
-                    "BN/A23/004": 50,
-                    "BN/A23/007": 26,
-                    "BN/A23/008": 64,
-                    "BN/A23/010": 93
-                }
-                
-                if test_student in expected_scores:
-                    expected = expected_scores[test_student]
-                    actual = data['PAPER II']
-                    if abs(actual - expected) > 0.1:
-                        logger.error(f"    ❌ MISMATCH! Expected Paper II: {expected}, Got: {actual}")
-            else:
-                logger.warning(f"  ✗ {test_student}: NOT FOUND in results")
-    else:
-        logger.error(f"❌ CRITICAL ERROR: paper_results is completely EMPTY!")
-        logger.error(f"   No Paper I or Paper II scores were extracted from any files!")
+        for paper in ["PAPER I", "PAPER II", "PAPER III"]:
+            if paper in paper_averages and paper_averages[paper]:
+                avg = sum(paper_averages[paper]) / len(paper_averages[paper])
+                logger.info(f"{paper} Average: {avg:.2f}%")
     
     return paper_results
 
 def process_combined_papers(df, filename):
     """
-    Process combined papers format: S/N, MAT NO., FULL NAME, PaperI/100.00, PaperII/100.00
-    FIXED VERSION with better column detection and debugging
+    Process combined papers format including PAPER III
     """
     logger.info(f"=== PROCESSING COMBINED PAPERS FILE: {filename} ===")
     logger.info(f"DataFrame shape: {df.shape}")
@@ -1046,142 +1323,102 @@ def process_combined_papers(df, filename):
     
     results = {}
     
-    # IMPROVED: Find columns by flexible matching
+    # Find columns by flexible matching
     mat_no_col = None
     full_name_col = None
-    paper_i_col = None
-    paper_ii_col = None
+    paper_cols = {}  # Dictionary to store paper columns
     
     # Find MAT NO column
+    mat_no_patterns = ["MAT NO", "MATNO", "MAT.NO", "EXAM NO", "REG NO", "REGISTRATION", "ID", "STUDENT ID"]
     for col in df.columns:
         col_upper = str(col).strip().upper()
-        if any(pattern in col_upper for pattern in ["MAT NO", "MATNO", "MAT.NO", "EXAM NO", "REG"]):
-            mat_no_col = col
-            logger.info(f"  Found MAT NO column: '{col}'")
+        for pattern in mat_no_patterns:
+            if pattern in col_upper:
+                mat_no_col = col
+                logger.info(f"  Found MAT NO column: '{col}'")
+                break
+        if mat_no_col:
             break
     
     # Find FULL NAME column
+    name_patterns = ["FULL NAME", "FULLNAME", "NAME", "STUDENT NAME", "CANDIDATE NAME", "FIRST NAME", "LAST NAME"]
     for col in df.columns:
         col_upper = str(col).strip().upper()
-        if any(pattern in col_upper for pattern in ["FULL NAME", "FULLNAME", "NAME", "STUDENT NAME"]):
-            full_name_col = col
-            logger.info(f"  Found FULL NAME column: '{col}'")
+        for pattern in name_patterns:
+            if pattern in col_upper:
+                full_name_col = col
+                logger.info(f"  Found FULL NAME column: '{col}'")
+                break
+        if full_name_col:
             break
     
-    # Find Paper I column - check for PaperI, Paper I, PAPER I, etc.
+    # Find Paper columns - check for PaperI, Paper II, Paper III, etc.
     for col in df.columns:
         col_str = str(col).strip()
         col_upper = col_str.upper()
         
-        # Match various Paper I patterns
-        paper_i_patterns = [
-            r"PAPERI", r"PAPER\s*I", r"PAPER\s*1",
-            r"PAPERI/", r"PAPER\s*I/", r"PAPER\s*1/",
-            r"PAPERI[^I]", r"PAPER\s*I[^I]"  # PaperI followed by non-I
-        ]
+        # Check for PAPER I
+        if re.search(r'PAPER\s*I|PAPER\s*1|PAPERI', col_upper) and not re.search(r'PAPER\s*II|PAPER\s*2|PAPERIII', col_upper):
+            paper_cols["PAPER I"] = col
+            logger.info(f"  Found Paper I column: '{col}'")
         
-        for pattern in paper_i_patterns:
-            if re.search(pattern, col_upper):
-                paper_i_col = col
-                logger.info(f"  Found Paper I column: '{col}' (matched pattern: {pattern})")
-                break
-        if paper_i_col:
-            break
+        # Check for PAPER II
+        if re.search(r'PAPER\s*II|PAPER\s*2|PAPERII', col_upper) and not re.search(r'PAPER\s*III|PAPER\s*3', col_upper):
+            paper_cols["PAPER II"] = col
+            logger.info(f"  Found Paper II column: '{col}'")
+        
+        # Check for PAPER III (Midwifery)
+        if re.search(r'PAPER\s*III|PAPER\s*3|PAPERIII|MIDWIFERY', col_upper, re.IGNORECASE):
+            paper_cols["PAPER III"] = col
+            logger.info(f"  Found Paper III column: '{col}'")
     
-    # Find Paper II column - FIXED FOR "PaperII/100.00" pattern
-    for col in df.columns:
-        col_str = str(col).strip()
-        col_upper = col_str.upper()
-        
-        # Match various Paper II patterns - FIXED TO HANDLE "PaperII" (two I's)
-        paper_ii_patterns = [
-            r"PAPERII", r"PAPER\s*II", r"PAPER\s*2",
-            r"PAPERII/", r"PAPER\s*II/", r"PAPER\s*2/",
-            r"PAPERI.*I",  # This catches "PaperII" (PaperI followed by another I)
-            r"PAPER.*II"
-        ]
-        
-        for pattern in paper_ii_patterns:
-            if re.search(pattern, col_upper):
-                paper_ii_col = col
-                logger.info(f"  Found Paper II column: '{col}' (matched pattern: {pattern})")
-                
-                # Show sample value for verification
-                if len(df) > 0:
-                    # Get non-null values
-                    non_null_values = df[col].dropna()
-                    if len(non_null_values) > 0:
-                        sample_val = non_null_values.iloc[0]
-                        logger.info(f"    Sample Paper II value: {sample_val}")
-                break
-        if paper_ii_col:
-            break
-    
-    # ALTERNATIVE: If Paper II column not found, try to identify it by position
-    if not paper_ii_col and paper_i_col:
+    # ALTERNATIVE: If columns not found by name, try to identify them by position
+    if not paper_cols and mat_no_col and full_name_col:
         col_list = list(df.columns)
         try:
-            paper_i_idx = col_list.index(paper_i_col)
-            # Paper II should be right after Paper I
-            if paper_i_idx + 1 < len(col_list):
-                potential_ii_col = col_list[paper_i_idx + 1]
-                logger.info(f"  Trying next column as Paper II: '{potential_ii_col}'")
-                
-                # Check if this looks like a Paper II column
-                if any(keyword in str(potential_ii_col).upper() for keyword in ["PAPER", "II", "2"]):
-                    paper_ii_col = potential_ii_col
-                    logger.info(f"  Using '{potential_ii_col}' as Paper II column")
-                else:
-                    # Still use it if it contains /100
-                    if "/100" in str(potential_ii_col):
-                        paper_ii_col = potential_ii_col
-                        logger.info(f"  Using '{potential_ii_col}' as Paper II column (contains /100)")
+            # Try to identify papers by position after MAT NO and FULL NAME
+            mat_no_idx = col_list.index(mat_no_col)
+            full_name_idx = col_list.index(full_name_col)
+            
+            # Papers should come after MAT NO and FULL NAME
+            paper_candidates = []
+            for idx in range(max(mat_no_idx, full_name_idx) + 1, len(col_list)):
+                candidate_col = col_list[idx]
+                candidate_str = str(candidate_col).upper()
+                if "/100" in candidate_str or "/100.00" in candidate_str or "PAPER" in candidate_str or "SCORE" in candidate_str or "GRADE" in candidate_str:
+                    paper_candidates.append(candidate_col)
+            
+            # Assign papers based on order
+            if len(paper_candidates) >= 1:
+                paper_cols["PAPER I"] = paper_candidates[0]
+                logger.info(f"  Assumed Paper I column (position): '{paper_candidates[0]}'")
+            if len(paper_candidates) >= 2:
+                paper_cols["PAPER II"] = paper_candidates[1]
+                logger.info(f"  Assumed Paper II column (position): '{paper_candidates[1]}'")
+            if len(paper_candidates) >= 3:
+                paper_cols["PAPER III"] = paper_candidates[2]
+                logger.info(f"  Assumed Paper III column (position): '{paper_candidates[2]}'")
         except ValueError:
             pass
     
     # Validate required columns
     if not mat_no_col:
         logger.error("  ❌ ERROR: Could not find MAT NO column!")
-        logger.error(f"  Available columns: {list(df.columns)}")
         return results
-    
-    if not paper_i_col:
-        logger.error("  ❌ ERROR: Could not find Paper I column!")
-        logger.error(f"  Available columns: {list(df.columns)}")
-        return results
-    
-    if not paper_ii_col:
-        logger.warning("  ⚠️ WARNING: Could not find Paper II column!")
-        # Try one more approach: look for any column with "/100.00" that's not Paper I
-        for col in df.columns:
-            if col == paper_i_col:
-                continue
-            if "/100" in str(col) or "/100.00" in str(col):
-                paper_ii_col = col
-                logger.info(f"  Using '{col}' as Paper II column (contains /100)")
-                break
-    
-    if not paper_ii_col:
-        logger.error("  ❌ CRITICAL: Still could not find Paper II column!")
-        logger.error("  The combined file may have incorrect column naming")
-        # Return partial results with Paper I only
-        pass
     
     rows_processed = 0
-    paper_i_count = 0
-    paper_ii_count = 0
+    paper_counts = {paper: 0 for paper in paper_cols}
     skipped_rows = 0
     
     for idx, row in df.iterrows():
         # Get exam number
         exam_no = sanitize_exam_no(row.get(mat_no_col))
         
-        # CRITICAL: Skip "Overall average" rows
+        # Skip "Overall average" rows
         if not exam_no or exam_no == "":
             skipped_rows += 1
             continue
             
-        # Additional check for "Overall average" text - more robust
         exam_no_str = str(exam_no).lower()
         fullname_str = str(row.get(full_name_col, "")).lower() if full_name_col else ""
         if ("overall" in exam_no_str and "average" in exam_no_str) or \
@@ -1197,65 +1434,45 @@ def process_combined_papers(df, filename):
             if not full_name or not re.search(r'[A-Za-z]{3,}', full_name):
                 full_name = None
         
-        # Get Paper I score (already normalized to 0-100)
-        paper_i_score = 0.00
-        if paper_i_col:
-            paper_i_val = numeric_safe(row.get(paper_i_col))
-            if paper_i_val is not None:
-                paper_i_score = round(float(paper_i_val), 2)
-                paper_i_count += 1
-        
-        # Get Paper II score (already normalized to 0-100)
-        paper_ii_score = 0.00
-        if paper_ii_col:
-            paper_ii_val = numeric_safe(row.get(paper_ii_col))
-            if paper_ii_val is not None:
-                paper_ii_score = round(float(paper_ii_val), 2)
-                paper_ii_count += 1
-        else:
-            logger.debug(f"  No Paper II column for row {idx}")
-        
-        # Store results
+        # Initialize result entry
         results[exam_no] = {
             "FULL NAME": full_name,
-            "PAPER I": paper_i_score,
-            "PAPER II": paper_ii_score
         }
+        
+        # Get scores for each paper found
+        for paper_name, col_name in paper_cols.items():
+            paper_score = 0.00
+            paper_val = numeric_safe(row.get(col_name))
+            if paper_val is not None:
+                paper_score = round(float(paper_val), 2)
+                paper_counts[paper_name] += 1
+            
+            results[exam_no][paper_name] = paper_score
         
         rows_processed += 1
         
-        # Log first 5 rows for debugging
-        if rows_processed <= 5:
+        # Log first 3 rows for debugging
+        if rows_processed <= 3:
             logger.info(f"  ✓ Processed row {rows_processed}:")
             logger.info(f"    Exam: {exam_no}")
             logger.info(f"    Name: {full_name}")
-            logger.info(f"    Paper I: {paper_i_score}")
-            logger.info(f"    Paper II: {paper_ii_score}")
+            for paper_name in paper_cols:
+                logger.info(f"    {paper_name}: {results[exam_no].get(paper_name, 0.00)}")
     
     logger.info(f"  Summary:")
     logger.info(f"    Total rows in file: {len(df)}")
     logger.info(f"    Rows processed: {rows_processed}")
     logger.info(f"    Rows skipped: {skipped_rows}")
-    logger.info(f"    Paper I scores found: {paper_i_count}")
-    logger.info(f"    Paper II scores found: {paper_ii_count}")
+    for paper_name, count in paper_counts.items():
+        logger.info(f"    {paper_name} scores found: {count}")
     logger.info(f"    Unique students: {len(results)}")
-    
-    if results:
-        # Show more sample results for verification
-        logger.info(f"\n  Sample results (first 10):")
-        sample_count = 0
-        for exam_no, data in results.items():
-            if sample_count >= 10:
-                break
-            logger.info(f"    {exam_no}: Paper I={data['PAPER I']}, Paper II={data['PAPER II']}")
-            sample_count += 1
     
     return results
 
 def process_caosce_station_files(files, raw_dir):
     """
-    Process CAOSCE station files (existing functionality)
-    Returns: caosce_results, station_max_scores, station_overall_averages, all_exam_numbers
+    Process CAOSCE station files with UPDATED OSCE grading
+    FIXED: Now properly handles stations at /10 instead of /15
     """
     caosce_results = {}
     station_max_scores = {}
@@ -1311,19 +1528,21 @@ def process_caosce_station_files(files, raw_dir):
 
         username_col = find_username_col(df)
         fullname_col = find_fullname_col(df)
-        grade_col, max_score = find_grade_column(df)
+        # FIXED: Pass station_key to find_grade_column for VIVA detection
+        grade_col, max_score = find_grade_column(df, fname, station_key)
         viva_score_col = find_viva_score_col(df) if station_key == "viva" else None
 
         if grade_col:
             logger.info(f"  Found grade column: '{grade_col}' (max score: {max_score}) in {fname}")
-            # Special default for viva if max_score defaulted to 10
-            if station_key == "viva" and max_score == 10.0:
-                max_score = 30.0
+            # Store the actual max score for this station
             station_max_scores[station_key] = max_score
         else:
             logger.warning(f"  No grade column found in {fname}")
-            default_max = 30.0 if station_key == "viva" else 10.0
-            station_max_scores[station_key] = default_max
+            # Use standard weights if not found
+            if station_key == "viva":
+                station_max_scores[station_key] = 10.0  # VIVA is 10%
+            else:
+                station_max_scores[station_key] = 10.0  # UPDATED: Stations are 10%
 
         # Remove unwanted columns
         for pattern in UNWANTED_COL_PATTERNS:
@@ -1404,8 +1623,15 @@ def process_caosce_station_files(files, raw_dir):
 
             if score_val is not None:
                 out_col = STATION_COLUMN_MAP[station_key]
-                caosce_results[exam_no][out_col] = round(score_val, 2)
-                station_scores.append(score_val)
+                # UPDATED: Keep station scores as /10
+                if station_key == "viva":
+                    # VIVA is out of 10, no scaling needed
+                    caosce_results[exam_no][out_col] = round(score_val, 2)
+                else:
+                    # All other stations are out of 10
+                    caosce_results[exam_no][out_col] = round(score_val, 2)
+                
+                station_scores.append(caosce_results[exam_no][out_col])
 
             rows_added += 1
 
@@ -1419,9 +1645,50 @@ def process_caosce_station_files(files, raw_dir):
     
     return caosce_results, station_max_scores, station_overall_averages, all_exam_numbers
 
+def calculate_osce_percentage(student_scores, station_max_scores):
+    """
+    UPDATED: Calculate OSCE percentage with stations at /10 each, contributing to 90% total:
+    1. Sum all 6 stations (PS1, PS3, PS5, QS2, QS4, QS6) - each out of 10
+    2. Convert to 90%: (sum ÷ 60) × 90
+    3. Add VIVA/10 (already weighted at 10%)
+    4. Total = Step 2 + Step 3
+    """
+    # Step 1: Sum all procedure and question stations (6 stations total, each /10)
+    procedure_question_stations = [
+        "procedure_station_one",
+        "procedure_station_three", 
+        "procedure_station_five",
+        "question_station_two",
+        "question_station_four",
+        "question_station_six"
+    ]
+    
+    station_scores_sum = 0
+    for station_key in procedure_question_stations:
+        score = student_scores.get(STATION_COLUMN_MAP[station_key], 0) or 0
+        station_scores_sum += float(score)
+    
+    # Each station is out of 10, so total possible for 6 stations is 60
+    # Step 2: Convert to 90% weight
+    if station_scores_sum > 0:
+        stations_percentage = (station_scores_sum / 60.0) * 90.0
+    else:
+        stations_percentage = 0
+    
+    # Step 3: Add VIVA/10 (already out of 10, weighted at 10%)
+    viva_score = student_scores.get(STATION_COLUMN_MAP["viva"], 0) or 0
+    # VIVA is out of 10, no scaling needed as it's already weighted at 10%
+    viva_percentage = float(viva_score)
+    
+    # Step 4: Total OSCE percentage
+    total_percentage = round(stations_percentage + viva_percentage, 2)
+    
+    return total_percentage
+
 def merge_results(caosce_results, paper_results, station_max_scores):
     """
     Merge CAOSCE and paper results into combined structure
+    Updated to include PAPER III and proper OSCE calculation
     """
     combined_results = {}
     all_exam_numbers = set(caosce_results.keys()) | set(paper_results.keys())
@@ -1432,27 +1699,21 @@ def merge_results(caosce_results, paper_results, station_max_scores):
             "FULL NAME": None,
             "PAPER I": 0.00,
             "PAPER II": 0.00,
+            "PAPER III": 0.00,
             "CAOSCE": 0.00,
             "OVERALL AVERAGE": 0.00,
             "REMARK": "",
             "FAILED PAPERS": "",
-            "FAILED_COUNT": 0  # Add failed count for sorting
+            "FAILED_COUNT": 0
         }
         
         # Add CAOSCE data
         if exam_no in caosce_results:
             combined_results[exam_no]["FULL NAME"] = caosce_results[exam_no]["FULL NAME"]
             
-            # Calculate CAOSCE percentage
-            total_score = 0
-            total_max = sum(station_max_scores.values())
-            for station_key, base_col in STATION_COLUMN_MAP.items():
-                score = caosce_results[exam_no].get(base_col, 0) or 0
-                total_score += score
-            
-            if total_max > 0:
-                caosce_percentage = (total_score / total_max) * 100
-                combined_results[exam_no]["CAOSCE"] = round(caosce_percentage, 2)
+            # Calculate CAOSCE percentage using UPDATED formula
+            caosce_percentage = calculate_osce_percentage(caosce_results[exam_no], station_max_scores)
+            combined_results[exam_no]["CAOSCE"] = caosce_percentage
         
         # Add paper data  
         if exam_no in paper_results:
@@ -1460,13 +1721,15 @@ def merge_results(caosce_results, paper_results, station_max_scores):
             if not combined_results[exam_no]["FULL NAME"] and paper_data.get("FULL NAME"):
                 combined_results[exam_no]["FULL NAME"] = paper_data["FULL NAME"]
                 
-            combined_results[exam_no]["PAPER I"] = paper_data.get("PAPER I", 0.00) or 0.00
-            combined_results[exam_no]["PAPER II"] = paper_data.get("PAPER II", 0.00) or 0.00
+            combined_results[exam_no]["PAPER I"] = float(paper_data.get("PAPER I", 0.00) or 0.00)
+            combined_results[exam_no]["PAPER II"] = float(paper_data.get("PAPER II", 0.00) or 0.00)
+            combined_results[exam_no]["PAPER III"] = float(paper_data.get("PAPER III", 0.00) or 0.00)
         
-        # Calculate overall average - FIXED LOGIC
-        paper_i = combined_results[exam_no]["PAPER I"] or 0
-        paper_ii = combined_results[exam_no]["PAPER II"] or 0  
-        caosce_score = combined_results[exam_no]["CAOSCE"] or 0
+        # Calculate overall average
+        paper_i = float(combined_results[exam_no]["PAPER I"] or 0)
+        paper_ii = float(combined_results[exam_no]["PAPER II"] or 0)  
+        paper_iii = float(combined_results[exam_no]["PAPER III"] or 0)
+        caosce_score = float(combined_results[exam_no]["CAOSCE"] or 0)
         
         # Count how many actual scores we have (non-zero)
         score_count = 0
@@ -1478,6 +1741,9 @@ def merge_results(caosce_results, paper_results, station_max_scores):
         if paper_ii > 0:
             score_count += 1
             total_score += paper_ii
+        if paper_iii > 0:
+            score_count += 1
+            total_score += paper_iii
         if caosce_score > 0:
             score_count += 1
             total_score += caosce_score
@@ -1491,10 +1757,12 @@ def merge_results(caosce_results, paper_results, station_max_scores):
         combined_results[exam_no]["OVERALL AVERAGE"] = round(overall_avg, 2)
         
         # Determine REMARK and FAILED PAPERS
-        remark, failed_papers, failed_count = determine_remark_and_failed_papers(paper_i, paper_ii, caosce_score)
+        remark, failed_papers, failed_count = determine_remark_and_failed_papers(
+            paper_i, paper_ii, paper_iii, caosce_score
+        )
         combined_results[exam_no]["REMARK"] = remark
         combined_results[exam_no]["FAILED PAPERS"] = failed_papers
-        combined_results[exam_no]["FAILED_COUNT"] = failed_count  # Store for sorting
+        combined_results[exam_no]["FAILED_COUNT"] = failed_count
     
     return combined_results
 
@@ -1504,32 +1772,40 @@ def sort_combined_results(combined_results):
     1. REMARK (Passed first, then Failed)
     2. FAILED_COUNT (1 fail before 2 fails, etc.)
     3. MAT NO. (alphabetical/numerical)
-    
-    Returns: sorted list of (exam_no, student_data) tuples
     """
-    # Convert to list of tuples for sorting
     results_list = [(exam_no, data) for exam_no, data in combined_results.items()]
     
-    # Define sorting key function
     def sort_key(item):
         exam_no, data = item
-        # Primary: Remark (Passed = 0, Failed = 1)
-        remark_order = 0 if data["REMARK"] == "Passed" else 1
+        remark_order = 0 if data.get("REMARK") == "Passed" else 1
+        failed_count = int(data.get("FAILED_COUNT", 0) or 0)
         
-        # Secondary: Failed count (lower is better)
-        failed_count = data.get("FAILED_COUNT", 0)
+        # Extract numeric part from exam number for better sorting
+        exam_str = str(exam_no).upper() if exam_no else ""
+        numeric_part = 0
         
-        # Tertiary: Exam number for consistent ordering
-        return (remark_order, failed_count, exam_no)
+        if exam_str:
+            match = re.search(r'(\d{2,})', exam_str)
+            if match:
+                try:
+                    numeric_part = int(match.group(1))
+                except (ValueError, TypeError):
+                    numeric_part = 0
+        
+        return (remark_order, failed_count, numeric_part, exam_str)
     
-    # Sort using the key function
-    sorted_results = sorted(results_list, key=sort_key)
+    try:
+        sorted_results = sorted(results_list, key=sort_key)
+    except TypeError as e:
+        logger.error(f"Sorting error: {e}")
+        # Fallback: sort by exam number only
+        sorted_results = sorted(results_list, key=lambda x: str(x[0]))
     
     return sorted_results
 
 def create_caosce_sheet(wb, df_caosce, college_config, station_max_scores, station_overall_averages):
     """
-    Create the CAOSCE Results sheet (existing functionality)
+    Create the CAOSCE Results sheet
     """
     ws = wb.create_sheet("CAOSCE Results", 0)
     
@@ -1543,6 +1819,7 @@ def create_caosce_sheet(wb, df_caosce, college_config, station_max_scores, stati
 def create_combined_sheet(wb, df_combined, college_config):
     """
     Create the Combined Results sheet
+    Updated to handle PAPER III column
     """
     ws = wb.create_sheet("Combined Results")
     
@@ -1556,6 +1833,7 @@ def create_combined_sheet(wb, df_combined, college_config):
 def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_scores=None):
     """
     Apply consistent Excel formatting to worksheets
+    Updated to handle PAPER III column and autofit columns
     """
     TITLE_ROWS = 6
     ws.insert_rows(1, TITLE_ROWS)
@@ -1608,22 +1886,22 @@ def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_score
     ws["B3"].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[3].height = 20
 
-    # DATE - moved slightly downward
+    # DATE
     ws.merge_cells(f"B4:{last_col_letter}4")
     ws.cell(row=4, column=2, value=f"Date: {datetime.now().strftime('%d %B %Y')}")
     ws.cell(row=4, column=2).font = DATE_FONT
     ws.cell(row=4, column=2).alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[4].height = 25  # Increased height to push CLASS downward
+    ws.row_dimensions[4].height = 25
 
-    # CLASS - moved further downward with more spacing
+    # CLASS
     ws.merge_cells(f"A5:{last_col_letter}5")
     class_cell = ws.cell(row=5, column=1, value="CLASS: _________________________________________________________________________________________")
     class_cell.font = Font(bold=True, size=11, name="Calibri", color="1F4E78")
     class_cell.alignment = Alignment(horizontal="left", vertical="center")
-    ws.row_dimensions[5].height = 28  # Increased height for better spacing
+    ws.row_dimensions[5].height = 28
 
-    # Empty row for spacing before header - increased spacing
-    ws.row_dimensions[6].height = 18  # Increased from 15 for better separation
+    # Empty row for spacing
+    ws.row_dimensions[6].height = 18
 
     # Header styling
     for cell in ws[header_row]:
@@ -1650,12 +1928,28 @@ def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_score
 
     # Determine column indices based on sheet type
     if sheet_type == "COMBINED":
-        paper_i_idx = 4      # Column D: PAPER I/100
-        paper_ii_idx = 5     # Column E: PAPER II/100
-        caosce_idx = 6       # Column F: CAOSCE/100
-        overall_idx = 7      # Column G: OVERALL AVERAGE/100
-        remark_idx = 8       # Column H: REMARK
-        failed_papers_idx = 9 # Column I: FAILED PAPERS
+        # Find paper columns dynamically
+        paper_columns = {}
+        for col_idx in range(1, ws.max_column + 1):
+            cell_value = ws.cell(row=header_row, column=col_idx).value
+            if cell_value and ("PAPER" in str(cell_value).upper() or "MIDWIFERY" in str(cell_value).upper() or "CAOSCE" in str(cell_value).upper()):
+                paper_columns[col_idx] = cell_value
+        
+        # Find other column indices
+        overall_idx = None
+        remark_idx = None
+        failed_papers_idx = None
+        
+        for col_idx in range(1, ws.max_column + 1):
+            cell_value = ws.cell(row=header_row, column=col_idx).value
+            if cell_value:
+                cell_str = str(cell_value).upper()
+                if "OVERALL" in cell_str:
+                    overall_idx = col_idx
+                elif "REMARK" in cell_str:
+                    remark_idx = col_idx
+                elif "FAILED" in cell_str:
+                    failed_papers_idx = col_idx
         
         # Format data rows for combined sheet
         for row in ws.iter_rows(min_row=header_row + 1, max_row=ws.max_row):
@@ -1685,7 +1979,7 @@ def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_score
                     else:
                         cell.font = Font(size=10, name="Calibri")
                     cell.alignment = Alignment(horizontal="left", vertical="center", indent=1)
-                elif cell.column in [paper_i_idx, paper_ii_idx, caosce_idx]:  # Paper scores
+                elif cell.column in paper_columns:  # Paper scores (I, II, III, CAOSCE)
                     if is_avg_row:
                         cell.font = AVERAGE_FONT
                         cell.fill = AVERAGE_FILL
@@ -1728,13 +2022,13 @@ def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_score
                         cell.font = FAILED_PAPERS_FONT
                     else:
                         cell.font = Font(size=10, name="Calibri")
-                    cell.alignment = Alignment(horizontal="left", vertical="center", indent=1)
+                    cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True, indent=1)
                 else:
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                     cell.font = Font(size=10, name="Calibri")
     else:
-        # CAOSCE sheet formatting (existing logic)
-        score_cols_count = len([col for col in df.columns if "Score/" in col or "VIVA/" in col])
+        # CAOSCE sheet formatting
+        score_cols_count = len([col for col in df.columns if "Score/" in col or "VIVA/" in col or "(15%)" in str(col) or "(10%)" in str(col)])
         station_col_indices = list(range(4, 4 + score_cols_count))
         total_col_idx = 4 + score_cols_count
         percent_col_idx = total_col_idx + 1
@@ -1793,7 +2087,7 @@ def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_score
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                     cell.font = Font(size=10, name="Calibri")
 
-    # Apply autofit columns with improved width calculation
+    # Apply autofit columns with improved sizing
     data_end_row = ws.max_row
     apply_autofit_columns(ws, header_row, data_end_row)
 
@@ -1801,23 +2095,16 @@ def apply_excel_formatting(ws, df, college_config, sheet_type, station_max_score
 
 def generate_caosce_dataframe(caosce_results, station_max_scores, station_overall_averages):
     """
-    Generate DataFrame for CAOSCE results (helper function for combined output)
+    UPDATED: Generate DataFrame for CAOSCE results with stations at /10 each
     """
-    # Create a copy to avoid modifying original data
     caosce_results = copy.deepcopy(caosce_results)
     
-    # Similar logic to generate_caosce_output but returns DataFrame instead of saving file
     score_cols = []
+    # Use UPDATED OSCE display names with stations at /10
     for station_key in ["procedure_station_one", "procedure_station_three", "procedure_station_five",
                         "question_station_two", "question_station_four", "question_station_six", "viva"]:
-        base_col = STATION_COLUMN_MAP[station_key]
-        max_score = station_max_scores.get(station_key, 10.0)
         display_name = STATION_DISPLAY_NAMES[station_key]
-        if max_score == int(max_score):
-            col_name = f"{display_name}/{int(max_score)}"
-        else:
-            col_name = f"{display_name}/{max_score}"
-        score_cols.append(col_name)
+        score_cols.append(display_name)
 
     # Create a new dictionary with the display column names
     processed_results = {}
@@ -1831,7 +2118,11 @@ def generate_caosce_dataframe(caosce_results, station_max_scores, station_overal
         for i, station_key in enumerate(["procedure_station_one", "procedure_station_three", "procedure_station_five",
                                          "question_station_two", "question_station_four", "question_station_six", "viva"]):
             base_col = STATION_COLUMN_MAP[station_key]
-            processed_results[exam_no][score_cols[i]] = student_data.get(base_col, 0.00)
+            score_value = student_data.get(base_col, 0.00)
+            try:
+                processed_results[exam_no][score_cols[i]] = float(score_value) if score_value is not None else 0.00
+            except (ValueError, TypeError):
+                processed_results[exam_no][score_cols[i]] = 0.00
 
     base_cols = ["MAT NO.", "FULL NAME"] + score_cols
     df_out = pd.DataFrame.from_dict(processed_results, orient="index")
@@ -1848,27 +2139,60 @@ def generate_caosce_dataframe(caosce_results, station_max_scores, station_overal
     )
 
     # Sort by exam number
-    df_out["__sort"] = pd.to_numeric(df_out["MAT NO."].str.extract(r'(\d+)')[0], errors='coerce')
-    df_out.sort_values(["__sort", "MAT NO."], inplace=True)
-    df_out.drop(columns=["__sort"], inplace=True)
+    try:
+        def extract_numeric(x):
+            if pd.isna(x):
+                return 0
+            x_str = str(x)
+            match = re.search(r'(\d+)', x_str)
+            if match:
+                try:
+                    return int(match.group(1))
+                except (ValueError, TypeError):
+                    return 0
+            return 0
+        
+        df_out["__sort"] = df_out["MAT NO."].apply(extract_numeric)
+        df_out["__sort_str"] = df_out["MAT NO."].astype(str)
+        df_out.sort_values(["__sort", "__sort_str"], inplace=True)
+        df_out.drop(columns=["__sort", "__sort_str"], inplace=True)
+    except Exception as e:
+        logger.error(f"Sorting error in generate_caosce_dataframe: {e}")
+        df_out.sort_values("MAT NO.", inplace=True)
+    
     df_out.reset_index(drop=True, inplace=True)
 
     df_out.insert(0, "S/N", range(1, len(df_out) + 1))
 
     df_out[score_cols] = df_out[score_cols].apply(pd.to_numeric, errors="coerce")
     for col in score_cols:
-        df_out[col] = df_out[col].apply(lambda x: round(x, 2) if pd.notna(x) else 0.00)
+        df_out[col] = df_out[col].apply(lambda x: round(float(x), 2) if pd.notna(x) else 0.00)
 
-    total_max_score = sum(station_max_scores.values())
-    df_out[f"Total Raw Score/{total_max_score}"] = df_out[score_cols].sum(axis=1)
-    total_col_name = f"Total Raw Score/{total_max_score}"
+    # UPDATED: Calculate OSCE score using the new formula with stations at /10
+    df_out["OSCE Total Score"] = 0.00
+    df_out["OSCE Percentage (%)"] = 0
     
-    df_out[total_col_name] = df_out[total_col_name].apply(lambda x: round(x, 2) if pd.notna(x) else 0.00)
-    
-    df_out["Percentage (%)"] = (df_out[total_col_name] / total_max_score * 100)
-    df_out["Percentage (%)"] = df_out["Percentage (%)"].apply(lambda x: int(round(x, 0)) if pd.notna(x) else 0)
+    for idx, row in df_out.iterrows():
+        # Sum all 6 stations (each out of 10)
+        stations_sum = 0
+        station_columns = ["PS ONE (/10) (15%)", "PS THREE (/10) (15%)", "PS FIVE (/10) (15%)",
+                          "QS TWO (/10) (15%)", "QS FOUR (/10) (15%)", "QS SIX (/10) (15%)"]
+        for col in station_columns:
+            stations_sum += float(row[col]) if pd.notna(row[col]) else 0
+        
+        # Convert to 90%: (sum ÷ 60) × 90
+        stations_percentage = (stations_sum / 60.0) * 90.0 if stations_sum > 0 else 0
+        
+        # Add VIVA/10 (already 10%)
+        viva_score = float(row["VIVA (/10) (10%)"]) if pd.notna(row["VIVA (/10) (10%)"]) else 0
+        
+        # Total OSCE percentage
+        total_osce = stations_percentage + viva_score
+        
+        df_out.at[idx, "OSCE Total Score"] = round(total_osce, 2)
+        df_out.at[idx, "OSCE Percentage (%)"] = int(round(total_osce, 0))
 
-    final_display_cols = ["S/N", "MAT NO.", "FULL NAME"] + score_cols + [total_col_name, "Percentage (%)"]
+    final_display_cols = ["S/N", "MAT NO.", "FULL NAME"] + score_cols + ["OSCE Total Score", "OSCE Percentage (%)"]
     df_out = df_out[final_display_cols]
 
     # Add overall average row
@@ -1881,11 +2205,22 @@ def generate_caosce_dataframe(caosce_results, station_max_scores, station_overal
     for i, station_key in enumerate(["procedure_station_one", "procedure_station_three", "procedure_station_five",
                                     "question_station_two", "question_station_four", "question_station_six", "viva"]):
         col_name = score_cols[i]
-        avg_row[col_name] = station_overall_averages.get(station_key, 0.00)
+        avg_row[col_name] = float(station_overall_averages.get(station_key, 0.00))
     
-    overall_total = sum([station_overall_averages.get(station_key, 0.00) for station_key in station_overall_averages])
-    avg_row[total_col_name] = round(overall_total, 2)
-    avg_row["Percentage (%)"] = int(round(overall_total / total_max_score * 100, 0))
+    # Calculate average weighted total with UPDATED formula
+    avg_stations_sum = 0
+    station_avg_columns = ["procedure_station_one", "procedure_station_three", "procedure_station_five",
+                          "question_station_two", "question_station_four", "question_station_six"]
+    for station_key in station_avg_columns:
+        station_avg = station_overall_averages.get(station_key, 0.00)
+        avg_stations_sum += station_avg
+    
+    avg_stations_percentage = (avg_stations_sum / 60.0) * 90.0 if avg_stations_sum > 0 else 0
+    avg_viva_score = station_overall_averages.get("viva", 0.00)
+    avg_total_osce = avg_stations_percentage + avg_viva_score
+    
+    avg_row["OSCE Total Score"] = round(avg_total_osce, 2)
+    avg_row["OSCE Percentage (%)"] = int(round(avg_total_osce, 0))
 
     df_out = pd.concat([df_out, pd.DataFrame([avg_row])], ignore_index=True)
 
@@ -1901,6 +2236,7 @@ def process_files():
     """
     logger.info("Starting Enhanced CAOSCE Pre-Council Results Cleaning...")
     logger.info(f"Processing year: CAOSCE_{CURRENT_YEAR}")
+    logger.info("Now with UPDATED OSCE grading: Stations at /10 each, contributing to 90% total")
 
     RAW_DIR = DEFAULT_RAW_DIR
     BASE_CLEAN_DIR = DEFAULT_CLEAN_DIR
@@ -1915,14 +2251,39 @@ def process_files():
         return
 
     logger.info(f"Found {len(files)} files to process")
+    
+    # DEBUG: Test file detection
+    logger.info("\n" + "="*80)
+    logger.info("FILENAME PATTERN TESTING")
+    logger.info("="*80)
+    
+    test_files = [
+        "Set2023A Class-PAPER I-grades.xlsx",
+        "Set2023A Class-PAPER II-grades.xlsx", 
+        "Set2023A Class-PAPER III-grades.xlsx"
+    ]
+    
+    for test_file in test_files:
+        result = detect_paper_type(test_file)
+        logger.info(f"{test_file:50s} → {result}")
+    
+    logger.info("="*80)
+    logger.info("ACTUAL FILES IN DIRECTORY")
+    logger.info("="*80)
+    
+    for fname in files:
+        result = detect_paper_type(fname)
+        logger.info(f"{fname:50s} → {result}")
+    
+    logger.info("="*80 + "\n")
 
     # Process CAOSCE station files
     caosce_results, station_max_scores, station_overall_averages, caosce_exam_numbers = process_caosce_station_files(files, RAW_DIR)
     
-    # Process Paper I and II files (including combined format)
+    # Process Paper I, II, and III files (including combined format)
     paper_results = process_paper_files(files, RAW_DIR)
     
-    # FIX 1: Allow CAOSCE-only or Paper-only processing
+    # Check for valid data
     if not caosce_results and not paper_results:
         logger.error("No valid data found in any files")
         return
@@ -1967,6 +2328,7 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
                            college_config, output_dir, timestamp):
     """
     Generate ONE workbook with TWO sheets: CAOSCE Results and Combined Results
+    Updated to handle PAPER III and UPDATED OSCE grading
     """
     # Create workbook
     wb = Workbook()
@@ -1980,12 +2342,14 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
         ws_caosce, data_end_row_caosce = create_caosce_sheet(wb, caosce_df, college_config, station_max_scores, station_overall_averages)
         
         # Calculate statistics for CAOSCE sheet
-        total_max_score_caosce = sum(station_max_scores.values())
-        student_percentages = caosce_df["Percentage (%)"].iloc[:-1]  # Exclude average row
+        student_percentages = caosce_df["OSCE Percentage (%)"].iloc[:-1]  # Exclude average row
         total_students_caosce = len(student_percentages)
         avg_percentage_caosce = round(student_percentages.mean(), 1) if total_students_caosce > 0 else 0
         highest_percentage_caosce = round(student_percentages.max(), 1) if total_students_caosce > 0 else 0
         lowest_percentage_caosce = round(student_percentages.min(), 1) if total_students_caosce > 0 else 0
+        
+        # Total max score for OSCE is always 100%
+        total_max_score_caosce = 100.0
         
         # Add documentation to CAOSCE sheet
         create_document_sections(
@@ -2000,14 +2364,13 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
         # Merge results for combined sheet
         combined_results = merge_results(caosce_results, paper_results, station_max_scores) if caosce_results and paper_results else {}
         
-        # NEW: Sort the combined results by Remark (Passed first), then Failed count, then Exam number
+        # Sort the combined results
         sorted_results = sort_combined_results(combined_results)
         
         # Create DataFrame from sorted results
         if sorted_results:
             sorted_data = []
             for exam_no, data in sorted_results:
-                # Remove internal sorting key before adding to DataFrame
                 row_data = {k: v for k, v in data.items() if k != "FAILED_COUNT"}
                 sorted_data.append(row_data)
             
@@ -2016,27 +2379,25 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             df_combined = pd.DataFrame()
             
         if not df_combined.empty:
-            # Reorder columns
-            column_order = ["MAT NO.", "FULL NAME", "PAPER I", "PAPER II", "CAOSCE", "OVERALL AVERAGE", "REMARK", "FAILED PAPERS"]
-            df_combined = df_combined[column_order]
+            # Define column order including PAPER III
+            column_order = ["MAT NO.", "FULL NAME", "PAPER I", "PAPER II", "PAPER III", "CAOSCE", "OVERALL AVERAGE", "REMARK", "FAILED PAPERS"]
+            # Filter to only include columns that exist in the dataframe
+            existing_columns = [col for col in column_order if col in df_combined.columns]
+            df_combined = df_combined[existing_columns]
             
-            # Rename columns for display with /100 notation (except REMARK and FAILED PAPERS)
-            rename_dict = {
-                "PAPER I": "PAPER I/100",
-                "PAPER II": "PAPER II/100",
-                "CAOSCE": "CAOSCE/100",
-                "OVERALL AVERAGE": "OVERALL AVERAGE/100"
-            }
+            # Rename columns for display with /100 notation
+            rename_dict = {}
+            for col in ["PAPER I", "PAPER II", "PAPER III", "CAOSCE", "OVERALL AVERAGE"]:
+                if col in df_combined.columns:
+                    rename_dict[col] = f"{col}/100"
             df_combined.rename(columns=rename_dict, inplace=True)
         elif caosce_results and not paper_results:
             # CAOSCE-only data
             logger.info("Creating combined sheet with CAOSCE data only")
             df_combined = pd.DataFrame.from_dict(caosce_results, orient="index")
-            # Keep only MAT NO. and FULL NAME columns
             df_combined = df_combined[["MAT NO.", "FULL NAME"]].copy()
             
-            # Add CAOSCE percentage calculation
-            total_max = sum(station_max_scores.values())
+            # Calculate CAOSCE percentage using UPDATED OSCE weighting
             caosce_percentages = []
             remarks = []
             failed_papers_list = []
@@ -2044,18 +2405,17 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             
             for exam_no in df_combined["MAT NO."]:
                 if exam_no in caosce_results:
-                    total_score = 0
-                    for station_key, base_col in STATION_COLUMN_MAP.items():
-                        score = caosce_results[exam_no].get(base_col, 0) or 0
-                        total_score += score
-                    percentage = (total_score / total_max * 100) if total_max > 0 else 0
-                    caosce_percentages.append(round(percentage, 2))
+                    caosce_percentage = calculate_osce_percentage(caosce_results[exam_no], station_max_scores)
+                    caosce_percentages.append(round(caosce_percentage, 2))
                     
                     # Determine remark and failed papers for CAOSCE only
                     paper_i_score = 0
                     paper_ii_score = 0
-                    caosce_score = percentage
-                    remark, failed_papers, failed_count = determine_remark_and_failed_papers(paper_i_score, paper_ii_score, caosce_score)
+                    paper_iii_score = 0
+                    caosce_score = caosce_percentage
+                    remark, failed_papers, failed_count = determine_remark_and_failed_papers(
+                        paper_i_score, paper_ii_score, paper_iii_score, caosce_score
+                    )
                     remarks.append(remark)
                     failed_papers_list.append(failed_papers)
                     failed_counts.append(failed_count)
@@ -2068,12 +2428,13 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             df_combined["CAOSCE/100"] = caosce_percentages
             df_combined["PAPER I/100"] = 0.00
             df_combined["PAPER II/100"] = 0.00
-            df_combined["OVERALL AVERAGE/100"] = df_combined["CAOSCE/100"]  # For CAOSCE-only, overall = CAOSCE
+            df_combined["PAPER III/100"] = 0.00
+            df_combined["OVERALL AVERAGE/100"] = df_combined["CAOSCE/100"]
             df_combined["REMARK"] = remarks
             df_combined["FAILED PAPERS"] = failed_papers_list
             df_combined["FAILED_COUNT"] = failed_counts
             
-            # NEW: Sort CAOSCE-only data
+            # Sort CAOSCE-only data
             df_combined["__sort_remark"] = df_combined["REMARK"].apply(lambda x: 0 if x == "Passed" else 1)
             df_combined.sort_values(["__sort_remark", "FAILED_COUNT", "MAT NO."], inplace=True)
             df_combined.drop(columns=["__sort_remark", "FAILED_COUNT"], inplace=True)
@@ -2090,18 +2451,32 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
                         df_combined[col] = 0.00
                     elif col == "OVERALL AVERAGE/100":
                         # Calculate overall average for papers only
-                        if "PAPER I" in df_combined.columns and "PAPER II" in df_combined.columns:
-                            df_combined[col] = (df_combined["PAPER I"] + df_combined["PAPER II"]) / 2
+                        paper_cols = [col for col in df_combined.columns if "PAPER" in col]
+                        if paper_cols:
+                            numeric_cols = []
+                            for paper_col in paper_cols:
+                                try:
+                                    df_combined[paper_col] = pd.to_numeric(df_combined[paper_col], errors='coerce').fillna(0)
+                                    numeric_cols.append(paper_col)
+                                except:
+                                    pass
+                            if numeric_cols:
+                                df_combined[col] = df_combined[numeric_cols].mean(axis=1)
+                            else:
+                                df_combined[col] = 0.00
                         else:
                             df_combined[col] = 0.00
                     elif col == "FAILED_COUNT":
                         # Calculate failed count for sorting
                         failed_counts = []
                         for idx, row in df_combined.iterrows():
-                            paper_i_score = row.get("PAPER I", 0) if "PAPER I" in row else 0
-                            paper_ii_score = row.get("PAPER II", 0) if "PAPER II" in row else 0
+                            paper_i_score = float(row.get("PAPER I", 0)) if "PAPER I" in row else 0
+                            paper_ii_score = float(row.get("PAPER II", 0)) if "PAPER II" in row else 0
+                            paper_iii_score = float(row.get("PAPER III", 0)) if "PAPER III" in row else 0
                             caosce_score = 0
-                            _, _, failed_count = determine_remark_and_failed_papers(paper_i_score, paper_ii_score, caosce_score)
+                            _, _, failed_count = determine_remark_and_failed_papers(
+                                paper_i_score, paper_ii_score, paper_iii_score, caosce_score
+                            )
                             failed_counts.append(failed_count)
                         df_combined[col] = failed_counts
                     else:
@@ -2113,10 +2488,13 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             failed_counts = []
             
             for idx, row in df_combined.iterrows():
-                paper_i_score = row.get("PAPER I", 0) if "PAPER I" in row else 0
-                paper_ii_score = row.get("PAPER II", 0) if "PAPER II" in row else 0
+                paper_i_score = float(row.get("PAPER I", 0)) if "PAPER I" in row else 0
+                paper_ii_score = float(row.get("PAPER II", 0)) if "PAPER II" in row else 0
+                paper_iii_score = float(row.get("PAPER III", 0)) if "PAPER III" in row else 0
                 caosce_score = 0
-                remark, failed_papers, failed_count = determine_remark_and_failed_papers(paper_i_score, paper_ii_score, caosce_score)
+                remark, failed_papers, failed_count = determine_remark_and_failed_papers(
+                    paper_i_score, paper_ii_score, paper_iii_score, caosce_score
+                )
                 remarks.append(remark)
                 failed_papers_list.append(failed_papers)
                 failed_counts.append(failed_count)
@@ -2126,12 +2504,13 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             df_combined["FAILED_COUNT"] = failed_counts
             
             # Rename columns if needed
-            if "PAPER I" in df_combined.columns:
-                df_combined.rename(columns={"PAPER I": "PAPER I/100"}, inplace=True)
-            if "PAPER II" in df_combined.columns:
-                df_combined.rename(columns={"PAPER II": "PAPER II/100"}, inplace=True)
+            rename_dict = {}
+            for col in ["PAPER I", "PAPER II", "PAPER III"]:
+                if col in df_combined.columns:
+                    rename_dict[col] = f"{col}/100"
+            df_combined.rename(columns=rename_dict, inplace=True)
             
-            # NEW: Sort paper-only data
+            # Sort paper-only data
             df_combined["__sort_remark"] = df_combined["REMARK"].apply(lambda x: 0 if x == "Passed" else 1)
             df_combined.sort_values(["__sort_remark", "FAILED_COUNT", "MAT NO."], inplace=True)
             df_combined.drop(columns=["__sort_remark", "FAILED_COUNT"], inplace=True)
@@ -2144,9 +2523,15 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
 
         # Calculate overall averages for the average row
         if not df_combined.empty:
-            paper_i_avg = df_combined["PAPER I/100"].mean() if "PAPER I/100" in df_combined.columns and not df_combined["PAPER I/100"].isna().all() else 0
-            paper_ii_avg = df_combined["PAPER II/100"].mean() if "PAPER II/100" in df_combined.columns and not df_combined["PAPER II/100"].isna().all() else 0
-            caosce_avg = df_combined["CAOSCE/100"].mean() if "CAOSCE/100" in df_combined.columns and not df_combined["CAOSCE/100"].isna().all() else 0
+            # FIXED: Ensure numeric conversion before calculations
+            for col in ["PAPER I/100", "PAPER II/100", "PAPER III/100", "CAOSCE/100", "OVERALL AVERAGE/100"]:
+                if col in df_combined.columns:
+                    df_combined[col] = pd.to_numeric(df_combined[col], errors='coerce').fillna(0)
+            
+            paper_i_avg = df_combined["PAPER I/100"].mean() if "PAPER I/100" in df_combined.columns else 0
+            paper_ii_avg = df_combined["PAPER II/100"].mean() if "PAPER II/100" in df_combined.columns else 0
+            paper_iii_avg = df_combined["PAPER III/100"].mean() if "PAPER III/100" in df_combined.columns else 0
+            caosce_avg = df_combined["CAOSCE/100"].mean() if "CAOSCE/100" in df_combined.columns else 0
             
             # Calculate overall average based on available data
             score_count = 0
@@ -2158,6 +2543,9 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             if paper_ii_avg > 0:
                 score_count += 1
                 total_score += paper_ii_avg
+            if paper_iii_avg > 0:
+                score_count += 1
+                total_score += paper_iii_avg
             if caosce_avg > 0:
                 score_count += 1
                 total_score += caosce_avg
@@ -2179,6 +2567,8 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
                 avg_row["PAPER I/100"] = round(paper_i_avg, 2)
             if "PAPER II/100" in df_combined.columns:
                 avg_row["PAPER II/100"] = round(paper_ii_avg, 2)
+            if "PAPER III/100" in df_combined.columns:
+                avg_row["PAPER III/100"] = round(paper_iii_avg, 2)
             if "CAOSCE/100" in df_combined.columns:
                 avg_row["CAOSCE/100"] = round(caosce_avg, 2)
             if "OVERALL AVERAGE/100" in df_combined.columns:
@@ -2193,10 +2583,10 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
             # Calculate statistics for documentation
             total_students = len(df_combined) - 1  # Exclude average row
             
-            # FIXED: Calculate statistics correctly by reading from the dataframe
+            # Calculate statistics correctly
             student_data = df_combined[df_combined["MAT NO."] != "OVERALL AVERAGE"]
             if not student_data.empty and "OVERALL AVERAGE/100" in student_data.columns:
-                student_overall = student_data["OVERALL AVERAGE/100"]
+                student_overall = pd.to_numeric(student_data["OVERALL AVERAGE/100"], errors='coerce').fillna(0)
                 avg_percentage = round(student_overall.mean(), 2) if not student_overall.empty else 0
                 highest_percentage = round(student_overall.max(), 2) if not student_overall.empty else 0
                 lowest_percentage = round(student_overall.min(), 2) if not student_overall.empty else 0
@@ -2205,13 +2595,21 @@ def generate_combined_output(caosce_results, paper_results, station_max_scores, 
                 highest_percentage = 0
                 lowest_percentage = 0
 
+            # Calculate total possible score based on number of papers
+            paper_count = 0
+            for col in df_combined.columns:
+                if "PAPER" in str(col).upper() or "CAOSCE" in str(col).upper() or "MIDWIFERY" in str(col).upper():
+                    paper_count += 1
+            
+            total_possible_score = paper_count * 100
+
             # Add Combined sheet
             ws_combined, data_end_row_combined = create_combined_sheet(wb, df_combined, college_config)
             
             # Add documentation to Combined sheet
             create_document_sections(
                 ws_combined, total_students, avg_percentage, highest_percentage, lowest_percentage,
-                300, data_end_row_combined, college_config, "COMBINED"
+                total_possible_score, data_end_row_combined, college_config, "COMBINED"
             )
         else:
             logger.error("No data available for Combined sheet")

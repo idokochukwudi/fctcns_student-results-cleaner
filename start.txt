@@ -1,0 +1,16 @@
+cd student_result_cleaner
+source venv/bin/activate
+gunicorn --workers 2 --bind 0.0.0.0:5000 --timeout 60 launcher.app:app
+
+==================
+hostname -I
+==================
+
+
+netsh interface portproxy reset
+netsh interface portproxy add v4tov4 listenport=5000 listenaddress=0.0.0.0 connectport=5000 connectaddress=172.30.204.227
+netsh advfirewall firewall add rule name="StudentCleaner" dir=in action=allow protocol=TCP localport=5000
+
+FCTCONS/ND24/020
+
+can you add a function to include if management decide to change the treshhold to 47 can you add 47, 46 and 45 the 50 should be default then if any of this 47, 46 and 45 is selected the system will automatically upgrade the value to 50. you can as well provide me with the full updated relevant script and files to implement this.

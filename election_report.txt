@@ -1,0 +1,204 @@
+================================================================================
+FCT COLLEGE OF NURSING SCIENCES, GWAGWALADA
+STUDENTS' UNION GOVERNMENT (SUG) ELECTION - 2026
+================================================================================
+Official Election Report - Generated: 2026-01-17 09:52:01
+
+VOTING STATISTICS
+----------------------------------------
+Total Submissions            : 4
+Valid Exam Numbers          : 2
+Duplicate Submissions       : 0
+Valid Votes Counted         : 2
+Invalid Votes (Excluded)    : 2
+Validation Rate             : 50.0%
+
+ELECTION RESULTS BY POSITION
+================================================================================
+
+PRESIDENT
+---------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+EGBUNU VICTOR                                    1        50.0%
+OLORUNBANWO OLAYINKA PETER                       1        50.0%
+
+Winner: TIE BETWEEN: EGBUNU VICTOR, OLORUNBANWO OLAYINKA PETER
+
+
+VICE PRESIDENT
+--------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+ASONYE GODGIFT NATHAN                            1        50.0%
+HALIMAH ISAH                                     1        50.0%
+
+Winner: TIE BETWEEN: ASONYE GODGIFT NATHAN, HALIMAH ISAH
+
+
+SECRETARY GENERAL
+-----------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+ABUBAKAR USMAN (DR SADEEQ)                       1        50.0%
+OMODARA OLUWABUKOLA FAVOUR                       1        50.0%
+
+Winner: TIE BETWEEN: ABUBAKAR USMAN (DR SADEEQ), OMODARA OLUWABUKOLA FAVOUR
+
+
+ASSISTANT SECRETARY GENERAL
+---------------------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+EZE JACINTHA CHIDERA                             2        100.0%
+SUCCESS ISONG JONAH                              0        0.0%
+
+Winner: EZE JACINTHA CHIDERA
+
+
+TREASURER
+---------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+AHMED KHADIJAT OVAYIOZA                          2        100.0%
+EGBELO GLORIA NITEN                              0        0.0%
+
+Winner: AHMED KHADIJAT OVAYIOZA
+
+
+FINANCIAL SECRETARY
+-------------------
+Total Valid Votes: 2
+
+Candidate: ISAAC BULUS MAGODE
+
+  YES (Approve)    :   2 votes (100.0%)
+  NO (Reject)      :   0 votes (0.0%)
+
+Winner: YES - CANDIDATE APPROVED
+
+
+DIRECTOR OF SPECIAL DUTIES
+--------------------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+LUKA ADUWAK ELLEN ZIGWAI                         2        100.0%
+ELISHA VICTORIA                                  0        0.0%
+UMARATU SUNDAY YUNUSA                            0        0.0%
+
+Winner: LUKA ADUWAK ELLEN ZIGWAI
+
+
+DIRECTOR FOR FOOD, WATER & ENVIRONMENTAL SANITATION
+---------------------------------------------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+OGUNBELE BARNABAS                                2        100.0%
+NASIRU ISHAQ                                     0        0.0%
+
+Winner: OGUNBELE BARNABAS
+
+
+DIRECTOR OF SOCIALS
+-------------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+UMEHAM PRAISE EZINNE                             2        100.0%
+ABASIYANGAOWO COLIN JOSEPH                       0        0.0%
+
+Winner: UMEHAM PRAISE EZINNE
+
+
+DIRECTOR OF HEALTH
+------------------
+Total Valid Votes: 2
+
+Candidate: SHARON CHINDONGNAAN PETER
+
+  YES (Approve)    :   1 votes (50.0%)
+  NO (Reject)      :   1 votes (50.0%)
+
+Winner: TIE - NEEDS REVIEW
+
+
+DIRECTOR OF SPORTS
+------------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+ISAAC PAMBERIMAM PAMELA                          2        100.0%
+ISAH USMAN ILIYASU                               0        0.0%
+
+Winner: ISAAC PAMBERIMAM PAMELA
+
+
+AUDITOR GENERAL
+---------------
+Total Valid Votes: 2
+
+Candidate: JEREMIAH PEACE OMENEFU
+
+  YES (Approve)    :   2 votes (100.0%)
+  NO (Reject)      :   0 votes (0.0%)
+
+Winner: YES - CANDIDATE APPROVED
+
+
+WELFARE SECRETARY
+-----------------
+Total Valid Votes: 2
+
+Candidate                                       Votes      Percentage
+----------------------------------------------------------------------
+DEHINDO TEMILOLUWA THERESA                       1        50.0%
+GEOFFRY DIVINE DESTINY                           1        50.0%
+
+Winner: TIE BETWEEN: DEHINDO TEMILOLUWA THERESA, GEOFFRY DIVINE DESTINY
+
+
+PRO I
+-----
+Total Valid Votes: 2
+
+Candidate: FATIMA UMAR JEJE
+
+  YES (Approve)    :   2 votes (100.0%)
+  NO (Reject)      :   0 votes (0.0%)
+
+Winner: YES - CANDIDATE APPROVED
+
+
+PRO II
+------
+Total Valid Votes: 2
+
+Candidate: BULUS ALEXANDER FUNOM
+
+  YES (Approve)    :   1 votes (50.0%)
+  NO (Reject)      :   1 votes (50.0%)
+
+Winner: TIE - NEEDS REVIEW
+
+
+================================================================================
+INVALID VOTES DETAIL
+----------------------------------------
+Invalid Exam Numbers: 2
+7446, FCTCONS/ND23/012
